@@ -1,0 +1,703 @@
+:root {
+  --fundo: #0b0c0a;
+  --painel: #131512;
+  --painel-alto: #191c17;
+  --borda: #232720;
+  --texto: #f1f3ed;
+  --texto-fraco: #8a9080;
+  --salabim: #c4ff3d;
+  --novos: #5cd0ff;
+  --alerta: #ff7a8a;
+  --atencao: #f2a33c;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--fonte-texto), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.numero,
+h1,
+h2,
+h3 {
+  font-family: var(--fonte-numero), system-ui, sans-serif;
+}
+
+.pagina {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* ---------------------------------------------------------------- cabecalho */
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.topo h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.topo .sub {
+  margin: 4px 0 0;
+  color: var(--texto-fraco);
+  font-size: 13px;
+}
+
+.filtro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.filtro button {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.filtro button:hover {
+  color: var(--texto);
+  border-color: #39402f;
+}
+
+.filtro button[data-ativo='true'] {
+  background: var(--salabim);
+  border-color: var(--salabim);
+  color: #0b0c0a;
+  font-weight: 600;
+}
+
+.filtro input[type='date'] {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  color: var(--texto);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+/* ------------------------------------------------------------------- cards */
+
+.grade {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  margin-bottom: 16px;
+}
+
+.grade.cheia {
+  grid-template-columns: 1fr;
+}
+
+.card {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  padding: 20px 22px 22px;
+  min-height: 120px;
+}
+
+.card > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+
+.card .periodo {
+  font-size: 11.5px;
+  color: var(--texto-fraco);
+}
+
+.grande {
+  font-size: 60px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.medio {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.rotulo {
+  font-size: 11.5px;
+  color: var(--texto-fraco);
+  letter-spacing: 0.04em;
+}
+
+/* ------------------------------------------------------------------ barras */
+
+.barra {
+  height: 8px;
+  border-radius: 999px;
+  background: #20241c;
+  overflow: hidden;
+  display: flex;
+  position: relative;
+}
+
+/* Onde a barra chegaria se os agendamentos ja marcados forem confirmados.
+   Tracejado e a 55% de opacidade para ler como "ainda nao aconteceu" -- se
+   fosse solido competiria com o numero real. */
+.marca-projecao {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 0;
+  border-left: 2px dashed currentColor;
+  opacity: 0.55;
+  transform: translateX(-1px);
+  pointer-events: none;
+}
+
+.barra > span {
+  display: block;
+  height: 100%;
+}
+
+.linha-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--texto-fraco);
+  margin-top: 10px;
+}
+
+.legenda i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: baseline;
+}
+
+/* ------------------------------------------------------------------ selos */
+
+.selo {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.selo[data-t='meta-batida'] {
+  color: var(--salabim);
+}
+.selo[data-t='acima'] {
+  color: var(--novos);
+}
+.selo[data-t='no-ritmo'] {
+  color: var(--texto-fraco);
+}
+.selo[data-t='abaixo'] {
+  color: var(--alerta);
+}
+
+/* ------------------------------------------------------- estados do card */
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--texto-fraco);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.estado.erro {
+  color: var(--alerta);
+}
+
+.estado code {
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--texto-fraco);
+  background: #0e100c;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 9px 11px;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.botao {
+  background: transparent;
+  border: 1px solid var(--borda);
+  color: var(--texto);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.botao:hover {
+  border-color: #39402f;
+}
+
+.esqueleto {
+  height: 60px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #171a14 25%, #1f2319 50%, #171a14 75%);
+  background-size: 200% 100%;
+  animation: brilho 1.4s infinite;
+}
+
+@keyframes brilho {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ tabela */
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabela th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+  padding: 0 10px 8px 0;
+  border-bottom: 1px solid var(--borda);
+}
+
+.tabela td {
+  padding: 9px 10px 9px 0;
+  border-bottom: 1px solid #1b1e18;
+  vertical-align: baseline;
+}
+
+.tabela tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela .num {
+  text-align: right;
+  font-family: var(--fonte-numero), system-ui, sans-serif;
+  padding-right: 0;
+}
+
+.rolagem {
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.nota {
+  font-size: 11.5px;
+  color: var(--texto-fraco);
+  line-height: 1.55;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--borda);
+}
+
+.aviso {
+  border: 1px solid #3a3320;
+  background: #17150e;
+  color: var(--atencao);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin-bottom: 16px;
+}
+
+.aviso a {
+  color: inherit;
+}
+
+/* --------------------------------------------------------- botao atualizar */
+
+.atualizar {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: 4px;
+  padding-left: 12px;
+  border-left: 1px solid var(--borda);
+}
+
+.atualizar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--painel-alto);
+  border: 1px solid var(--borda);
+  color: var(--texto);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.atualizar button:hover:not(:disabled) {
+  border-color: var(--salabim);
+  color: var(--salabim);
+}
+
+.atualizar button:disabled {
+  cursor: progress;
+  color: var(--texto-fraco);
+}
+
+/* Anel que gira só enquanto há busca em voo. */
+.atualizar .giro {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0.55;
+}
+
+.atualizar button[data-ocupado='true'] .giro {
+  opacity: 1;
+  animation: girar 0.7s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.atualizar .carimbo {
+  font-size: 11px;
+  color: var(--texto-fraco);
+  white-space: nowrap;
+  min-width: 108px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atualizar button[data-ocupado='true'] .giro {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------- numeros clicaveis */
+
+/* O numero continua sendo um <button> para funcionar no teclado; o reset abaixo
+   tira a aparencia de botao e devolve a de numero.
+   
+   O reset vai dentro de :where() para ter especificidade ZERO. Sem isso, o
+   `font: inherit` daqui vence `.grande`/`.medio` por vir depois no arquivo, e os
+   numeros desabam de 60px para os 16px herdados do body -- foi exatamente o que
+   aconteceu na primeira versao. */
+:where(.clicavel) {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+}
+
+.clicavel {
+  cursor: pointer;
+  border-bottom: 1px dashed #39402f;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+
+.clicavel:hover,
+.clicavel:focus-visible {
+  border-bottom-color: currentColor;
+  opacity: 0.85;
+}
+
+.clicavel.numero.grande,
+.clicavel.numero.medio {
+  line-height: 1;
+}
+
+.numero.forte {
+  font-weight: 600;
+}
+
+/* Link de texto dentro das notas de rodape do card. */
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--texto);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 3px;
+}
+
+.link:hover {
+  color: var(--salabim);
+}
+
+/* -------------------------------------------------------------- modal */
+
+.fundo-modal {
+  position: fixed;
+  inset: 0;
+  background: #05060488;
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+  animation: surgir 0.12s ease-out;
+}
+
+.modal {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  width: min(940px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px #00000080;
+  outline: none;
+}
+
+.modal > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.modal h3 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.modal header p {
+  margin: 5px 0 0;
+  font-size: 11.5px;
+  color: var(--texto-fraco);
+}
+
+.modal .fechar {
+  background: none;
+  border: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.modal .fechar:hover {
+  color: var(--texto);
+  border-color: #39402f;
+}
+
+.corpo-modal {
+  overflow: auto;
+  padding: 6px 22px 20px;
+}
+
+.corpo-modal a {
+  color: var(--texto);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: #39402f;
+}
+
+.corpo-modal a:hover {
+  color: var(--salabim);
+  text-decoration-color: currentColor;
+}
+
+.corpo-modal .tabela th {
+  position: sticky;
+  top: 0;
+  background: var(--painel);
+  padding-top: 12px;
+  z-index: 1;
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fundo-modal {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ login */
+
+.tela-login {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.caixa-login {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.caixa-login h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.caixa-login .sub {
+  margin: 0 0 18px;
+  font-size: 12.5px;
+  color: var(--texto-fraco);
+}
+
+.caixa-login label {
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--texto-fraco);
+}
+
+.caixa-login input {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.caixa-login input:focus {
+  outline: none;
+  border-color: var(--salabim);
+}
+
+.caixa-login .entrar {
+  margin-top: 14px;
+  padding: 10px;
+  background: var(--salabim);
+  border-color: var(--salabim);
+  color: #0b0c0a;
+  font-weight: 600;
+}
+
+.caixa-login .entrar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.erro-login {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--alerta);
+}
+
+.sair {
+  background: none;
+  border: none;
+  color: var(--texto-fraco);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0;
+}
+
+.sair:hover {
+  color: var(--texto);
+}
