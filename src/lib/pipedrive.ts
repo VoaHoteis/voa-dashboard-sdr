@@ -10,7 +10,17 @@
 import { SDR_FIELD_KEY, type SdrKey, SDRS } from './config';
 import type { ISODate } from './dates';
 
-const BASE_URL = (process.env.PIPEDRIVE_BASE_URL ?? 'https://voahoteis2.pipedrive.com/api').replace(/\/$/, '');
+const BASE_PADRAO = 'https://voahoteis2.pipedrive.com/api';
+
+/**
+ * `||` e nao `??` de proposito: uma variavel de ambiente cadastrada VAZIA no
+ * painel da Vercel chega como '' -- que passa direto pelo `??` e faz o
+ * `new URL()` quebrar com um "Invalid URL" que nao explica nada. Aqui, vazio
+ * cai no padrao, como se nao existisse.
+ */
+function baseUrl(): string {
+  return (process.env.PIPEDRIVE_BASE_URL?.trim() || BASE_PADRAO).replace(/\/+$/, '');
+}
 
 export function modoMock(): boolean {
   return process.env.PIPEDRIVE_MOCK === '1';
@@ -58,7 +68,17 @@ async function chamar<T>(
   path: string,
   params: Record<string, string | number | undefined>
 ): Promise<RespostaPipedrive<T>> {
-  const url = new URL(BASE_URL + path);
+  const base = baseUrl();
+  let url: URL;
+  try {
+    url = new URL(base + path);
+  } catch {
+    // Sem esta mensagem o card mostraria so "Invalid URL", que nao diz onde olhar.
+    throw new PipedriveError(
+      'Endereço da API do Pipedrive inválido: "' + base + '". Verifique a variável ' +
+        'PIPEDRIVE_BASE_URL — se ela não for necessária, apague-a em vez de deixá-la em branco.'
+    );
+  }
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== '') url.searchParams.set(k, String(v));
   }

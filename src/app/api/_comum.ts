@@ -14,5 +14,12 @@ export function respostaDeErro(e: unknown) {
  * botao, porque passa a impressao de que o dado esta fresco.
  */
 export function limparCacheSePedido(req: Request): void {
-  if (new URL(req.url).searchParams.get('atualizar') === '1') limparCache();
+  // Nunca deixar a leitura da propria URL derrubar a rota: se ela vier num
+  // formato inesperado, o pior caso e servir do cache -- nao e motivo para o
+  // card inteiro falhar.
+  try {
+    if (new URL(req.url).searchParams.get('atualizar') === '1') limparCache();
+  } catch {
+    /* ignora */
+  }
 }
