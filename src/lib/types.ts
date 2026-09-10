@@ -143,9 +143,11 @@ export interface ItemForecast {
 }
 
 export interface ForecastResposta {
-  /** Quantidade de negocios abertos nas etapas acompanhadas. */
+  /** Mes de referencia da previsao (recorte da Data de fechamento esperada). */
+  periodo: Periodo;
+  /** Quantidade de negocios abertos com fechamento previsto no periodo. */
   total: number;
-  /** Soma dos valores abertos. */
+  /** Soma dos valores previstos. */
   valor: number;
   porFunil: PorFunil;
   valorPorFunil: PorFunil;

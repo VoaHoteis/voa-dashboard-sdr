@@ -16,7 +16,7 @@ import {
   TIPOS_ESFORCO,
   TIPO_NO_SHOW,
 } from './config';
-import { addDias, ehDiaUtil, listarDias, primeiroDiaDoMes, type ISODate } from './dates';
+import { addDias, ehDiaUtil, hoje, listarDias, primeiroDiaDoMes, type ISODate } from './dates';
 import type { Atividade, Negocio } from './pipedrive';
 
 /** PRNG mulberry32: pequeno, deterministico, bom o bastante para dado de exemplo. */
@@ -71,6 +71,17 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
   const proxima = pendentes === 0 ? null : addDias(hojeRef, Math.floor(r() * 14) - 6);
   const valor = 12000 + Math.floor(r() * 108000);
 
+  // Data de fechamento esperada: ~55% no mês corrente (entram no forecast),
+  // ~25% em meses seguintes e ~20% sem data preenchida (ficam de fora).
+  const inicioMes = primeiroDiaDoMes(hoje());
+  const sorteioData = r();
+  const expected =
+    sorteioData < 0.2
+      ? null
+      : sorteioData < 0.75
+        ? addDias(inicioMes, Math.floor(r() * 27))
+        : addDias(inicioMes, 33 + Math.floor(r() * 40));
+
   return {
     id: 1000 + i,
     title: titulo,
@@ -80,6 +91,7 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
     undone_activities_count: pendentes,
     next_activity_date: proxima,
     value: valor,
+    expected_close_date: expected,
     [SDR_FIELD_KEY]: sdrIds,
   } as Negocio;
 });
