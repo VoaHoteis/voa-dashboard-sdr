@@ -155,6 +155,41 @@ export function resolverFechamentos(negocios: Negocio[]): FechamentoResolvido[] 
   return out;
 }
 
+// --------------------------------------------------------------- forecast
+
+/**
+ * Forecast = todo negocio ABERTO nas etapas acompanhadas dos dois funis.
+ *
+ * Recebe os negocios ja agrupados por funil e etapa (uma consulta por
+ * `stage_id`, como o card de Funil faz), e devolve a lista achatada com funil,
+ * etapa e valor de cada um. Diferente do funil, aqui NAO se quebra por SDR: o
+ * card mostra a carteira aberta inteira, entao as 4 etapas entram -- inclusive
+ * a Pre Qualificacao, por escolha do time.
+ */
+export interface ForecastItemResolvido {
+  negocio: Negocio;
+  funil: FunnelKey;
+  etapa: EtapaKey;
+  valor: number;
+}
+
+export function resolverForecast(
+  porFunilEtapa: Record<FunnelKey, Record<EtapaKey, Negocio[]>>
+): ForecastItemResolvido[] {
+  const out: ForecastItemResolvido[] = [];
+  for (const funil of ['novosNegocios', 'salabim'] as FunnelKey[]) {
+    for (const etapa of ETAPAS_ORDEM) {
+      for (const d of porFunilEtapa[funil]?.[etapa] ?? []) {
+        if (d.status !== 'open') continue;
+        const valorBruto = (d as { value?: unknown }).value;
+        const valor = typeof valorBruto === 'number' ? valorBruto : Number(valorBruto) || 0;
+        out.push({ negocio: d, funil, etapa, valor });
+      }
+    }
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------- ritmo
 
 export type Temperatura = 'meta-batida' | 'acima' | 'no-ritmo' | 'abaixo';

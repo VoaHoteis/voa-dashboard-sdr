@@ -132,6 +132,33 @@ export interface FechamentosResposta {
   itens: ItemFechamento[];
 }
 
+/** Uma linha da tabela do card de Forecast (um negocio aberto). */
+export interface ItemForecast {
+  negocioId: number;
+  titulo: string;
+  funil: FunnelKey;
+  etapa: EtapaKey;
+  /** Valor do negocio, na moeda da conta (BRL). */
+  valor: number;
+}
+
+export interface ForecastResposta {
+  /** Quantidade de negocios abertos nas etapas acompanhadas. */
+  total: number;
+  /** Soma dos valores abertos. */
+  valor: number;
+  porFunil: PorFunil;
+  valorPorFunil: PorFunil;
+  /** Uma entrada por combinacao funil x etapa que tem ao menos um negocio. */
+  porEtapa: Array<{
+    funil: FunnelKey;
+    etapa: EtapaKey;
+    total: number;
+    valor: number;
+  }>;
+  itens: ItemForecast[];
+}
+
 export interface AtividadesResposta {
   mes: Periodo;
   semanas: string[];

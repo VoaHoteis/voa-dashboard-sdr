@@ -14,6 +14,7 @@ import { BotaoAtualizar, ProvedorAtualizacao, useApi } from '@/components/base';
 import { CardAgendamentoPorSdr, CardAgendamentosTotais } from '@/components/CardsAgendamentos';
 import { CardDetalhamentoSdr, CardFunilSdr } from '@/components/CardsSdr';
 import { CardFechamentos } from '@/components/CardFechamentos';
+import { CardForecast } from '@/components/CardForecast';
 import { CardNoShows } from '@/components/CardNoShows';
 import {
   CardAgendamentosFuturos,
@@ -154,10 +155,6 @@ function Painel() {
         />
       </div>
 
-      <div className="grade cheia">
-        <CardFechamentos />
-      </div>
-
       <div className="grade">
         <CardDetalhamentoSdr estado={mes} />
       </div>
@@ -176,6 +173,14 @@ function Painel() {
 
       <div className="grade">
         <CardsAtividadesSemana />
+      </div>
+
+      <div className="grade cheia">
+        <CardFechamentos />
+      </div>
+
+      <div className="grade cheia">
+        <CardForecast />
       </div>
     </main>
   );

@@ -69,6 +69,7 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
   const pendentes = r() < 0.25 ? 0 : 1 + Math.floor(r() * 3);
   const hojeRef = new Date().toISOString().slice(0, 10);
   const proxima = pendentes === 0 ? null : addDias(hojeRef, Math.floor(r() * 14) - 6);
+  const valor = 12000 + Math.floor(r() * 108000);
 
   return {
     id: 1000 + i,
@@ -78,6 +79,7 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
     status: 'open',
     undone_activities_count: pendentes,
     next_activity_date: proxima,
+    value: valor,
     [SDR_FIELD_KEY]: sdrIds,
   } as Negocio;
 });
