@@ -7,14 +7,17 @@
  * precisa acontecer no outro.
  */
 
-import type { FunnelKey, SdrKey, UnidadeContagem } from './config';
+import { pessoaPorChave, type FunnelKey, type UnidadeContagem } from './config';
 import type { ItemAgendamento } from './types';
 
 export interface Recorte {
   funil?: FunnelKey;
-  sdr?: SdrKey;
-  /** Sem SDR preenchida no negocio. */
+  /** Chave de PESSOAS. */
+  sdr?: string;
+  /** Nem campo SDR nem proprietario conhecido. */
   semSdr?: boolean;
+  /** Atribuido apenas a quem ja saiu do time. */
+  inativo?: boolean;
   unidade?: UnidadeContagem;
 }
 
@@ -22,8 +25,13 @@ export function filtrarItens(itens: ItemAgendamento[], r: Recorte): ItemAgendame
   let out = itens;
 
   if (r.funil) out = out.filter((i) => i.funil === r.funil);
-  if (r.sdr) out = out.filter((i) => i.sdrs.includes(r.sdr as SdrKey));
-  if (r.semSdr) out = out.filter((i) => i.sdrs.length === 0);
+  if (r.sdr) out = out.filter((i) => i.sdrs.includes(r.sdr as string));
+  if (r.semSdr) out = out.filter((i) => i.atribuicao === 'nenhuma');
+  if (r.inativo) {
+    out = out.filter(
+      (i) => i.sdrs.length > 0 && i.sdrs.every((k) => pessoaPorChave(k)?.papel === 'inativo')
+    );
+  }
 
   // Na unidade "negocios", duas reunioes com o mesmo hotel no mesmo funil valem
   // 1 -- entao a lista tambem mostra so a primeira.

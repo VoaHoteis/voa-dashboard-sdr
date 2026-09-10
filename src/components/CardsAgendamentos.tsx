@@ -59,15 +59,28 @@ export function CardAgendamentosTotais({ url }: { url: string }) {
                   {/* Sem a nota de rodape, este vira o unico acesso ao recorte
                       "sem SDR" -- que e justamente o que precisa de correcao no
                       Pipedrive, entao nao pode sumir junto com a nota. */}
+                  {!MOSTRAR_NOTAS && d.inativos > 0 && (
+                    <>
+                      {' · '}
+                      <button
+                        className="link"
+                        style={{ color: 'var(--atencao)' }}
+                        onClick={() => abrir('Agendamentos de quem saiu do time', { inativo: true })}
+                        title="O campo SDR nomeia alguém que não está mais no time. Entram no total, mas não na meta de ninguém."
+                      >
+                        {d.inativos} de SDR inativo
+                      </button>
+                    </>
+                  )}
                   {!MOSTRAR_NOTAS && d.semSdr > 0 && (
                     <>
                       {' · '}
                       <button
                         className="link"
-                        onClick={() => abrir('Agendamentos sem SDR preenchida', { semSdr: true })}
-                        title="Estes negócios estão sem o campo SDR preenchido no Pipedrive"
+                        onClick={() => abrir('Agendamentos sem responsável identificado', { semSdr: true })}
+                        title="Campo SDR vazio e proprietário desconhecido"
                       >
-                        {d.semSdr} sem SDR
+                        {d.semSdr} sem responsável
                       </button>
                     </>
                   )}

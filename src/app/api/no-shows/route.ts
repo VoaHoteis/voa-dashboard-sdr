@@ -15,8 +15,8 @@
 import { NextResponse } from 'next/server';
 import { PIPELINE_TO_FUNNEL, TIPO_NO_SHOW } from '@/lib/config';
 import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
-import { totalDe, zeroPorFunil } from '@/lib/metrics';
-import { buscarAtividades, buscarNegociosPorIds, sdrsDoNegocio } from '@/lib/pipedrive';
+import { atribuir, totalDe, zeroPorFunil } from '@/lib/metrics';
+import { buscarAtividades, buscarNegociosPorIds } from '@/lib/pipedrive';
 import type { ItemAgendamento, NoShowsResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -57,7 +57,7 @@ export async function GET(req: Request) {
         titulo: negocio?.title ?? a.subject,
         data: a.due_date ?? inicio,
         funil,
-        sdrs: sdrsDoNegocio(negocio),
+        ...(negocio ? atribuir(negocio) : { sdrs: [], atribuicao: 'nenhuma' as const }),
         assunto: a.subject,
         tipo: a.type,
       };

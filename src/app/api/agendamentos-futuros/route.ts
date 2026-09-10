@@ -46,6 +46,7 @@ export async function GET(req: Request) {
         data: i.atividade.due_date ?? inicio,
         funil: i.funil,
         sdrs: i.sdrs,
+        atribuicao: i.atribuicao,
         assunto: i.atividade.subject,
         tipo: i.atividade.type,
       });

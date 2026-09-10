@@ -23,7 +23,15 @@ export interface ItemAgendamento {
   data: ISODate;
   /** null quando nao da para saber o funil -- sem negocio, ou negocio de outro funil. */
   funil: FunnelKey | null;
-  sdrs: SdrKey[];
+  /** Chaves de PESSOAS -- pode incluir closer e quem já saiu do time. */
+  sdrs: string[];
+  /**
+   * De onde veio a atribuicao:
+   * - 'campo'         : campo SDR do negocio preenchido (soberano);
+   * - 'proprietario'  : campo vazio, caiu para o dono do negocio;
+   * - 'nenhuma'       : campo vazio e dono desconhecido.
+   */
+  atribuicao: 'campo' | 'proprietario' | 'nenhuma';
   assunto: string;
   tipo: string;
 }
@@ -45,8 +53,10 @@ export interface AgendamentosResposta {
     porFunil: PorFunil;
     metas: PorFunil;
   }>;
-  /** Atividades que nao puderam ser atribuidas a nenhuma SDR. */
+  /** Nem campo SDR nem dono conhecido -- nao da para dizer de quem e. */
   semSdr: number;
+  /** Atribuidos apenas a quem ja saiu do time (campo SDR de negocio antigo). */
+  inativos: number;
   /** Tudo que entrou na conta, para o modal de detalhe. */
   itens: ItemAgendamento[];
 }

@@ -1,9 +1,15 @@
 'use client';
 
-import { CORES_FUNIL, FUNNEL_LABEL, TIPOS_ESFORCO, TIPO_NO_SHOW } from '@/lib/config';
+import {
+  CORES_FUNIL,
+  FUNNEL_LABEL,
+  PAPEL_LABEL,
+  pessoaPorChave,
+  TIPOS_ESFORCO,
+  TIPO_NO_SHOW,
+} from '@/lib/config';
 import { formatarBR } from '@/lib/dates';
 import { linkDoNegocio } from '@/lib/detalhe';
-import { nomeDaSdr } from '@/lib/metrics';
 import type { ItemAgendamento } from '@/lib/types';
 
 /** Nome legivel do tipo de atividade. */
@@ -67,7 +73,39 @@ export function TabelaNegocios({ itens }: { itens: ItemAgendamento[] }) {
             </td>
             <td style={{ whiteSpace: 'nowrap' }}>
               {i.sdrs.length ? (
-                i.sdrs.map(nomeDaSdr).join(', ')
+                <>
+                  {i.sdrs.map((k, n) => {
+                    const p = pessoaPorChave(k);
+                    return (
+                      <span key={k}>
+                        {n > 0 && ', '}
+                        {p?.nome ?? k}
+                        {/* Quem nao e SDR ativa ganha selo: sem isso, um
+                            agendamento de closer ou de quem ja saiu pareceria
+                            contar para a meta das duas SDRs. */}
+                        {p && p.papel !== 'sdr' && (
+                          <span
+                            style={{
+                              color: p.papel === 'inativo' ? 'var(--atencao)' : 'var(--texto-fraco)',
+                              fontSize: 11,
+                            }}
+                          >
+                            {' '}
+                            ({PAPEL_LABEL[p.papel]})
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })}
+                  {i.atribuicao === 'proprietario' && (
+                    <span
+                      style={{ color: 'var(--texto-fraco)', fontSize: 11, display: 'block' }}
+                      title="Campo SDR vazio no negócio — atribuído pelo proprietário"
+                    >
+                      pelo proprietário
+                    </span>
+                  )}
+                </>
               ) : i.negocioId === null ? (
                 // Sem negocio nao ha campo SDR para estar vazio -- dizer "sem SDR"
                 // aqui apontaria para a lacuna errada.

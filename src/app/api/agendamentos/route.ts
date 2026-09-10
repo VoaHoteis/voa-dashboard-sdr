@@ -11,6 +11,7 @@ import {
   agendamentosDaSdr,
   contarPorFunil,
   resolverAgendamentos,
+  soInativos,
   totalDe,
 } from '@/lib/metrics';
 import { buscarAtividades, buscarNegociosPorIds } from '@/lib/pipedrive';
@@ -64,7 +65,8 @@ export async function GET(req: Request) {
           metas: s.metas,
         };
       }),
-      semSdr: itens.filter((i) => i.sdrs.length === 0).length,
+      semSdr: itens.filter((i) => i.atribuicao === 'nenhuma').length,
+      inativos: itens.filter((i) => soInativos(i.sdrs)).length,
       // A lista crua vai junto para o modal de detalhe recortar em memoria --
       // sem uma segunda consulta que poderia discordar do numero exibido.
       itens: itens.map(
@@ -75,6 +77,7 @@ export async function GET(req: Request) {
           data: i.atividade.due_date ?? inicio,
           funil: i.funil,
           sdrs: i.sdrs,
+          atribuicao: i.atribuicao,
           assunto: i.atividade.subject,
           tipo: i.atividade.type,
         })

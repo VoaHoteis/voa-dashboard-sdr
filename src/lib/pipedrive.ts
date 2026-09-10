@@ -7,7 +7,7 @@
  * mesma pergunta sempre devolve o mesmo numero.
  */
 
-import { SDR_FIELD_KEY, type SdrKey, SDRS } from './config';
+import { PESSOAS, SDR_FIELD_KEY } from './config';
 import type { ISODate } from './dates';
 
 const BASE_PADRAO = 'https://voahoteis2.pipedrive.com/api';
@@ -265,16 +265,21 @@ function normalizarNegocioV2(d: Negocio): Negocio {
 
 // ------------------------------------------------------------ atribuicao SDR
 
-const OPCAO_PARA_SDR = new Map<number, SdrKey>(SDRS.map((s) => [s.sdrOptionId, s.key]));
+const OPCAO_PARA_PESSOA = new Map<number, string>(
+  PESSOAS.filter((p) => p.sdrOptionId !== undefined).map((p) => [p.sdrOptionId as number, p.key])
+);
+
+const USUARIO_PARA_PESSOA = new Map<number, string>(
+  PESSOAS.filter((p) => p.userId !== undefined).map((p) => [p.userId as number, p.key])
+);
 
 /**
- * SDRs de um negocio, a partir do campo personalizado tipo `set`.
+ * Pessoas nomeadas no campo personalizado "SDR" do negocio.
  *
- * O valor chega como "645,680" (v1) ou como array de ids/objetos (v2). Se o
- * negocio tem duas SDRs marcadas, ele conta inteiro para as duas -- nao ha
- * divisao de fracao. Combinado com o Joao? Nao: esta na lista de pendencias.
+ * O valor chega como "645,680" (v1) ou como array de ids (v2). Negocio com duas
+ * pessoas marcadas conta inteiro para as duas -- nao ha divisao de fracao.
  */
-export function sdrsDoNegocio(negocio: Negocio | undefined): SdrKey[] {
+export function pessoasDoCampoSdr(negocio: Negocio | undefined): string[] {
   if (!negocio) return [];
   const bruto = negocio[SDR_FIELD_KEY];
   if (bruto === null || bruto === undefined || bruto === '') return [];
@@ -285,12 +290,54 @@ export function sdrsDoNegocio(negocio: Negocio | undefined): SdrKey[] {
         .split(',')
         .map((s) => Number(s.trim()));
 
-  const out: SdrKey[] = [];
+  const out: string[] = [];
   for (const id of ids) {
-    const k = OPCAO_PARA_SDR.get(id);
+    const k = OPCAO_PARA_PESSOA.get(id);
     if (k && !out.includes(k)) out.push(k);
   }
   return out;
+}
+
+/** Mantido para o card de funil, que atribui por dono e so olha as duas SDRs. */
+export function sdrsDoNegocio(negocio: Negocio | undefined): string[] {
+  return pessoasDoCampoSdr(negocio);
+}
+
+
+/**
+ * Proprietario do negocio. A v1 devolve `user_id` como objeto ({id, name, ...}),
+ * a v2 como numero -- dai as duas leituras.
+ *
+ * E este campo, e nao o campo personalizado "SDR", que diz de quem e o negocio
+ * no **funil**. Conferido com o Joao em 08/09/2026: as seis contagens de etapa
+ * batem exatamente pelo proprietario e nao batem pelo campo SDR, que esta vazio
+ * em 91% dos negocios da Pre Qualificacao.
+ */
+export function donoDoNegocio(negocio: Negocio | undefined): number | null {
+  if (!negocio) return null;
+
+  // Terceira divergencia entre as versoes: a v1 chama o dono de `user_id` e o
+  // entrega como objeto ({id, name, ...}); a v2 chama de `owner_id` e entrega
+  // como numero. Ler so `user_id` fazia a regra de reserva pelo proprietario
+  // nunca disparar nos cards que usam a v2 -- 14 agendamentos de julho ficavam
+  // sem responsavel sendo que o dono era o Joao ou o Bruno.
+  for (const bruto of [
+    (negocio as { user_id?: unknown }).user_id,
+    (negocio as { owner_id?: unknown }).owner_id,
+  ]) {
+    if (typeof bruto === 'number') return bruto;
+    if (bruto && typeof bruto === 'object') {
+      const id = (bruto as { id?: unknown }).id;
+      if (typeof id === 'number') return id;
+    }
+  }
+  return null;
+}
+
+/** Proprietario traduzido para uma pessoa conhecida, quando houver. */
+export function pessoaDoProprietario(negocio: Negocio | undefined): string | null {
+  const id = donoDoNegocio(negocio);
+  return id === null ? null : (USUARIO_PARA_PESSOA.get(id) ?? null);
 }
 
 // -------------------------------------------------------------------- mock
@@ -301,24 +348,4 @@ let mockCarregado: ModuloMock | null = null;
 async function mock(): Promise<ModuloMock> {
   if (!mockCarregado) mockCarregado = await import('./mock');
   return mockCarregado;
-}
-
-/**
- * Proprietario do negocio. A v1 devolve `user_id` como objeto ({id, name, ...}),
- * a v2 como numero -- daí as duas leituras.
- *
- * E este campo, e nao o campo personalizado "SDR", que diz de quem e o negocio
- * no **funil**. Conferido com o Joao em 08/09/2026: as seis contagens de etapa
- * batem exatamente pelo proprietario e nao batem pelo campo SDR, que esta vazio
- * em 91% dos negocios da Pre Qualificacao.
- */
-export function donoDoNegocio(negocio: Negocio | undefined): number | null {
-  if (!negocio) return null;
-  const bruto = (negocio as { user_id?: unknown }).user_id;
-  if (typeof bruto === 'number') return bruto;
-  if (bruto && typeof bruto === 'object') {
-    const id = (bruto as { id?: unknown }).id;
-    return typeof id === 'number' ? id : null;
-  }
-  return null;
 }

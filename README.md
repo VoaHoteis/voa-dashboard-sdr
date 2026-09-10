@@ -213,6 +213,12 @@ das duas versões:
 Se a v2 um dia parar de mandar o bloco `custom_fields`, `buscarNegociosPorIds`
 lança erro em vez de deixar a atribuição por SDR virar zero calado.
 
+**Terceira divergência entre as versões: o proprietário do negócio.** A v1 chama
+`user_id` e entrega um objeto (`{id, name, ...}`); a v2 chama `owner_id` e entrega
+um número. Ler só `user_id` fazia a regra de reserva nunca disparar nos cards que
+usam a v2 — 14 agendamentos de julho ficavam sem responsável sendo que o dono era
+o João ou o Bruno. `donoDoNegocio` lê os dois nomes.
+
 ## Regras de negócio implementadas
 
 **Agendamento** = atividade concluída de um dos 3 tipos
@@ -221,6 +227,24 @@ vinculado num pipeline 6 ou 10**. O filtro de funil não é detalhe: `meeting`
 também é usado nas reuniões internas do time (alinhamento, checkpoint, almoço),
 que quase nunca têm negócio vinculado. O tipo inativo duplicado
 `apresentacao_institucional` fica de fora, por decisão do João.
+
+### Regra de atribuição dos agendamentos
+
+O **campo SDR do negócio é soberano**: se estiver preenchido, vale ele — mesmo
+nomeando quem já saiu do time. Só quando o campo está vazio a atribuição cai para
+o **proprietário** do negócio. Decisão do João em 09/09/2026.
+
+Quem aparece está em `PESSOAS` (`config.ts`), com um papel:
+
+| papel | quem | efeito |
+|---|---|---|
+| `sdr` | Juliana, Bárbara | têm meta; aparecem nos cards por SDR, funil e atividades |
+| `closer` | Bruno, João | contam no total e aparecem nos modais, sem meta |
+| `inativo` | Mariana, Daniela, Marcela, Pedro, Bot, Jéssica | contam no total, marcados em âmbar |
+
+Sem essa lista, um agendamento de closer ou de quem saiu virava "sem SDR" — o que
+é factualmente errado, porque o campo está preenchido. O efeito era grande: em
+julho, 25 dos 46 agendamentos eram de Bruno, João, Mariana ou Daniela.
 
 **Atribuição por SDR — são três campos diferentes, de propósito.** Isso parece
 inconsistência e não é; cada card faz uma pergunta distinta:

@@ -32,22 +32,44 @@ export const SDR_FIELD_KEY = '8bf893d50586a148d5a5f39bb09198ae3edfb7d5';
 
 export type SdrKey = 'juliana' | 'barbara';
 
-export interface SdrConfig {
-  key: SdrKey;
+/**
+ * Papel de quem pode aparecer atribuido a um agendamento.
+ * - 'sdr'     : as duas com meta (Juliana e Barbara);
+ * - 'closer'  : Bruno e Joao -- fazem agendamentos, mas nao tem meta de SDR;
+ * - 'inativo' : quem saiu do time ou nao atua mais como SDR. Continua no campo
+ *               SDR de negocios antigos, entao precisa de nome, senao o
+ *               agendamento apareceria como "sem SDR" -- que e falso: o campo
+ *               esta preenchido, so nao com alguem ativo.
+ */
+export type Papel = 'sdr' | 'closer' | 'inativo';
+
+export interface Pessoa {
+  key: string;
   nome: string;
   /** Opcao do campo personalizado "SDR" do negocio. */
+  sdrOptionId?: number;
+  /** Usuario do Pipedrive -- dono de negocio e executor de atividade. */
+  userId?: number;
+  papel: Papel;
+  metas?: Record<FunnelKey, number>;
+}
+
+export interface SdrConfig extends Pessoa {
+  key: SdrKey;
   sdrOptionId: number;
-  /** Usuario do Pipedrive -- usado no card de Atividades (executor real). */
   userId: number;
+  papel: 'sdr';
   metas: Record<FunnelKey, number>;
 }
 
+/** Só estas duas têm meta e aparecem nos cards de meta, funil e atividades. */
 export const SDRS: SdrConfig[] = [
   {
     key: 'juliana',
     nome: 'Juliana',
     sdrOptionId: 645,
     userId: 27038398,
+    papel: 'sdr',
     metas: { novosNegocios: 20, salabim: 10 },
   },
   {
@@ -55,9 +77,43 @@ export const SDRS: SdrConfig[] = [
     nome: 'Bárbara Almeida',
     sdrOptionId: 680,
     userId: 27867501,
+    papel: 'sdr',
     metas: { novosNegocios: 20, salabim: 10 },
   },
 ];
+
+/**
+ * Todo mundo que pode aparecer atribuido a um agendamento.
+ *
+ * Cobre as nove opcoes do campo SDR mais quem so aparece como dono de negocio.
+ * Sem esta lista, um agendamento do Bruno ou da Mariana caia em "sem SDR", o que
+ * e factualmente errado: o campo esta preenchido.
+ */
+export const PESSOAS: Pessoa[] = [
+  ...SDRS,
+  { key: 'bruno', nome: 'Bruno Dias', sdrOptionId: 635, userId: 12029818, papel: 'closer' },
+  { key: 'joao', nome: 'João Pacheco', sdrOptionId: 636, userId: 12696278, papel: 'closer' },
+  { key: 'mariana', nome: 'Mariana Teixeira', sdrOptionId: 267, userId: 23227690, papel: 'inativo' },
+  { key: 'daniela', nome: 'Daniela', sdrOptionId: 326, papel: 'inativo' },
+  { key: 'marcela', nome: 'Marcela', sdrOptionId: 634, papel: 'inativo' },
+  { key: 'pedro', nome: 'Pedro Siniscalchi', sdrOptionId: 691, userId: 24237677, papel: 'inativo' },
+  { key: 'bot', nome: 'Bot', sdrOptionId: 627, papel: 'inativo' },
+  { key: 'jessica', nome: 'Jéssica Garcia', userId: 15020508, papel: 'inativo' },
+];
+
+export function pessoaPorChave(key: string): Pessoa | undefined {
+  return PESSOAS.find((p) => p.key === key);
+}
+
+export function nomeDaPessoa(key: string): string {
+  return pessoaPorChave(key)?.nome ?? key;
+}
+
+export const PAPEL_LABEL: Record<Papel, string> = {
+  sdr: 'SDR',
+  closer: 'closer',
+  inativo: 'inativo',
+};
 
 /** Meta do time = soma das metas individuais (40 Novos + 20 Salabim = 60). */
 export const METAS_TIME: Record<FunnelKey, number> = {

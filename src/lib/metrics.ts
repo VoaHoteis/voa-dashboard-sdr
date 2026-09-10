@@ -13,13 +13,14 @@ import {
   PIPELINE_TO_FUNNEL,
   RITMO_ACIMA,
   RITMO_NO_RITMO,
+  nomeDaPessoa,
+  pessoaPorChave,
   type SdrKey,
-  SDRS,
   STAGES,
   type UnidadeContagem,
 } from './config';
 import type { Negocio } from './pipedrive';
-import { sdrsDoNegocio, type Atividade } from './pipedrive';
+import { pessoaDoProprietario, pessoasDoCampoSdr, type Atividade } from './pipedrive';
 import type { PorFunil } from './types';
 
 export function zeroPorFunil(): PorFunil {
@@ -38,7 +39,27 @@ export interface AgendamentoResolvido {
   atividade: Atividade;
   negocio: Negocio;
   funil: FunnelKey;
-  sdrs: SdrKey[];
+  sdrs: string[];
+  atribuicao: 'campo' | 'proprietario' | 'nenhuma';
+}
+
+/**
+ * De quem e o agendamento.
+ *
+ * O campo SDR do negocio e **soberano**: se estiver preenchido, vale ele, mesmo
+ * que nomeie alguem que saiu do time (esses aparecem marcados como inativos, em
+ * vez de virarem "sem SDR" -- o campo nao esta vazio, so nao aponta para alguem
+ * ativo). So quando o campo esta vazio a atribuicao cai para o proprietario do
+ * negocio. Decisao do Joao em 09/09/2026.
+ */
+export function atribuir(negocio: Negocio): Pick<AgendamentoResolvido, 'sdrs' | 'atribuicao'> {
+  const doCampo = pessoasDoCampoSdr(negocio);
+  if (doCampo.length > 0) return { sdrs: doCampo, atribuicao: 'campo' };
+
+  const dono = pessoaDoProprietario(negocio);
+  if (dono) return { sdrs: [dono], atribuicao: 'proprietario' };
+
+  return { sdrs: [], atribuicao: 'nenhuma' };
 }
 
 export function resolverAgendamentos(
@@ -52,7 +73,7 @@ export function resolverAgendamentos(
     if (!negocio) continue;
     const funil = PIPELINE_TO_FUNNEL[negocio.pipeline_id];
     if (!funil) continue;
-    out.push({ atividade: a, negocio, funil, sdrs: sdrsDoNegocio(negocio) });
+    out.push({ atividade: a, negocio, funil, ...atribuir(negocio) });
   }
   return out;
 }
@@ -85,10 +106,10 @@ export function totalDe(p: PorFunil): number {
   return p.novosNegocios + p.salabim;
 }
 
-/** Filtra os agendamentos de uma SDR. Negocio com duas SDRs entra nas duas. */
+/** Filtra os agendamentos de uma pessoa. Negocio com duas marcadas entra nas duas. */
 export function agendamentosDaSdr(
   itens: AgendamentoResolvido[],
-  sdr: SdrKey
+  sdr: string
 ): AgendamentoResolvido[] {
   return itens.filter((i) => i.sdrs.includes(sdr));
 }
@@ -273,6 +294,12 @@ export function resumirFunil(
 
 // -------------------------------------------------------------------- misc
 
-export function nomeDaSdr(key: SdrKey): string {
-  return SDRS.find((s) => s.key === key)?.nome ?? key;
+export function nomeDaSdr(key: string): string {
+  return nomeDaPessoa(key);
+}
+
+/** O agendamento so tem gente que saiu do time? */
+export function soInativos(sdrs: string[]): boolean {
+  if (sdrs.length === 0) return false;
+  return sdrs.every((k) => pessoaPorChave(k)?.papel === 'inativo');
 }
