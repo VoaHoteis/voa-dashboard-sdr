@@ -214,6 +214,34 @@ export async function buscarNegociosDaEtapa(stageId: number): Promise<Negocio[]>
 }
 
 /**
+ * Negocios GANHOS no periodo, para o card de Fechamentos.
+ *
+ * A v1 nao filtra por data de ganho, entao pedimos todos os `status=won`
+ * (paginado, com o mesmo cache de 60s dos outros endpoints) e recortamos por
+ * `won_time` em memoria. `won_time` vem como "2026-09-05 14:03:00" em UTC; como
+ * o resto do codigo, comparamos so a parte da data -- perto da virada de dia um
+ * fechamento pode cair no dia vizinho, o que e aceitavel para uma contagem
+ * mensal e evita o trabalho de converter fuso aqui.
+ *
+ * A v1 e de proposito: ela devolve `value`, `won_time`, `pipeline_id` e o dono
+ * em `user_id` (objeto) no topo do negocio, que e tudo de que este card precisa.
+ */
+export async function buscarNegociosGanhos(opts: {
+  inicio: ISODate;
+  fim: ISODate;
+}): Promise<Negocio[]> {
+  if (modoMock()) return (await mock()).negociosGanhosFalsos(opts);
+
+  const todos = await buscarTudo<Negocio>('/v1/deals', { status: 'won', user_id: 0 });
+  return todos.filter((d) => {
+    const wt = (d as { won_time?: string | null }).won_time;
+    if (!wt) return false;
+    const dia = wt.slice(0, 10);
+    return dia >= opts.inicio && dia <= opts.fim;
+  });
+}
+
+/**
  * Negocios por id, para resolver funil e SDR das atividades do periodo.
  *
  * Aqui e a v2, que aceita lote por `ids` -- sao poucas dezenas de negocios por
