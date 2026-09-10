@@ -158,50 +158,64 @@ export function resolverFechamentos(negocios: Negocio[]): FechamentoResolvido[] 
 // --------------------------------------------------------------- forecast
 
 /**
- * Forecast = negocio ABERTO, nas etapas acompanhadas dos dois funis, cuja
- * **Data de fechamento esperada** (`expected_close_date`) cai dentro do periodo.
+ * Forecast = negocio ABERTO num dos dois funis, em QUALQUER etapa, cuja **Data
+ * de fechamento esperada** (`expected_close_date`) cai dentro do periodo.
  *
- * Recebe os negocios ja agrupados por funil e etapa (uma consulta por
- * `stage_id`, como o card de Funil faz) e o periodo do mes, e devolve a lista
- * achatada com funil, etapa e valor de cada um. Diferente do funil, aqui NAO se
- * quebra por SDR: interessa a previsao do time inteiro.
+ * Recebe a lista crua de negocios abertos da conta, o periodo do mes e o mapa
+ * de etapas (id -> nome), e devolve os que entram na previsao. Duas escolhas
+ * importantes:
  *
- * O corte pela `expected_close_date` e o que separa o forecast da carteira
- * aberta inteira: negocio sem data prevista, ou com previsao para outro mes,
- * fica de fora -- ele existe, mas nao e previsao deste mes. As 4 etapas seguem
- * elegiveis (inclusive a Pre Qualificacao), desde que tenham a data no mes.
+ * - **Nao filtra por etapa.** A definicao do time e "todo aberto com previsao no
+ *   mes"; restringir pelas 4 etapas do funil descartava os negocios em
+ *   negociacao avancada, que sao justamente os que tem data de fechamento. Por
+ *   isso a etapa aqui vem do nome real da etapa (mapa), nao do STAGES fixo.
+ * - **Corta por `expected_close_date`.** Negocio sem data prevista, ou com
+ *   previsao para outro mes, fica de fora -- existe, mas nao e previsao deste mes.
+ *
+ * O recorte por funil (`PIPELINE_TO_FUNNEL`) mantem o card no mesmo universo
+ * Novos Negocios / Salabim do resto do dashboard; negocio de outro pipeline nao
+ * entra.
  */
 export interface ForecastItemResolvido {
   negocio: Negocio;
   funil: FunnelKey;
-  etapa: EtapaKey;
+  etapaId: number;
+  etapa: string;
   valor: number;
   /** Data de fechamento esperada, so a parte YYYY-MM-DD. */
   previsao: string;
 }
 
 export function resolverForecast(
-  porFunilEtapa: Record<FunnelKey, Record<EtapaKey, Negocio[]>>,
-  periodo: { inicio: string; fim: string }
+  negocios: Negocio[],
+  periodo: { inicio: string; fim: string },
+  etapas: Map<number, string>
 ): ForecastItemResolvido[] {
   const out: ForecastItemResolvido[] = [];
-  for (const funil of ['novosNegocios', 'salabim'] as FunnelKey[]) {
-    for (const etapa of ETAPAS_ORDEM) {
-      for (const d of porFunilEtapa[funil]?.[etapa] ?? []) {
-        if (d.status !== 'open') continue;
+  for (const d of negocios) {
+    if (d.status !== 'open') continue;
 
-        // `expected_close_date` vem como 'YYYY-MM-DD' ou null. Comparamos so a
-        // parte da data, como no resto do codigo. Sem data preenchida => fora.
-        const ecd = (d as { expected_close_date?: string | null }).expected_close_date;
-        if (!ecd) continue;
-        const previsao = ecd.slice(0, 10);
-        if (previsao < periodo.inicio || previsao > periodo.fim) continue;
+    const funil = PIPELINE_TO_FUNNEL[d.pipeline_id];
+    if (!funil) continue;
 
-        const valorBruto = (d as { value?: unknown }).value;
-        const valor = typeof valorBruto === 'number' ? valorBruto : Number(valorBruto) || 0;
-        out.push({ negocio: d, funil, etapa, valor, previsao });
-      }
-    }
+    // `expected_close_date` vem como 'YYYY-MM-DD' ou null. Comparamos so a parte
+    // da data, como no resto do codigo. Sem data preenchida => fora do forecast.
+    const ecd = (d as { expected_close_date?: string | null }).expected_close_date;
+    if (!ecd) continue;
+    const previsao = ecd.slice(0, 10);
+    if (previsao < periodo.inicio || previsao > periodo.fim) continue;
+
+    const valorBruto = (d as { value?: unknown }).value;
+    const valor = typeof valorBruto === 'number' ? valorBruto : Number(valorBruto) || 0;
+
+    out.push({
+      negocio: d,
+      funil,
+      etapaId: d.stage_id,
+      etapa: etapas.get(d.stage_id) ?? 'Etapa ' + d.stage_id,
+      valor,
+      previsao,
+    });
   }
   return out;
 }

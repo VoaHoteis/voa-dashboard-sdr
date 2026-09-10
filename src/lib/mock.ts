@@ -8,6 +8,9 @@
 
 import {
   CLOSERS,
+  ETAPA_LABEL,
+  type EtapaKey,
+  type FunnelKey,
   PIPELINES,
   SDRS,
   SDR_FIELD_KEY,
@@ -100,6 +103,22 @@ const POR_ID = new Map(NEGOCIOS.map((d) => [d.id, d]));
 
 export async function negociosFalsosDaEtapa(stageId: number): Promise<Negocio[]> {
   return NEGOCIOS.filter((d) => d.stage_id === stageId);
+}
+
+/** Todos os negocios abertos da base -- o forecast recorta por funil e data. */
+export async function negociosAbertosFalsos(): Promise<Negocio[]> {
+  return NEGOCIOS.filter((d) => d.status === 'open');
+}
+
+/** Etapas conhecidas (id -> nome), montadas a partir do STAGES. */
+export async function etapasFalsas(): Promise<Map<number, string>> {
+  const m = new Map<number, string>();
+  for (const funil of Object.keys(STAGES) as FunnelKey[]) {
+    for (const etapa of Object.keys(STAGES[funil]) as EtapaKey[]) {
+      for (const id of STAGES[funil][etapa]) m.set(id, ETAPA_LABEL[etapa]);
+    }
+  }
+  return m;
 }
 
 export async function negociosFalsosPorIds(ids: number[]): Promise<Map<number, Negocio>> {
