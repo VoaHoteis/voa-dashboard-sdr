@@ -109,6 +109,20 @@ export function nomeDaPessoa(key: string): string {
   return pessoaPorChave(key)?.nome ?? key;
 }
 
+/**
+ * Closers ativos -- Bruno e Joao. Sao os donos dos negocios que fecham, entao o
+ * card de Fechamentos atribui cada venda pelo proprietario do negocio, nao pelo
+ * campo SDR. Ambos tem `userId`, que e o que a atribuicao por proprietario usa.
+ */
+export interface CloserConfig extends Pessoa {
+  userId: number;
+  papel: 'closer';
+}
+
+export const CLOSERS: CloserConfig[] = PESSOAS.filter(
+  (p): p is CloserConfig => p.papel === 'closer' && p.userId !== undefined
+);
+
 export const PAPEL_LABEL: Record<Papel, string> = {
   sdr: 'SDR',
   closer: 'closer',

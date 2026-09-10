@@ -96,6 +96,42 @@ export interface NoShowsResposta {
   itensForaDaConta: ItemAgendamento[];
 }
 
+/** Uma linha do modal de detalhe do card de Fechamentos. */
+export interface ItemFechamento {
+  negocioId: number;
+  titulo: string;
+  /** Data do ganho (won_time). */
+  data: ISODate;
+  funil: FunnelKey | null;
+  /** Chave de PESSOAS do dono do negocio (o closer), ou null. */
+  closer: string | null;
+  /** Valor do negocio, na moeda da conta (BRL). */
+  valor: number;
+}
+
+export interface FechamentosResposta {
+  periodo: Periodo;
+  time: {
+    /** Quantidade de negocios ganhos no periodo. */
+    total: number;
+    /** Soma dos valores ganhos no periodo. */
+    valor: number;
+    porFunil: PorFunil;
+    valorPorFunil: PorFunil;
+  };
+  porCloser: Array<{
+    /** Chave de PESSOAS do closer. */
+    closer: string;
+    nome: string;
+    total: number;
+    valor: number;
+    porFunil: PorFunil;
+  }>;
+  /** Ganhos cujo dono nao e um closer ativo (owned por SDR, inativo, etc.). */
+  outros: { total: number; valor: number };
+  itens: ItemFechamento[];
+}
+
 export interface AtividadesResposta {
   mes: Periodo;
   semanas: string[];

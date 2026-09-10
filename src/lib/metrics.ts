@@ -114,6 +114,47 @@ export function agendamentosDaSdr(
   return itens.filter((i) => i.sdrs.includes(sdr));
 }
 
+// ------------------------------------------------------------- fechamentos
+
+/**
+ * Um fechamento = negocio GANHO num dos dois funis acompanhados.
+ *
+ * Atribuido pelo PROPRIETARIO do negocio (o closer), nao pelo campo SDR -- quem
+ * fecha e o dono da venda. Negocio ganho em outro funil (pipeline 1, etc.) fica
+ * de fora, para o card manter o mesmo recorte Novos Negocios / Salabim do resto
+ * do dashboard.
+ */
+export interface FechamentoResolvido {
+  negocio: Negocio;
+  funil: FunnelKey;
+  /** Dono do negocio traduzido para uma pessoa conhecida (ou null). */
+  dono: string | null;
+  valor: number;
+  /** Data do ganho (won_time), so a parte YYYY-MM-DD. */
+  data: string;
+}
+
+export function resolverFechamentos(negocios: Negocio[]): FechamentoResolvido[] {
+  const out: FechamentoResolvido[] = [];
+  for (const d of negocios) {
+    const funil = PIPELINE_TO_FUNNEL[d.pipeline_id];
+    if (!funil) continue;
+
+    const valorBruto = (d as { value?: unknown }).value;
+    const valor = typeof valorBruto === 'number' ? valorBruto : Number(valorBruto) || 0;
+    const wt = (d as { won_time?: string | null }).won_time ?? null;
+
+    out.push({
+      negocio: d,
+      funil,
+      dono: pessoaDoProprietario(d),
+      valor,
+      data: wt ? wt.slice(0, 10) : '',
+    });
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------- ritmo
 
 export type Temperatura = 'meta-batida' | 'acima' | 'no-ritmo' | 'abaixo';

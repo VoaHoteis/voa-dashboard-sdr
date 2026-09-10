@@ -7,6 +7,7 @@
  */
 
 import {
+  CLOSERS,
   PIPELINES,
   SDRS,
   SDR_FIELD_KEY,
@@ -166,6 +167,51 @@ export async function atividadesFalsas(opts: {
             user_id: userId,
           });
         }
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Negocios ganhos no periodo, atribuidos aos closers pelo proprietario.
+ *
+ * ~12 fechamentos por closer por mes, divididos entre os dois funis, com valor
+ * entre R$ 15 mil e R$ 120 mil. Deterministico como o resto do mock.
+ */
+export async function negociosGanhosFalsos(opts: {
+  inicio: ISODate;
+  fim: ISODate;
+}): Promise<Negocio[]> {
+  const out: Negocio[] = [];
+  let id = 900000;
+
+  for (const dia of listarDias(opts.inicio, opts.fim)) {
+    if (!ehDiaUtil(dia)) continue;
+
+    for (const closer of CLOSERS) {
+      const r = rng(hash('ganho:' + dia + ':' + closer.userId));
+      const quantos = r() < 0.5 ? 1 : r() < 0.72 ? 2 : 0;
+
+      for (let k = 0; k < quantos; k++) {
+        const r2 = rng(hash('ganho:' + dia + ':' + closer.userId + ':' + k));
+        const funil = r2() < 0.34 ? 'salabim' : 'novosNegocios';
+        const pipelineId = funil === 'salabim' ? PIPELINES.salabim : PIPELINES.novosNegocios;
+        const titulo = HOTEIS[Math.floor(r2() * HOTEIS.length)];
+        const valor = 15000 + Math.floor(r2() * 105000);
+
+        out.push({
+          id: id++,
+          title: titulo,
+          pipeline_id: pipelineId,
+          stage_id: STAGES[funil].apresentacaoAgendada[0] ?? 0,
+          status: 'won',
+          undone_activities_count: 0,
+          next_activity_date: null,
+          user_id: closer.userId,
+          value: valor,
+          won_time: dia + ' 12:00:00',
+        } as unknown as Negocio);
       }
     }
   }

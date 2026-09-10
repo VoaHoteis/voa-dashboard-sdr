@@ -13,6 +13,7 @@ import {
 import { BotaoAtualizar, ProvedorAtualizacao, useApi } from '@/components/base';
 import { CardAgendamentoPorSdr, CardAgendamentosTotais } from '@/components/CardsAgendamentos';
 import { CardDetalhamentoSdr, CardFunilSdr } from '@/components/CardsSdr';
+import { CardFechamentos } from '@/components/CardFechamentos';
 import { CardNoShows } from '@/components/CardNoShows';
 import {
   CardAgendamentosFuturos,
@@ -140,8 +141,8 @@ function Painel() {
       {!ehMesCorrente && (
         <p className="aviso">
           O filtro está em {formatarBR(periodo.inicio)}–{formatarBR(periodo.fim)}. Os cards de
-          Agendamentos Totais, por SDR e No-shows seguem esse período; Detalhamento, Funil,
-          Futuros e Atividades continuam no mês corrente, porque as metas são mensais.
+          Agendamentos Totais, por SDR e No-shows seguem esse período; Fechamentos, Detalhamento,
+          Funil, Futuros e Atividades continuam no mês corrente, porque as metas são mensais.
         </p>
       )}
 
@@ -151,6 +152,10 @@ function Painel() {
           url={urlFiltro}
           futuros={ehMesCorrente ? futuros.dados : null}
         />
+      </div>
+
+      <div className="grade cheia">
+        <CardFechamentos />
       </div>
 
       <div className="grade">
