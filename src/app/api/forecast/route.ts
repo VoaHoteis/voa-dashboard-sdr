@@ -48,6 +48,35 @@ export async function GET(req: Request) {
       }
     }
 
+    // Diagnóstico temporário: /api/forecast?debug=1 mostra, por etapa, quantos
+    // negócios abertos vieram, quantos têm expected_close_date preenchida e uma
+    // amostra das datas. Serve para descobrir por que o forecast veio vazio sem
+    // expor dados sensíveis (só datas e contagens). Remover depois.
+    if (searchParams.get('debug') === '1') {
+      const diag: Record<string, unknown> = { periodo: { inicio, fim } };
+      for (const funil of FUNIS) {
+        for (const etapa of ETAPAS_ORDEM) {
+          const lista = porFunilEtapa[funil][etapa];
+          const datas = lista
+            .map((d) => (d as { expected_close_date?: string | null }).expected_close_date)
+            .filter((v): v is string => !!v);
+          const noMes = datas.filter((v) => v.slice(0, 10) >= inicio && v.slice(0, 10) <= fim);
+          diag[funil + '/' + etapa] = {
+            abertos: lista.length,
+            com_data: datas.length,
+            no_mes: noMes.length,
+            amostra_datas: datas.slice(0, 5),
+            tem_campo_no_objeto: lista.length > 0 ? 'expected_close_date' in lista[0] : null,
+            chaves_de_data:
+              lista.length > 0
+                ? Object.keys(lista[0]).filter((k) => /date|close|expect|time/i.test(k))
+                : [],
+          };
+        }
+      }
+      return NextResponse.json(diag);
+    }
+
     const itens = resolverForecast(porFunilEtapa, { inicio, fim });
 
     const porFunil = zeroPorFunil();
