@@ -9,6 +9,7 @@ import {
   type EtapaKey,
   type FunnelKey,
 } from '@/lib/config';
+import { hoje, nomeDoMes } from '@/lib/dates';
 import { linkDoNegocio } from '@/lib/detalhe';
 import type { ForecastResposta, ItemForecast } from '@/lib/types';
 import { BarraFunis, LegendaFunis, Painel, useApi } from './base';
@@ -28,9 +29,10 @@ function moeda(n: number): string {
 
 export function CardForecast() {
   const estado = useApi<ForecastResposta>('/api/forecast');
+  const mes = nomeDoMes(hoje());
 
   return (
-    <Painel titulo="Forecast — negócios abertos" periodo="posição atual" estado={estado}>
+    <Painel titulo="Forecast — previsão do mês" periodo={`fecham em ${mes}`} estado={estado}>
       {(d) => {
         const celula = (funil: FunnelKey, etapa: EtapaKey) =>
           d.porEtapa.find((x) => x.funil === funil && x.etapa === etapa);
@@ -44,7 +46,7 @@ export function CardForecast() {
                 {moeda(d.valor)}
               </span>
               <span className="rotulo">
-                em aberto ·{' '}
+                previstos para fechar ·{' '}
                 <strong style={{ color: 'var(--texto)' }}>{d.total}</strong>{' '}
                 {d.total === 1 ? 'negócio' : 'negócios'}
               </span>
@@ -115,7 +117,7 @@ export function CardForecast() {
             </div>
 
             <div style={{ marginTop: 24 }}>
-              <span className="rotulo">Todos os negócios abertos · maior valor primeiro</span>
+              <span className="rotulo">Negócios com fechamento previsto · maior valor primeiro</span>
               <div className="rolagem" style={{ marginTop: 8 }}>
                 <TabelaForecast itens={itens} />
               </div>
@@ -131,7 +133,7 @@ function TabelaForecast({ itens }: { itens: ItemForecast[] }) {
   if (itens.length === 0) {
     return (
       <p className="nota" style={{ border: 'none', marginTop: 0 }}>
-        Nenhum negócio aberto nas etapas acompanhadas.
+        Nenhum negócio com fechamento previsto para este mês.
       </p>
     );
   }

@@ -158,32 +158,48 @@ export function resolverFechamentos(negocios: Negocio[]): FechamentoResolvido[] 
 // --------------------------------------------------------------- forecast
 
 /**
- * Forecast = todo negocio ABERTO nas etapas acompanhadas dos dois funis.
+ * Forecast = negocio ABERTO, nas etapas acompanhadas dos dois funis, cuja
+ * **Data de fechamento esperada** (`expected_close_date`) cai dentro do periodo.
  *
  * Recebe os negocios ja agrupados por funil e etapa (uma consulta por
- * `stage_id`, como o card de Funil faz), e devolve a lista achatada com funil,
- * etapa e valor de cada um. Diferente do funil, aqui NAO se quebra por SDR: o
- * card mostra a carteira aberta inteira, entao as 4 etapas entram -- inclusive
- * a Pre Qualificacao, por escolha do time.
+ * `stage_id`, como o card de Funil faz) e o periodo do mes, e devolve a lista
+ * achatada com funil, etapa e valor de cada um. Diferente do funil, aqui NAO se
+ * quebra por SDR: interessa a previsao do time inteiro.
+ *
+ * O corte pela `expected_close_date` e o que separa o forecast da carteira
+ * aberta inteira: negocio sem data prevista, ou com previsao para outro mes,
+ * fica de fora -- ele existe, mas nao e previsao deste mes. As 4 etapas seguem
+ * elegiveis (inclusive a Pre Qualificacao), desde que tenham a data no mes.
  */
 export interface ForecastItemResolvido {
   negocio: Negocio;
   funil: FunnelKey;
   etapa: EtapaKey;
   valor: number;
+  /** Data de fechamento esperada, so a parte YYYY-MM-DD. */
+  previsao: string;
 }
 
 export function resolverForecast(
-  porFunilEtapa: Record<FunnelKey, Record<EtapaKey, Negocio[]>>
+  porFunilEtapa: Record<FunnelKey, Record<EtapaKey, Negocio[]>>,
+  periodo: { inicio: string; fim: string }
 ): ForecastItemResolvido[] {
   const out: ForecastItemResolvido[] = [];
   for (const funil of ['novosNegocios', 'salabim'] as FunnelKey[]) {
     for (const etapa of ETAPAS_ORDEM) {
       for (const d of porFunilEtapa[funil]?.[etapa] ?? []) {
         if (d.status !== 'open') continue;
+
+        // `expected_close_date` vem como 'YYYY-MM-DD' ou null. Comparamos so a
+        // parte da data, como no resto do codigo. Sem data preenchida => fora.
+        const ecd = (d as { expected_close_date?: string | null }).expected_close_date;
+        if (!ecd) continue;
+        const previsao = ecd.slice(0, 10);
+        if (previsao < periodo.inicio || previsao > periodo.fim) continue;
+
         const valorBruto = (d as { value?: unknown }).value;
         const valor = typeof valorBruto === 'number' ? valorBruto : Number(valorBruto) || 0;
-        out.push({ negocio: d, funil, etapa, valor });
+        out.push({ negocio: d, funil, etapa, valor, previsao });
       }
     }
   }
