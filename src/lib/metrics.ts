@@ -20,7 +20,12 @@ import {
   type UnidadeContagem,
 } from './config';
 import type { Negocio } from './pipedrive';
-import { pessoaDoProprietario, pessoasDoCampoSdr, type Atividade } from './pipedrive';
+import {
+  nomeDoProprietario,
+  pessoaDoProprietario,
+  pessoasDoCampoSdr,
+  type Atividade,
+} from './pipedrive';
 import type { PorFunil } from './types';
 
 export function zeroPorFunil(): PorFunil {
@@ -182,6 +187,8 @@ export interface ForecastItemResolvido {
   etapaId: number;
   etapa: string;
   valor: number;
+  /** Nome do dono do negocio (pessoa conhecida ou nome cru da conta). */
+  proprietario: string;
   /** Data de fechamento esperada, so a parte YYYY-MM-DD. */
   previsao: string;
 }
@@ -208,12 +215,18 @@ export function resolverForecast(
     const valorBruto = (d as { value?: unknown }).value;
     const valor = typeof valorBruto === 'number' ? valorBruto : Number(valorBruto) || 0;
 
+    // Dono conhecido sai com o nome padronizado de PESSOAS; senao, o nome cru
+    // cadastrado na conta; e so entao um traço.
+    const donoKey = pessoaDoProprietario(d);
+    const proprietario = donoKey ? nomeDaPessoa(donoKey) : (nomeDoProprietario(d) ?? '—');
+
     out.push({
       negocio: d,
       funil,
       etapaId: d.stage_id,
       etapa: etapas.get(d.stage_id) ?? 'Etapa ' + d.stage_id,
       valor,
+      proprietario,
       previsao,
     });
   }

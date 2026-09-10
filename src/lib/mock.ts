@@ -85,6 +85,10 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
         ? addDias(inicioMes, Math.floor(r() * 27))
         : addDias(inicioMes, 33 + Math.floor(r() * 40));
 
+  // Dono do negocio no formato objeto da v1 ({id, name}), alternando entre os
+  // closers, para o card de Forecast ter um proprietario nomeado para exibir.
+  const dono = CLOSERS[i % CLOSERS.length];
+
   return {
     id: 1000 + i,
     title: titulo,
@@ -95,6 +99,7 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
     next_activity_date: proxima,
     value: valor,
     expected_close_date: expected,
+    user_id: { id: dono.userId, name: dono.nome },
     [SDR_FIELD_KEY]: sdrIds,
   } as Negocio;
 });
