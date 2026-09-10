@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  CORES_FUNIL,
-  ETAPAS_ORDEM,
-  ETAPA_LABEL,
-  etapaExiste,
-  FUNNEL_LABEL,
-  type EtapaKey,
-  type FunnelKey,
-} from '@/lib/config';
+import { CORES_FUNIL, FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
 import { hoje, nomeDoMes } from '@/lib/dates';
 import { linkDoNegocio } from '@/lib/detalhe';
 import type { ForecastResposta, ItemForecast } from '@/lib/types';
@@ -34,9 +26,7 @@ export function CardForecast() {
   return (
     <Painel titulo="Forecast — previsão do mês" periodo={`fecham em ${mes}`} estado={estado}>
       {(d) => {
-        const celula = (funil: FunnelKey, etapa: EtapaKey) =>
-          d.porEtapa.find((x) => x.funil === funil && x.etapa === etapa);
-
+        const etapas = [...d.porEtapa].sort((a, b) => b.valor - a.valor);
         const itens = [...d.itens].sort((a, b) => b.valor - a.valor);
 
         return (
@@ -74,47 +64,35 @@ export function CardForecast() {
 
             <LegendaFunis />
 
-            <div style={{ marginTop: 24 }}>
-              <span className="rotulo">Por etapa</span>
-              <table className="tabela" style={{ marginTop: 8 }}>
-                <thead>
-                  <tr>
-                    <th>Etapa</th>
-                    {FUNIS.map((f) => (
-                      <th key={f} className="num" style={{ color: CORES_FUNIL[f] }}>
-                        {FUNNEL_LABEL[f]}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {ETAPAS_ORDEM.map((etapa) => (
-                    <tr key={etapa}>
-                      <td>{ETAPA_LABEL[etapa]}</td>
-                      {FUNIS.map((f) => {
-                        const c = celula(f, etapa);
-                        return (
-                          <td key={f} className="num">
-                            {!etapaExiste(f, etapa) ? (
-                              <span style={{ color: 'var(--texto-fraco)' }} title="Etapa não existe neste funil">
-                                —
-                              </span>
-                            ) : c ? (
-                              <>
-                                {c.total}
-                                <span style={{ color: 'var(--texto-fraco)' }}> · {moeda(c.valor)}</span>
-                              </>
-                            ) : (
-                              <span style={{ color: 'var(--texto-fraco)' }}>0</span>
-                            )}
-                          </td>
-                        );
-                      })}
+            {etapas.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <span className="rotulo">Por etapa · maior valor primeiro</span>
+                <table className="tabela" style={{ marginTop: 8 }}>
+                  <thead>
+                    <tr>
+                      <th>Etapa</th>
+                      <th>Funil</th>
+                      <th className="num">Negócios</th>
+                      <th className="num">Valor</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {etapas.map((e) => (
+                      <tr key={e.funil + ':' + e.etapaId}>
+                        <td>{e.etapa}</td>
+                        <td style={{ color: CORES_FUNIL[e.funil], whiteSpace: 'nowrap' }}>
+                          {FUNNEL_LABEL[e.funil]}
+                        </td>
+                        <td className="num">{e.total}</td>
+                        <td className="num" style={{ whiteSpace: 'nowrap' }}>
+                          {moeda(e.valor)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             <div style={{ marginTop: 24 }}>
               <span className="rotulo">Negócios com fechamento previsto · maior valor primeiro</span>
@@ -161,7 +139,7 @@ function TabelaForecast({ itens }: { itens: ItemForecast[] }) {
             <td style={{ color: CORES_FUNIL[i.funil], whiteSpace: 'nowrap' }}>
               {FUNNEL_LABEL[i.funil]}
             </td>
-            <td style={{ whiteSpace: 'nowrap' }}>{ETAPA_LABEL[i.etapa]}</td>
+            <td style={{ whiteSpace: 'nowrap' }}>{i.etapa}</td>
             <td className="num" style={{ whiteSpace: 'nowrap' }}>
               {moeda(i.valor)}
             </td>

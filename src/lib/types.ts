@@ -137,7 +137,10 @@ export interface ItemForecast {
   negocioId: number;
   titulo: string;
   funil: FunnelKey;
-  etapa: EtapaKey;
+  /** stage_id do negocio no Pipedrive. */
+  etapaId: number;
+  /** Nome da etapa (vindo de /v1/stages). */
+  etapa: string;
   /** Valor do negocio, na moeda da conta (BRL). */
   valor: number;
 }
@@ -151,10 +154,11 @@ export interface ForecastResposta {
   valor: number;
   porFunil: PorFunil;
   valorPorFunil: PorFunil;
-  /** Uma entrada por combinacao funil x etapa que tem ao menos um negocio. */
+  /** Uma entrada por etapa (funil + stage) que tem ao menos um negocio previsto. */
   porEtapa: Array<{
     funil: FunnelKey;
-    etapa: EtapaKey;
+    etapaId: number;
+    etapa: string;
     total: number;
     valor: number;
   }>;

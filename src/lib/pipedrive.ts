@@ -242,6 +242,36 @@ export async function buscarNegociosGanhos(opts: {
 }
 
 /**
+ * Todos os negocios ABERTOS da conta, para o card de Forecast.
+ *
+ * Sem filtro de etapa de proposito: a definicao do forecast e "todo negocio
+ * aberto com Data de fechamento esperada no mes", em QUALQUER etapa -- restringir
+ * pelas etapas do funil (como o card de saude faz) descartava justamente os
+ * negocios em negociacao avancada, que sao os que tem previsao de fechamento. O
+ * recorte por funil e por data roda depois, em memoria.
+ *
+ * Mesmo formato da busca de ganhos: a v1 traz `value`, `expected_close_date`,
+ * `pipeline_id` e `stage_id` no topo de cada negocio.
+ */
+export async function buscarNegociosAbertos(): Promise<Negocio[]> {
+  if (modoMock()) return (await mock()).negociosAbertosFalsos();
+  return buscarTudo<Negocio>('/v1/deals', { status: 'open', user_id: 0 });
+}
+
+/**
+ * Etapas da conta (id -> nome), para o forecast rotular a etapa de cada negocio
+ * sem depender do STAGES fixo (que so cobre as 4 etapas acompanhadas). Como o
+ * forecast pega negocios de qualquer etapa, precisa do nome de todas.
+ */
+export async function buscarEtapas(): Promise<Map<number, string>> {
+  if (modoMock()) return (await mock()).etapasFalsas();
+  const linhas = await buscarTudo<{ id: number; name: string }>('/v1/stages', {});
+  const m = new Map<number, string>();
+  for (const s of linhas) if (typeof s.id === 'number') m.set(s.id, s.name);
+  return m;
+}
+
+/**
  * Negocios por id, para resolver funil e SDR das atividades do periodo.
  *
  * Aqui e a v2, que aceita lote por `ids` -- sao poucas dezenas de negocios por
