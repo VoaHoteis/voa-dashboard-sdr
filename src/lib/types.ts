@@ -141,6 +141,8 @@ export interface ItemForecast {
   etapaId: number;
   /** Nome da etapa (vindo de /v1/stages). */
   etapa: string;
+  /** Nome do dono do negocio. */
+  proprietario: string;
   /** Valor do negocio, na moeda da conta (BRL). */
   valor: number;
 }
@@ -154,14 +156,6 @@ export interface ForecastResposta {
   valor: number;
   porFunil: PorFunil;
   valorPorFunil: PorFunil;
-  /** Uma entrada por etapa (funil + stage) que tem ao menos um negocio previsto. */
-  porEtapa: Array<{
-    funil: FunnelKey;
-    etapaId: number;
-    etapa: string;
-    total: number;
-    valor: number;
-  }>;
   itens: ItemForecast[];
 }
 

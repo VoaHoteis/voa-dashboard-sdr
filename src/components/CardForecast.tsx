@@ -26,7 +26,6 @@ export function CardForecast() {
   return (
     <Painel titulo="Forecast — previsão do mês" periodo={`fecham em ${mes}`} estado={estado}>
       {(d) => {
-        const etapas = [...d.porEtapa].sort((a, b) => b.valor - a.valor);
         const itens = [...d.itens].sort((a, b) => b.valor - a.valor);
 
         return (
@@ -64,36 +63,6 @@ export function CardForecast() {
 
             <LegendaFunis />
 
-            {etapas.length > 0 && (
-              <div style={{ marginTop: 24 }}>
-                <span className="rotulo">Por etapa · maior valor primeiro</span>
-                <table className="tabela" style={{ marginTop: 8 }}>
-                  <thead>
-                    <tr>
-                      <th>Etapa</th>
-                      <th>Funil</th>
-                      <th className="num">Negócios</th>
-                      <th className="num">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {etapas.map((e) => (
-                      <tr key={e.funil + ':' + e.etapaId}>
-                        <td>{e.etapa}</td>
-                        <td style={{ color: CORES_FUNIL[e.funil], whiteSpace: 'nowrap' }}>
-                          {FUNNEL_LABEL[e.funil]}
-                        </td>
-                        <td className="num">{e.total}</td>
-                        <td className="num" style={{ whiteSpace: 'nowrap' }}>
-                          {moeda(e.valor)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
             <div style={{ marginTop: 24 }}>
               <span className="rotulo">Negócios com fechamento previsto · maior valor primeiro</span>
               <div className="rolagem" style={{ marginTop: 8 }}>
@@ -122,6 +91,7 @@ function TabelaForecast({ itens }: { itens: ItemForecast[] }) {
         <tr>
           <th>#</th>
           <th>Negócio</th>
+          <th>Proprietário</th>
           <th>Funil</th>
           <th>Etapa</th>
           <th className="num">Valor</th>
@@ -136,6 +106,7 @@ function TabelaForecast({ itens }: { itens: ItemForecast[] }) {
                 {i.titulo}
               </a>
             </td>
+            <td style={{ whiteSpace: 'nowrap' }}>{i.proprietario}</td>
             <td style={{ color: CORES_FUNIL[i.funil], whiteSpace: 'nowrap' }}>
               {FUNNEL_LABEL[i.funil]}
             </td>

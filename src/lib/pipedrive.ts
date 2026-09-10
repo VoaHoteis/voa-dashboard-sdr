@@ -398,6 +398,24 @@ export function pessoaDoProprietario(negocio: Negocio | undefined): string | nul
   return id === null ? null : (USUARIO_PARA_PESSOA.get(id) ?? null);
 }
 
+/**
+ * Nome de exibicao do dono, direto do objeto `user_id` da v1 ({id, name, ...}).
+ *
+ * Serve para o forecast, que lista negocios de qualquer dono -- inclusive quem
+ * nao esta em PESSOAS. Quando o dono e uma pessoa conhecida, prefira
+ * `pessoaDoProprietario` + `nomeDaPessoa` para o nome sair padronizado; este
+ * aqui e o fallback com o nome cru que a conta cadastrou.
+ */
+export function nomeDoProprietario(negocio: Negocio | undefined): string | null {
+  if (!negocio) return null;
+  const bruto = (negocio as { user_id?: unknown }).user_id;
+  if (bruto && typeof bruto === 'object') {
+    const name = (bruto as { name?: unknown }).name;
+    if (typeof name === 'string' && name.trim()) return name.trim();
+  }
+  return null;
+}
+
 // -------------------------------------------------------------------- mock
 
 type ModuloMock = typeof import('./mock');
