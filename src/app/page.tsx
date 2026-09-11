@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { UNIDADE_PADRAO, type UnidadeContagem } from '@/lib/config';
 import {
@@ -81,6 +82,10 @@ function Painel() {
           <h1>Metas do time de SDR</h1>
           <p className="sub">
             VOA Hotéis · dados do Pipedrive · hoje é {formatarBR(ref)} ·{' '}
+            <Link className="troca" href="/marketing">
+              ver marketing
+            </Link>{' '}
+            ·{' '}
             <button
               className="sair"
               onClick={async () => {

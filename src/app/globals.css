@@ -701,3 +701,167 @@ h3 {
 .sair:hover {
   color: var(--texto);
 }
+
+.troca {
+  color: var(--texto-fraco);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: #39402f;
+}
+
+.troca:hover {
+  color: var(--salabim);
+  text-decoration-color: currentColor;
+}
+
+/* --------------------------------------------------------- kpis marketing */
+
+.kpis-marketing {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 18px 24px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.kpi .rotulo {
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+}
+
+.kpi .numero {
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.kpi-sub {
+  font-size: 11.5px;
+  color: var(--texto-fraco);
+}
+
+/* ------------------------------------------------------ tabela marketing */
+
+.fontes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+}
+
+.fonte {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: var(--texto-fraco);
+}
+
+.fonte i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--texto-fraco);
+}
+
+.fonte[data-origem='live'] i {
+  background: var(--salabim);
+}
+
+.fonte[data-origem='mock'] i {
+  background: var(--atencao);
+}
+
+.rolagem-x {
+  overflow-x: auto;
+  margin: 0 -22px -22px;
+  padding: 0 22px 4px;
+}
+
+.tabela-marketing {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabela-marketing th,
+.tabela-marketing td {
+  padding: 8px 12px;
+  text-align: right;
+  border-bottom: 1px solid #1b1e18;
+}
+
+.tabela-marketing thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--painel);
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+  border-bottom: 1px solid var(--borda);
+}
+
+.tabela-marketing .sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--painel);
+  text-align: left;
+  font-family: var(--fonte-texto), system-ui, sans-serif;
+}
+
+.tabela-marketing thead .sticky-col {
+  z-index: 3;
+}
+
+.tabela-marketing tbody .sticky-col {
+  color: var(--texto);
+  font-weight: 500;
+}
+
+.tabela-marketing td {
+  font-family: var(--fonte-numero), system-ui, sans-serif;
+  color: var(--texto-fraco);
+}
+
+.tabela-marketing td.forte {
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.tabela-marketing .sep {
+  border-left: 1px solid var(--borda);
+}
+
+.tabela-marketing tbody tr:hover td {
+  background: var(--painel-alto);
+}
+
+.tabela-marketing tbody tr:hover .sticky-col {
+  background: var(--painel-alto);
+}
+
+.tabela-marketing tfoot td {
+  position: sticky;
+  bottom: 0;
+  background: var(--painel);
+  border-top: 1px solid var(--borda);
+  border-bottom: none;
+  color: var(--texto);
+  font-weight: 600;
+  font-family: var(--fonte-numero), system-ui, sans-serif;
+}
+
+.tabela-marketing tfoot .sticky-col {
+  font-family: var(--fonte-texto), system-ui, sans-serif;
+}
