@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { UNIDADE_PADRAO, type UnidadeContagem } from '@/lib/config';
 import {
   addDias,
@@ -54,8 +54,34 @@ function Painel() {
   const [atalho, setAtalho] = useState<Atalho>('este-mes');
   const [custom, setCustom] = useState(() => intervalo('este-mes', ref));
   const [unidade, setUnidade] = useState<UnidadeContagem>(UNIDADE_PADRAO);
+  const [filtroAberto, setFiltroAberto] = useState(false);
 
   const periodo = atalho === 'custom' ? custom : intervalo(atalho, ref);
+
+  // Fecha o popover de filtro ao clicar fora ou apertar Esc.
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!filtroAberto) return;
+    const aoClicar = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setFiltroAberto(false);
+    };
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFiltroAberto(false);
+    };
+    document.addEventListener('mousedown', aoClicar);
+    document.addEventListener('keydown', aoTeclar);
+    return () => {
+      document.removeEventListener('mousedown', aoClicar);
+      document.removeEventListener('keydown', aoTeclar);
+    };
+  }, [filtroAberto]);
+
+  const rotuloAtalho: Record<Atalho, string> = {
+    'este-mes': 'Este mês',
+    'mes-passado': 'Mês passado',
+    'ultimos-30': 'Últimos 30 dias',
+    custom: `${formatarBR(periodo.inicio)}–${formatarBR(periodo.fim)}`,
+  };
 
   const urlFiltro = `/api/agendamentos?inicio=${periodo.inicio}&fim=${periodo.fim}&unidade=${unidade}`;
 
@@ -97,48 +123,80 @@ function Painel() {
 
         <div className="filtro">
           {aba === 'sdr' && (
-            <>
-              {(
-                [
-                  ['este-mes', 'Este mês'],
-                  ['mes-passado', 'Mês passado'],
-                  ['ultimos-30', 'Últimos 30 dias'],
-                ] as const
-              ).map(([k, label]) => (
-                <button key={k} data-ativo={atalho === k} onClick={() => setAtalho(k)}>
-                  {label}
-                </button>
-              ))}
-
-              <input
-                type="date"
-                value={periodo.inicio}
-                max={periodo.fim}
-                onChange={(e) => {
-                  setCustom({ inicio: e.target.value, fim: periodo.fim });
-                  setAtalho('custom');
-                }}
-                aria-label="Início do período"
-              />
-              <input
-                type="date"
-                value={periodo.fim}
-                min={periodo.inicio}
-                onChange={(e) => {
-                  setCustom({ inicio: periodo.inicio, fim: e.target.value });
-                  setAtalho('custom');
-                }}
-                aria-label="Fim do período"
-              />
-
+            <div className="filtro-menu" ref={menuRef}>
               <button
-                data-ativo={unidade === 'negocios'}
-                onClick={() => setUnidade(unidade === 'atividades' ? 'negocios' : 'atividades')}
-                title="Alterna entre contar cada reunião e contar negócios distintos"
+                className="gatilho-filtro"
+                data-aberto={filtroAberto}
+                aria-expanded={filtroAberto}
+                aria-haspopup="menu"
+                onClick={() => setFiltroAberto((v) => !v)}
               >
-                {unidade === 'atividades' ? 'Contando reuniões' : 'Contando negócios'}
+                Filtrar
+                <span className="resumo-filtro">{rotuloAtalho[atalho]}</span>
               </button>
-            </>
+
+              {filtroAberto && (
+                <div className="popover-filtro" role="menu">
+                  <div className="grupo-filtro">
+                    <span className="rotulo">Período</span>
+                    <div className="linha-filtro">
+                      {(
+                        [
+                          ['este-mes', 'Este mês'],
+                          ['mes-passado', 'Mês passado'],
+                          ['ultimos-30', 'Últimos 30 dias'],
+                        ] as const
+                      ).map(([k, label]) => (
+                        <button key={k} data-ativo={atalho === k} onClick={() => setAtalho(k)}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grupo-filtro">
+                    <span className="rotulo">Intervalo personalizado</span>
+                    <div className="linha-filtro">
+                      <input
+                        type="date"
+                        value={periodo.inicio}
+                        max={periodo.fim}
+                        onChange={(e) => {
+                          setCustom({ inicio: e.target.value, fim: periodo.fim });
+                          setAtalho('custom');
+                        }}
+                        aria-label="Início do período"
+                      />
+                      <input
+                        type="date"
+                        value={periodo.fim}
+                        min={periodo.inicio}
+                        onChange={(e) => {
+                          setCustom({ inicio: periodo.inicio, fim: e.target.value });
+                          setAtalho('custom');
+                        }}
+                        aria-label="Fim do período"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grupo-filtro">
+                    <span className="rotulo">Contagem</span>
+                    <div className="linha-filtro">
+                      <button
+                        data-ativo={unidade === 'negocios'}
+                        onClick={() =>
+                          setUnidade(unidade === 'atividades' ? 'negocios' : 'atividades')
+                        }
+                        title="Alterna entre contar cada reunião e contar negócios distintos"
+                      >
+                        {unidade === 'atividades' ? 'Contando reuniões' : 'Contando negócios'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           <BotaoAtualizar />
