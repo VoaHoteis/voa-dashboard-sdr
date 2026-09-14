@@ -6,6 +6,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -233,14 +234,44 @@ export function CardsAtividadesSemana() {
                         labelStyle={{ color: '#f1f3ed' }}
                       />
                       <Legend wrapperStyle={{ fontSize: 11, color: '#8a9080' }} iconSize={9} />
-                      {TIPOS_ESFORCO.map((t) => (
+                      {TIPOS_ESFORCO.map((t, i) => (
                         <Bar
                           key={t.key}
                           dataKey={t.key}
                           name={t.label}
                           stackId="esforco"
                           fill={t.cor}
-                        />
+                        >
+                          {/* O total vai só na última barra da pilha (o topo),
+                              somando todos os tipos daquela semana. */}
+                          {i === TIPOS_ESFORCO.length - 1 && (
+                            <LabelList
+                              position="top"
+                              content={({ x, y, width, index }) => {
+                                if (index == null) return null;
+                                const linha = sdr.series[index];
+                                const total = TIPOS_ESFORCO.reduce(
+                                  (acc, tt) => acc + (Number(linha?.[tt.key]) || 0),
+                                  0
+                                );
+                                if (!total) return null;
+                                const cx = Number(x) + Number(width) / 2;
+                                return (
+                                  <text
+                                    x={cx}
+                                    y={Number(y) - 6}
+                                    fill="#f1f3ed"
+                                    fontSize={12}
+                                    fontWeight={600}
+                                    textAnchor="middle"
+                                  >
+                                    {total}
+                                  </text>
+                                );
+                              }}
+                            />
+                          )}
+                        </Bar>
                       ))}
                     </BarChart>
                   </ResponsiveContainer>
