@@ -10,8 +10,8 @@
 
 import { NextResponse } from 'next/server';
 import { SDRS, TIPOS_ESFORCO } from '@/lib/config';
-import { hoje, primeiroDiaDoMes, semanasDoMes, ultimoDiaDoMes } from '@/lib/dates';
-import { buscarAtividades } from '@/lib/pipedrive';
+import { addDias, hoje, primeiroDiaDoMes, semanasDoMes, ultimoDiaDoMes } from '@/lib/dates';
+import { buscarAtividades, dataConclusao } from '@/lib/pipedrive';
 import type { AtividadesResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -26,11 +26,17 @@ export async function GET(req: Request) {
     const semanas = semanasDoMes(ref);
     const tipos = TIPOS_ESFORCO.map((t) => t.key);
 
+    // A busca da API filtra por data MARCADA (due_date), mas contamos por data de
+    // CONCLUSÃO. Alargamos a janela ~35 dias para trás para pegar atividades
+    // concluídas neste mês que estavam marcadas no mês anterior; o recorte fino
+    // por semana (abaixo) usa a data de conclusão e descarta o excedente.
+    const janelaInicio = addDias(inicio, -35);
+
     const porSdr: AtividadesResposta['porSdr'] = [];
 
     for (const s of SDRS) {
       const atividades = await buscarAtividades({
-        inicio,
+        inicio: janelaInicio,
         fim,
         tipos,
         concluidas: true,
@@ -44,7 +50,7 @@ export async function GET(req: Request) {
         for (const t of tipos) linha[t] = 0;
 
         for (const a of atividades) {
-          const d = a.due_date;
+          const d = dataConclusao(a);
           if (!d || d < sem.inicio || d > sem.fim) continue;
           if (!(a.type in linha)) continue;
           linha[a.type] = (linha[a.type] as number) + 1;
