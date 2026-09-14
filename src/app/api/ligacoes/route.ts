@@ -1,0 +1,68 @@
+/**
+ * Card — Ligações de Prospecção por dia.
+ *
+ * GET /api/ligacoes
+ *
+ * Conta, por SDR, as atividades do tipo "Ligação de Prospecção" concluídas em
+ * cada dia útil do mês corrente, contra a meta diária (20). Como o card de
+ * Atividades, a atribuição é pelo EXECUTOR da atividade (user_id do Pipedrive):
+ * a pergunta aqui é quanto esforço a pessoa fez, não de quem é a carteira.
+ */
+
+import { NextResponse } from 'next/server';
+import { META_LIGACOES_DIA, SDRS, TIPO_LIGACAO } from '@/lib/config';
+import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
+import { resolverLigacoesDiarias } from '@/lib/metrics';
+import { buscarAtividades } from '@/lib/pipedrive';
+import type { LigacoesResposta } from '@/lib/types';
+import { limparCacheSePedido, respostaDeErro } from '../_comum';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: Request) {
+  try {
+    limparCacheSePedido(req);
+    const ref = hoje();
+    const inicio = primeiroDiaDoMes(ref);
+    const fim = ultimoDiaDoMes(ref);
+
+    const porSdr: LigacoesResposta['porSdr'] = [];
+
+    for (const s of SDRS) {
+      const atividades = await buscarAtividades({
+        inicio,
+        fim,
+        tipos: [TIPO_LIGACAO],
+        concluidas: true,
+        userId: s.userId,
+      });
+
+      const r = resolverLigacoesDiarias(atividades, {
+        inicio,
+        hojeIso: ref,
+        meta: META_LIGACOES_DIA,
+      });
+
+      porSdr.push({
+        sdr: s.key,
+        nome: s.nome,
+        total: r.total,
+        diasBatidos: r.diasBatidos,
+        diasUteisDecorridos: r.diasUteisDecorridos,
+        sequenciaAtual: r.sequenciaAtual,
+        dias: r.dias,
+      });
+    }
+
+    const resposta: LigacoesResposta = {
+      mes: { inicio, fim },
+      meta: META_LIGACOES_DIA,
+      hoje: ref,
+      porSdr,
+    };
+
+    return NextResponse.json(resposta);
+  } catch (e) {
+    return respostaDeErro(e);
+  }
+}

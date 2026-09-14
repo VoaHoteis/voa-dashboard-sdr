@@ -318,6 +318,57 @@ h3 {
   vertical-align: baseline;
 }
 
+/* ------------------------------------------------- grade de ligações/dia */
+
+.dias-ligacoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.dia-ligacao {
+  width: 38px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border: 1px solid var(--borda);
+  background: var(--painel-alto);
+}
+
+.dia-ligacao .n {
+  font-family: var(--fonte-numero), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.dia-ligacao .dnum {
+  font-size: 9px;
+  color: var(--texto-fraco);
+}
+
+/* Dia que bateu a meta: preenchido com o lime da marca. */
+.dia-ligacao[data-batida='true'] {
+  background: color-mix(in srgb, var(--salabim) 16%, transparent);
+  border-color: color-mix(in srgb, var(--salabim) 45%, transparent);
+}
+
+.dia-ligacao[data-batida='true'] .n {
+  color: var(--salabim);
+}
+
+/* Contorno no dia corrente — ainda em andamento. */
+.dia-ligacao[data-hoje='true'] {
+  outline: 1px dashed var(--texto-fraco);
+  outline-offset: 1px;
+}
+
 /* ------------------------------------------------------------------ selos */
 
 .selo {

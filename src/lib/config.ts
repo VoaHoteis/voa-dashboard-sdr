@@ -160,9 +160,18 @@ export const TIPOS_AGENDAMENTO = [
  */
 export const TIPO_NO_SHOW = 'registro_de_no_show';
 
+/**
+ * Tipo de atividade "Ligação de Prospecção" e a meta diaria de ligacoes por SDR.
+ *
+ * A meta e por DIA UTIL (20 ligacoes), diferente das metas de agendamento, que
+ * sao mensais. O card de ligacoes conta so este tipo, agrupado por dia.
+ */
+export const TIPO_LIGACAO = 'ligacao_de_prospeccao_plan';
+export const META_LIGACOES_DIA = 20;
+
 /** Tipos de atividade de esforco, do card "Atividades por semana". */
 export const TIPOS_ESFORCO = [
-  { key: 'ligacao_de_prospeccao_plan', label: 'Ligação de Prospecção', cor: '#C4FF3D' },
+  { key: TIPO_LIGACAO, label: 'Ligação de Prospecção', cor: '#C4FF3D' },
   { key: 'whatsapp', label: 'Follow up WhatsApp', cor: '#5CD0FF' },
   { key: 'primeiro_contato', label: 'Follow up', cor: '#F2A33C' },
   { key: 'pesquisa_de_qualificacao', label: 'Qualificação', cor: '#B98CFF' },
