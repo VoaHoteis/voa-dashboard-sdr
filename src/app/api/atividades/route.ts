@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { SDRS, TIPOS_ESFORCO } from '@/lib/config';
+import { SDRS, TIPO_LIGACAO, TIPOS_ESFORCO } from '@/lib/config';
 import { addDias, hoje, primeiroDiaDoMes, semanasDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { buscarAtividades, dataConclusao } from '@/lib/pipedrive';
 import type { AtividadesResposta } from '@/lib/types';
@@ -25,43 +25,6 @@ export async function GET(req: Request) {
     const fim = ultimoDiaDoMes(ref);
     const semanas = semanasDoMes(ref);
     const tipos = TIPOS_ESFORCO.map((t) => t.key);
-
-    // DIAGNÓSTICO TEMPORÁRIO: distribuição por assunto das ligações da Bárbara.
-    // Abrir /api/atividades?debug=1 no preview publicado. Remover depois.
-    const url = new URL(req.url);
-    if (url.searchParams.get('debug') === '1') {
-      const barbara = SDRS.find((s) => s.key === 'barbara') ?? SDRS[0];
-      const ligacoes = await buscarAtividades({
-        inicio: addDias(inicio, -35),
-        fim,
-        tipos: ['ligacao_de_prospeccao_plan'],
-        concluidas: true,
-        userId: barbara.userId,
-      });
-      const noMes = ligacoes.filter((a) => {
-        const d = dataConclusao(a);
-        return d && d >= inicio && d <= fim;
-      });
-      const porAssunto: Record<string, { total: number; comNegocio: number; semNegocio: number }> = {};
-      for (const a of noMes) {
-        const s = (a.subject ?? '(sem assunto)').trim() || '(sem assunto)';
-        porAssunto[s] ??= { total: 0, comNegocio: 0, semNegocio: 0 };
-        porAssunto[s].total += 1;
-        if (a.deal_id) porAssunto[s].comNegocio += 1;
-        else porAssunto[s].semNegocio += 1;
-      }
-      const distribuicao = Object.entries(porAssunto)
-        .map(([assunto, v]) => ({ assunto, ...v }))
-        .sort((x, y) => y.total - x.total);
-      return NextResponse.json({
-        sdr: barbara.nome,
-        mes: { inicio, fim },
-        total_ligacoes_no_mes: noMes.length,
-        total_com_negocio: noMes.filter((a) => a.deal_id).length,
-        total_sem_negocio: noMes.filter((a) => !a.deal_id).length,
-        distribuicao_por_assunto: distribuicao,
-      });
-    }
 
     // A busca da API filtra por data MARCADA (due_date), mas contamos por data de
     // CONCLUSÃO. Alargamos a janela ~35 dias para trás para pegar atividades
@@ -90,6 +53,12 @@ export async function GET(req: Request) {
           const d = dataConclusao(a);
           if (!d || d < sem.inicio || d > sem.fim) continue;
           if (!(a.type in linha)) continue;
+          // Ligação de Prospecção só conta com negócio vinculado: o discador
+          // automático (Kinbox) gera uma atividade por tentativa, sempre sem
+          // negócio (deal_id null), enquanto a ligação que a SDR faz e marca no
+          // CRM fica ligada a um negócio. Os demais tipos de esforço não têm
+          // essa inflação, então contam como antes.
+          if (a.type === TIPO_LIGACAO && a.deal_id == null) continue;
           linha[a.type] = (linha[a.type] as number) + 1;
           porTipo[a.type] += 1;
         }
