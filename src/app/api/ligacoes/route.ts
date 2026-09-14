@@ -11,7 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import { META_LIGACOES_DIA, SDRS, TIPO_LIGACAO } from '@/lib/config';
-import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
+import { addDias, hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { resolverLigacoesDiarias } from '@/lib/metrics';
 import { buscarAtividades } from '@/lib/pipedrive';
 import type { LigacoesResposta } from '@/lib/types';
@@ -26,11 +26,16 @@ export async function GET(req: Request) {
     const inicio = primeiroDiaDoMes(ref);
     const fim = ultimoDiaDoMes(ref);
 
+    // Busca por data MARCADA (due_date), mas o resolver conta por data de
+    // CONCLUSÃO. Alargamos ~35 dias para trás para pegar ligações concluídas
+    // neste mês que estavam marcadas no anterior; o resolver recorta o excedente.
+    const janelaInicio = addDias(inicio, -35);
+
     const porSdr: LigacoesResposta['porSdr'] = [];
 
     for (const s of SDRS) {
       const atividades = await buscarAtividades({
-        inicio,
+        inicio: janelaInicio,
         fim,
         tipos: [TIPO_LIGACAO],
         concluidas: true,

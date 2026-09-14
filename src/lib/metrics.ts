@@ -22,6 +22,7 @@ import {
 import { ehDiaUtil, listarDias, type ISODate } from './dates';
 import type { Negocio } from './pipedrive';
 import {
+  dataConclusao,
   nomeDoProprietario,
   pessoaDoProprietario,
   pessoasDoCampoSdr,
@@ -267,7 +268,10 @@ export function resolverLigacoesDiarias(
   const porDia = new Map<string, number>();
   let total = 0;
   for (const a of atividades) {
-    const d = a.due_date;
+    // Conta pelo dia em que a ligação foi CONCLUÍDA, não pelo que estava marcado
+    // na agenda. A janela [inicio, hoje] também recorta aqui as concluídas que
+    // vieram da busca alargada (marcadas em outro mês, feitas neste).
+    const d = dataConclusao(a);
     if (!d || d < opts.inicio || d > opts.hojeIso) continue;
     porDia.set(d, (porDia.get(d) ?? 0) + 1);
     total += 1;

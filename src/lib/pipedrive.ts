@@ -147,8 +147,30 @@ export interface Atividade {
   subject: string;
   done: boolean;
   due_date: ISODate | null;
+  /**
+   * Quando a atividade foi marcada como concluida. Vem como "2026-09-05 14:03:00"
+   * em UTC (ou null se ainda em aberto). E a base de contagem dos cards de
+   * esforco: a pergunta e "quantas ligacoes a pessoa FEZ no dia", e o dia que
+   * importa e o da realizacao, nao o que estava agendado na agenda.
+   */
+  marked_as_done_time: string | null;
   deal_id: number | null;
   user_id: number | null;
+}
+
+/**
+ * Data de conclusao (`marked_as_done_time`), so a parte YYYY-MM-DD, ou null se
+ * a atividade nao foi concluida.
+ *
+ * Como no resto do codigo (won_time, expected_close_date), comparamos so a parte
+ * da data e aceitamos o fuso UTC: uma ligacao concluida perto da meia-noite pode
+ * cair no dia vizinho. Para uma contagem diaria/mensal isso e aceitavel e evita
+ * carregar conversao de fuso aqui.
+ */
+export function dataConclusao(a: Atividade): ISODate | null {
+  const t = a.marked_as_done_time;
+  if (!t) return null;
+  return t.slice(0, 10) as ISODate;
 }
 
 export interface Negocio {

@@ -171,6 +171,7 @@ export async function atividadesFalsas(opts: {
             subject: 'Ligação de Prospecção',
             done: opts.concluidas,
             due_date: dia,
+            marked_as_done_time: opts.concluidas ? dia + ' 12:00:00' : null,
             deal_id: negocioDaSdr(r, userId).id,
             user_id: userId,
           });
@@ -186,6 +187,7 @@ export async function atividadesFalsas(opts: {
             subject: semVinculo ? 'Reunião de Apresentacão' : 'No show — ' + negocio.title,
             done: opts.concluidas,
             due_date: dia,
+            marked_as_done_time: opts.concluidas ? dia + ' 12:00:00' : null,
             deal_id: semVinculo ? null : negocio.id,
             user_id: userId,
           });
@@ -202,6 +204,7 @@ export async function atividadesFalsas(opts: {
             subject: 'Reunião de Apresentação — ' + negocio.title,
             done: opts.concluidas,
             due_date: dia,
+            marked_as_done_time: opts.concluidas ? dia + ' 12:00:00' : null,
             deal_id: negocio.id,
             user_id: userId,
           });
@@ -218,6 +221,7 @@ export async function atividadesFalsas(opts: {
             subject: label,
             done: opts.concluidas,
             due_date: dia,
+            marked_as_done_time: opts.concluidas ? dia + ' 12:00:00' : null,
             deal_id: negocioDaSdr(r, userId).id,
             user_id: userId,
           });
