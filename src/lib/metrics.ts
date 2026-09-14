@@ -19,6 +19,7 @@ import {
   STAGES,
   type UnidadeContagem,
 } from './config';
+import { ehDiaUtil, listarDias, type ISODate } from './dates';
 import type { Negocio } from './pipedrive';
 import {
   nomeDoProprietario,
@@ -26,7 +27,7 @@ import {
   pessoasDoCampoSdr,
   type Atividade,
 } from './pipedrive';
-import type { PorFunil } from './types';
+import type { DiaLigacoes, PorFunil } from './types';
 
 export function zeroPorFunil(): PorFunil {
   return { novosNegocios: 0, salabim: 0 };
@@ -231,6 +232,69 @@ export function resolverForecast(
     });
   }
   return out;
+}
+
+// --------------------------------------------------------------- ligações
+
+/**
+ * Ligações de Prospecção por dia útil de uma SDR, contra a meta diária.
+ *
+ * Recebe as atividades do tipo ligação já do mês (concluídas, da pessoa) e
+ * devolve, por dia útil do começo do mês até hoje: a contagem, se bateu a meta,
+ * quantos dias bateram e a sequência atual de dias úteis na meta.
+ *
+ * Três decisões que valem registro:
+ * - **Só dia útil entra na régua.** Fim de semana e feriado não têm meta de 20
+ *   ligações, então não contam como dia batido nem quebram a sequência. Ligação
+ *   lançada num sábado ainda soma no `total`, mas não vira um dia da grade.
+ * - **A janela vai só até hoje.** Dias futuros do mês não existem ainda; incluí-
+ *   los como "não batidos" afundaria o placar sem significar nada.
+ * - **Hoje não quebra a sequência.** O dia corrente ainda está em andamento, as
+ *   ligações podem estar sendo feitas agora — se ainda não bateu, ele é pulado
+ *   (não conta e não zera); um dia útil anterior abaixo da meta, sim, encerra a
+ *   sequência.
+ */
+export function resolverLigacoesDiarias(
+  atividades: Atividade[],
+  opts: { inicio: ISODate; hojeIso: ISODate; meta: number }
+): {
+  dias: DiaLigacoes[];
+  total: number;
+  diasBatidos: number;
+  diasUteisDecorridos: number;
+  sequenciaAtual: number;
+} {
+  const porDia = new Map<string, number>();
+  let total = 0;
+  for (const a of atividades) {
+    const d = a.due_date;
+    if (!d || d < opts.inicio || d > opts.hojeIso) continue;
+    porDia.set(d, (porDia.get(d) ?? 0) + 1);
+    total += 1;
+  }
+
+  const dias: DiaLigacoes[] = [];
+  for (const dia of listarDias(opts.inicio, opts.hojeIso)) {
+    if (!ehDiaUtil(dia)) continue;
+    const quantidade = porDia.get(dia) ?? 0;
+    dias.push({ data: dia, quantidade, batida: quantidade >= opts.meta });
+  }
+
+  const diasBatidos = dias.filter((d) => d.batida).length;
+
+  // Sequência: dias úteis batidos, de trás para frente. Hoje sem meta ainda é
+  // pulado (em andamento); qualquer outro dia útil abaixo da meta encerra.
+  let sequenciaAtual = 0;
+  for (let i = dias.length - 1; i >= 0; i--) {
+    if (dias[i].batida) {
+      sequenciaAtual += 1;
+      continue;
+    }
+    if (dias[i].data === opts.hojeIso) continue;
+    break;
+  }
+
+  return { dias, total, diasBatidos, diasUteisDecorridos: dias.length, sequenciaAtual };
 }
 
 // ------------------------------------------------------------------- ritmo

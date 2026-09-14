@@ -15,6 +15,7 @@ import { CardAgendamentoPorSdr, CardAgendamentosTotais } from '@/components/Card
 import { CardDetalhamentoSdr, CardFunilSdr } from '@/components/CardsSdr';
 import { CardFechamentos } from '@/components/CardFechamentos';
 import { CardForecast } from '@/components/CardForecast';
+import { CardLigacoes } from '@/components/CardLigacoes';
 import { CardNoShows } from '@/components/CardNoShows';
 import {
   CardAgendamentosFuturos,
@@ -257,6 +258,10 @@ function Painel() {
 
           <div className="grade">
             <CardsAtividadesSemana />
+          </div>
+
+          <div className="grade">
+            <CardLigacoes />
           </div>
         </>
       ) : (

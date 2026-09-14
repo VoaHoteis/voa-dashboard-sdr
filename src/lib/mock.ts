@@ -17,6 +17,7 @@ import {
   STAGES,
   TIPOS_AGENDAMENTO,
   TIPOS_ESFORCO,
+  TIPO_LIGACAO,
   TIPO_NO_SHOW,
 } from './config';
 import { addDias, ehDiaUtil, hoje, listarDias, primeiroDiaDoMes, type ISODate } from './dates';
@@ -149,6 +150,7 @@ export async function atividadesFalsas(opts: {
   const out: Atividade[] = [];
   const ehAgendamento = opts.tipos.some((t) => (TIPOS_AGENDAMENTO as readonly string[]).includes(t));
   const ehNoShow = opts.tipos.includes(TIPO_NO_SHOW);
+  const ehLigacoes = opts.tipos.length === 1 && opts.tipos[0] === TIPO_LIGACAO;
   const usuarios = opts.userId ? [opts.userId] : SDRS.map((s) => s.userId);
   let id = 500000;
 
@@ -158,7 +160,22 @@ export async function atividadesFalsas(opts: {
     for (const userId of usuarios) {
       const r = rng(hash(dia + ':' + userId + ':' + (opts.concluidas ? 'd' : 'p')));
 
-      if (ehNoShow) {
+      if (ehLigacoes) {
+        // Volume centrado perto da meta de 20: ~14 a 27 por dia útil, para a
+        // grade mostrar dias batidos e não batidos e uma sequência plausível.
+        const quantos = opts.concluidas ? 14 + Math.floor(r() * 14) : 0;
+        for (let k = 0; k < quantos; k++) {
+          out.push({
+            id: id++,
+            type: TIPO_LIGACAO,
+            subject: 'Ligação de Prospecção',
+            done: opts.concluidas,
+            due_date: dia,
+            deal_id: negocioDaSdr(r, userId).id,
+            user_id: userId,
+          });
+        }
+      } else if (ehNoShow) {
         // Volume baixo, e ~20% sem negocio vinculado, como na conta real.
         if (r() < 0.12) {
           const negocio = negocioDaSdr(r, userId);

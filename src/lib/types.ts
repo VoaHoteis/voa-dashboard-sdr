@@ -171,3 +171,33 @@ export interface AtividadesResposta {
     porTipo: Record<string, number>;
   }>;
 }
+
+/** Um dia útil no card de Ligações de Prospecção. */
+export interface DiaLigacoes {
+  data: ISODate;
+  quantidade: number;
+  /** A meta diária foi atingida neste dia? */
+  batida: boolean;
+}
+
+export interface LigacoesResposta {
+  mes: Periodo;
+  /** Meta diária de ligações por SDR (dia útil). */
+  meta: number;
+  /** Hoje no fuso de São Paulo — último dia contabilizado. */
+  hoje: ISODate;
+  porSdr: Array<{
+    sdr: SdrKey;
+    nome: string;
+    /** Total de ligações no mês até hoje. */
+    total: number;
+    /** Dias úteis em que a meta foi atingida. */
+    diasBatidos: number;
+    /** Dias úteis decorridos no mês até hoje. */
+    diasUteisDecorridos: number;
+    /** Dias úteis seguidos batendo a meta (sequência atual). */
+    sequenciaAtual: number;
+    /** Um registro por dia útil do mês até hoje. */
+    dias: DiaLigacoes[];
+  }>;
+}
