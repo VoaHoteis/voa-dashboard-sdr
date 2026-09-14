@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { SDRS, TIPOS_ESFORCO } from '@/lib/config';
+import { SDRS, TIPO_LIGACAO, TIPOS_ESFORCO } from '@/lib/config';
 import { addDias, hoje, primeiroDiaDoMes, semanasDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { buscarAtividades, dataConclusao } from '@/lib/pipedrive';
 import type { AtividadesResposta } from '@/lib/types';
@@ -53,6 +53,12 @@ export async function GET(req: Request) {
           const d = dataConclusao(a);
           if (!d || d < sem.inicio || d > sem.fim) continue;
           if (!(a.type in linha)) continue;
+          // Ligação de Prospecção só conta com negócio vinculado: o discador
+          // automático (Kinbox) gera uma atividade por tentativa, sempre sem
+          // negócio (deal_id null), enquanto a ligação que a SDR faz e marca no
+          // CRM fica ligada a um negócio. Os demais tipos de esforço não têm
+          // essa inflação, então contam como antes.
+          if (a.type === TIPO_LIGACAO && a.deal_id == null) continue;
           linha[a.type] = (linha[a.type] as number) + 1;
           porTipo[a.type] += 1;
         }

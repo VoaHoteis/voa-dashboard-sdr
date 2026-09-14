@@ -42,7 +42,15 @@ export async function GET(req: Request) {
         userId: s.userId,
       });
 
-      const r = resolverLigacoesDiarias(atividades, {
+      // Só ligações com negócio vinculado contam. O discador automático (Kinbox)
+      // registra uma atividade por tentativa de chamada, sempre SEM negócio
+      // (deal_id null); as ligações que a SDR faz de fato e marca no CRM ficam
+      // ligadas a um negócio. Contar só as com negócio deixa a meta de 20/dia
+      // medir ligação efetiva, não tentativa de discagem. Decisão do Joao em
+      // 13/09/2026.
+      const efetivas = atividades.filter((a) => a.deal_id != null);
+
+      const r = resolverLigacoesDiarias(efetivas, {
         inicio,
         hojeIso: ref,
         meta: META_LIGACOES_DIA,

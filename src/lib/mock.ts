@@ -161,18 +161,22 @@ export async function atividadesFalsas(opts: {
       const r = rng(hash(dia + ':' + userId + ':' + (opts.concluidas ? 'd' : 'p')));
 
       if (ehLigacoes) {
-        // Volume centrado perto da meta de 20: ~14 a 27 por dia útil, para a
-        // grade mostrar dias batidos e não batidos e uma sequência plausível.
-        const quantos = opts.concluidas ? 14 + Math.floor(r() * 14) : 0;
+        // Volume alto de tentativas (como o discador automático real): ~34 a 60
+        // por dia útil, mas só uma fração fica ligada a um negócio (as que a SDR
+        // marca no CRM). O card conta só as com negócio, então o número efetivo
+        // por dia cai para perto da meta de 20 — o resto entra sem deal_id, como
+        // a "Ligação ativa realizada por agente" do Kinbox.
+        const quantos = opts.concluidas ? 34 + Math.floor(r() * 27) : 0;
         for (let k = 0; k < quantos; k++) {
+          const efetiva = r() < 0.45;
           out.push({
             id: id++,
             type: TIPO_LIGACAO,
-            subject: 'Ligação de Prospecção',
+            subject: efetiva ? 'Ligação de Prospecção' : 'Ligação ativa realizada por agente',
             done: opts.concluidas,
             due_date: dia,
             marked_as_done_time: opts.concluidas ? dia + ' 12:00:00' : null,
-            deal_id: negocioDaSdr(r, userId).id,
+            deal_id: efetiva ? negocioDaSdr(r, userId).id : null,
             user_id: userId,
           });
         }
