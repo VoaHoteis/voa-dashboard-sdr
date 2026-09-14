@@ -26,6 +26,43 @@ export async function GET(req: Request) {
     const semanas = semanasDoMes(ref);
     const tipos = TIPOS_ESFORCO.map((t) => t.key);
 
+    // DIAGNÓSTICO TEMPORÁRIO: distribuição por assunto das ligações da Bárbara.
+    // Abrir /api/atividades?debug=1 no preview publicado. Remover depois.
+    const url = new URL(req.url);
+    if (url.searchParams.get('debug') === '1') {
+      const barbara = SDRS.find((s) => s.key === 'barbara') ?? SDRS[0];
+      const ligacoes = await buscarAtividades({
+        inicio: addDias(inicio, -35),
+        fim,
+        tipos: ['ligacao_de_prospeccao_plan'],
+        concluidas: true,
+        userId: barbara.userId,
+      });
+      const noMes = ligacoes.filter((a) => {
+        const d = dataConclusao(a);
+        return d && d >= inicio && d <= fim;
+      });
+      const porAssunto: Record<string, { total: number; comNegocio: number; semNegocio: number }> = {};
+      for (const a of noMes) {
+        const s = (a.subject ?? '(sem assunto)').trim() || '(sem assunto)';
+        porAssunto[s] ??= { total: 0, comNegocio: 0, semNegocio: 0 };
+        porAssunto[s].total += 1;
+        if (a.deal_id) porAssunto[s].comNegocio += 1;
+        else porAssunto[s].semNegocio += 1;
+      }
+      const distribuicao = Object.entries(porAssunto)
+        .map(([assunto, v]) => ({ assunto, ...v }))
+        .sort((x, y) => y.total - x.total);
+      return NextResponse.json({
+        sdr: barbara.nome,
+        mes: { inicio, fim },
+        total_ligacoes_no_mes: noMes.length,
+        total_com_negocio: noMes.filter((a) => a.deal_id).length,
+        total_sem_negocio: noMes.filter((a) => !a.deal_id).length,
+        distribuicao_por_assunto: distribuicao,
+      });
+    }
+
     // A busca da API filtra por data MARCADA (due_date), mas contamos por data de
     // CONCLUSÃO. Alargamos a janela ~35 dias para trás para pegar atividades
     // concluídas neste mês que estavam marcadas no mês anterior; o recorte fino
