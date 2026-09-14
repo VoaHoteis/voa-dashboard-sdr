@@ -58,12 +58,18 @@ export async function GET(req: Request) {
 
       const contarPorSemana = (base: 'due' | 'done') =>
         semanas.map((sem) => {
-          let n = 0;
-          for (const a of daBarbara) {
+          const naSemana = daBarbara.filter((a) => {
             const d = base === 'done' ? dataConclusao(a) : a.due_date;
-            if (d && d >= sem.inicio && d <= sem.fim) n += 1;
-          }
-          return { semana: sem.label, [base]: n };
+            return d && d >= sem.inicio && d <= sem.fim;
+          });
+          const negociosDistintos = new Set(naSemana.map((a) => a.deal_id ?? 'sem_negocio'));
+          const assuntosDistintos = new Set(naSemana.map((a) => (a.subject ?? '').trim().toLowerCase()));
+          return {
+            semana: sem.label,
+            [base]: naSemana.length,
+            negocios_distintos: negociosDistintos.size,
+            assuntos_distintos: assuntosDistintos.size,
+          };
         });
 
       return NextResponse.json({
@@ -79,12 +85,14 @@ export async function GET(req: Request) {
         escopo_time_inteiro: { registros_recebidos: doTime.length },
         por_semana_data_marcada: contarPorSemana('due'),
         por_semana_data_conclusao: contarPorSemana('done'),
-        amostra: daBarbara.slice(0, 8).map((a) => ({
+        amostra: daBarbara.slice(0, 12).map((a) => ({
           id: a.id,
           type: a.type,
+          subject: a.subject,
           due_date: a.due_date,
           marked_as_done_time: a.marked_as_done_time,
           user_id: a.user_id,
+          deal_id: a.deal_id,
         })),
       });
     }
