@@ -496,6 +496,13 @@ h3 {
 .tabela .num {
   text-align: right;
   font-family: var(--fonte-numero), system-ui, sans-serif;
+  padding-right: 18px;
+}
+
+/* Só a última coluna encosta na borda; colunas numéricas intermediárias
+   mantêm o espaçamento à direita para não colar na coluna seguinte. */
+.tabela th.num:last-child,
+.tabela td.num:last-child {
   padding-right: 0;
 }
 
