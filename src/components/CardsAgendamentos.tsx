@@ -41,7 +41,11 @@ export function CardAgendamentosTotais({ url }: { url: string }) {
     <>
       <Painel titulo="Agendamentos Totais" estado={estado}>
         {(d) => {
-          const atingido = META_TIME_TOTAL > 0 ? d.time.total / META_TIME_TOTAL : 0;
+          // A meta de 60 é das SDRs com meta (Juliana e Bárbara), não do time
+          // inteiro: o total inclui closers, inativos e agendamentos sem SDR.
+          const totalSdr = d.porSdr.reduce((acc, s) => acc + s.total, 0);
+          const chavesSdr = d.porSdr.map((s) => s.sdr);
+          const atingido = META_TIME_TOTAL > 0 ? totalSdr / META_TIME_TOTAL : 0;
           const divergem = d.time.total !== d.time.totalAlternativo;
           const abrir = (titulo: string, recorte: Recorte) =>
             setDetalhe({ titulo, recorte: { ...recorte, unidade: d.unidade } });
@@ -55,7 +59,7 @@ export function CardAgendamentosTotais({ url }: { url: string }) {
                   titulo="Ver os negócios que formam este número"
                 />
                 <span className="rotulo">
-                  de {META_TIME_TOTAL} · {pct(atingido)} da meta do time
+                  agendamentos totais
                   {/* Sem a nota de rodape, este vira o unico acesso ao recorte
                       "sem SDR" -- que e justamente o que precisa de correcao no
                       Pipedrive, entao nao pode sumir junto com a nota. */}
@@ -87,8 +91,23 @@ export function CardAgendamentosTotais({ url }: { url: string }) {
                 </span>
               </div>
 
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 16 }}>
+                <NumeroClicavel
+                  valor={totalSdr}
+                  classe="numero medio"
+                  aoAbrir={() =>
+                    abrir('Agendamentos das SDRs (Juliana e Bárbara)', { sdrs: chavesSdr })
+                  }
+                  titulo="Ver os agendamentos de Juliana e Bárbara"
+                  desabilitado={totalSdr === 0}
+                />
+                <span className="rotulo">
+                  de {META_TIME_TOTAL} · {pct(atingido)} da meta das SDRs (Juliana e Bárbara)
+                </span>
+              </div>
+
               <div style={{ marginTop: 18 }}>
-                <BarraMeta valor={d.time.total} meta={META_TIME_TOTAL} cor={CORES_FUNIL.salabim} />
+                <BarraMeta valor={totalSdr} meta={META_TIME_TOTAL} cor={CORES_FUNIL.salabim} />
               </div>
 
               <div style={{ marginTop: 22 }}>
