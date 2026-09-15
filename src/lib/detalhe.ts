@@ -14,6 +14,8 @@ export interface Recorte {
   funil?: FunnelKey;
   /** Chave de PESSOAS. */
   sdr?: string;
+  /** Várias chaves de PESSOAS (OR) -- usado pelo agregado das SDRs com meta. */
+  sdrs?: string[];
   /** Nem campo SDR nem proprietario conhecido. */
   semSdr?: boolean;
   /** Atribuido apenas a quem ja saiu do time. */
@@ -26,6 +28,7 @@ export function filtrarItens(itens: ItemAgendamento[], r: Recorte): ItemAgendame
 
   if (r.funil) out = out.filter((i) => i.funil === r.funil);
   if (r.sdr) out = out.filter((i) => i.sdrs.includes(r.sdr as string));
+  if (r.sdrs) out = out.filter((i) => i.sdrs.some((k) => r.sdrs!.includes(k)));
   if (r.semSdr) out = out.filter((i) => i.atribuicao === 'nenhuma');
   if (r.inativo) {
     out = out.filter(
