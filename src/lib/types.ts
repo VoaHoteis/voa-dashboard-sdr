@@ -34,6 +34,11 @@ export interface ItemAgendamento {
   atribuicao: 'campo' | 'proprietario' | 'nenhuma';
   assunto: string;
   tipo: string;
+  /**
+   * Quantidade de U.Hs (unidades habitacionais) do negocio. null quando nao ha
+   * negocio vinculado, o campo esta vazio ou a conta nao tem esse campo.
+   */
+  uhs: number | null;
 }
 
 export interface AgendamentosResposta {
@@ -145,6 +150,8 @@ export interface ItemForecast {
   proprietario: string;
   /** Valor do negocio, na moeda da conta (BRL). */
   valor: number;
+  /** Quantidade de U.Hs (unidades habitacionais) do negocio; null se sem valor. */
+  uhs: number | null;
 }
 
 export interface ForecastResposta {

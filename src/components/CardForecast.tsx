@@ -90,8 +90,9 @@ function TabelaForecast({ itens }: { itens: ItemForecast[] }) {
       <thead>
         <tr>
           <th>#</th>
-          <th>Negócio</th>
-          <th>Proprietário</th>
+                    <th>Negócio</th>
+                    <th className="num">U.Hs</th>
+                    <th>Proprietário</th>
           <th>Funil</th>
           <th>Etapa</th>
           <th className="num">Valor</th>
@@ -105,6 +106,9 @@ function TabelaForecast({ itens }: { itens: ItemForecast[] }) {
               <a href={linkDoNegocio(i.negocioId)} target="_blank" rel="noopener noreferrer">
                 {i.titulo}
               </a>
+            </td>
+            <td className="num" style={{ whiteSpace: 'nowrap' }}>
+              {i.uhs ?? '—'}
             </td>
             <td style={{ whiteSpace: 'nowrap' }}>{i.proprietario}</td>
             <td style={{ color: CORES_FUNIL[i.funil], whiteSpace: 'nowrap' }}>

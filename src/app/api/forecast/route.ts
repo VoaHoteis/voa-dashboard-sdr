@@ -16,7 +16,12 @@
 import { NextResponse } from 'next/server';
 import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { resolverForecast, zeroPorFunil } from '@/lib/metrics';
-import { buscarEtapas, buscarNegociosAbertos } from '@/lib/pipedrive';
+import {
+  buscarEtapas,
+  buscarNegociosAbertos,
+  quantidadeUhDoNegocio,
+  resolverChaveCampoUh,
+} from '@/lib/pipedrive';
 import type { ForecastResposta, ItemForecast } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -30,7 +35,11 @@ export async function GET(req: Request) {
     const inicio = searchParams.get('inicio') || primeiroDiaDoMes(ref);
     const fim = searchParams.get('fim') || ultimoDiaDoMes(ref);
 
-    const [negocios, etapas] = await Promise.all([buscarNegociosAbertos(), buscarEtapas()]);
+    const [negocios, etapas, uhKey] = await Promise.all([
+      buscarNegociosAbertos(),
+      buscarEtapas(),
+      resolverChaveCampoUh(),
+    ]);
     const itens = resolverForecast(negocios, { inicio, fim }, etapas);
 
     const porFunil = zeroPorFunil();
@@ -48,6 +57,7 @@ export async function GET(req: Request) {
       etapa: it.etapa,
       proprietario: it.proprietario,
       valor: it.valor,
+      uhs: quantidadeUhDoNegocio(it.negocio, uhKey),
     }));
 
     const resposta: ForecastResposta = {

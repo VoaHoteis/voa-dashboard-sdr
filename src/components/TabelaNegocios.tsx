@@ -38,6 +38,7 @@ export function TabelaNegocios({ itens }: { itens: ItemAgendamento[] }) {
         <tr>
           <th>#</th>
           <th>Negócio</th>
+          <th className="num">U.Hs</th>
           <th>Data</th>
           <th>Funil</th>
           <th>SDR</th>
@@ -61,6 +62,9 @@ export function TabelaNegocios({ itens }: { itens: ItemAgendamento[] }) {
                   {i.titulo}
                 </a>
               )}
+            </td>
+            <td className="num" style={{ whiteSpace: 'nowrap' }}>
+              {i.uhs ?? '—'}
             </td>
             <td style={{ whiteSpace: 'nowrap' }}>{formatarBR(i.data)}</td>
             <td

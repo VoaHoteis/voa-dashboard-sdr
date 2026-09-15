@@ -16,7 +16,12 @@ import { NextResponse } from 'next/server';
 import { PIPELINE_TO_FUNNEL, TIPO_NO_SHOW } from '@/lib/config';
 import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { atribuir, totalDe, zeroPorFunil } from '@/lib/metrics';
-import { buscarAtividades, buscarNegociosPorIds } from '@/lib/pipedrive';
+import {
+  buscarAtividades,
+  buscarNegociosPorIds,
+  quantidadeUhDoNegocio,
+  resolverChaveCampoUh,
+} from '@/lib/pipedrive';
 import type { ItemAgendamento, NoShowsResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -42,6 +47,7 @@ export async function GET(req: Request) {
       atividades.map((a) => a.deal_id).filter((id): id is number => typeof id === 'number')
     );
 
+    const uhKey = await resolverChaveCampoUh();
     const porFunil = zeroPorFunil();
     const itens: ItemAgendamento[] = [];
     const itensForaDaConta: ItemAgendamento[] = [];
@@ -60,6 +66,7 @@ export async function GET(req: Request) {
         ...(negocio ? atribuir(negocio) : { sdrs: [], atribuicao: 'nenhuma' as const }),
         assunto: a.subject,
         tipo: a.type,
+        uhs: quantidadeUhDoNegocio(negocio, uhKey),
       };
 
       if (funil) {
