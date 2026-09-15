@@ -334,13 +334,16 @@ export async function buscarNegociosPorIds(ids: number[]): Promise<Map<number, N
  * A v2 devolve campo personalizado aninhado em `custom_fields` e como array de
  * ids (`[645]`); a v1 devolve no topo do objeto e como string ("645,680"). O
  * resto do codigo le sempre pelo formato da v1.
+ *
+ * Sobe TODO o bloco `custom_fields` para o topo do objeto (nao so o SDR): assim
+ * campos como "Quantidade UH" tambem ficam legiveis pelo mesmo caminho da v1,
+ * sem precisar saber cada chave aqui. As chaves sao hashes de 40 caracteres,
+ * entao nao colidem com campos nativos como `id`/`title`.
  */
 function normalizarNegocioV2(d: Negocio): Negocio {
   const custom = (d as { custom_fields?: Record<string, unknown> }).custom_fields;
-  if (custom && SDR_FIELD_KEY in custom) {
-    return { ...d, [SDR_FIELD_KEY]: custom[SDR_FIELD_KEY] };
-  }
-  return d;
+  if (!custom) return d;
+  return { ...d, ...custom };
 }
 
 // ------------------------------------------------------------ atribuicao SDR
@@ -381,6 +384,56 @@ export function pessoasDoCampoSdr(negocio: Negocio | undefined): string[] {
 /** Mantido para o card de funil, que atribui por dono e so olha as duas SDRs. */
 export function sdrsDoNegocio(negocio: Negocio | undefined): string[] {
   return pessoasDoCampoSdr(negocio);
+}
+
+// ------------------------------------------------------------ quantidade UH
+
+/**
+ * Nome do campo personalizado de unidades habitacionais, como cadastrado no
+ * Pipedrive. Confirmado com o time: "Quantidade UH".
+ */
+const NOME_CAMPO_UH = 'quantidade uh';
+
+let chaveUhCache: { em: number; valor: string | null } | null = null;
+
+/**
+ * Chave interna do campo "Quantidade UH".
+ *
+ * Todo campo personalizado tem um hash de 40 caracteres como chave, que varia de
+ * conta para conta -- por isso resolvemos pelo NOME em runtime (via
+ * `/v1/dealFields`) em vez de cravar o hash no codigo. Cacheado por 5 min: a
+ * definicao de campo quase nunca muda, entao nao vale uma chamada por request.
+ * Devolve null se a conta nao tiver um campo com esse nome (a coluna some em vez
+ * de quebrar).
+ */
+export async function resolverChaveCampoUh(): Promise<string | null> {
+  if (modoMock()) return (await mock()).CHAVE_UH_MOCK;
+
+  if (chaveUhCache && Date.now() - chaveUhCache.em < 5 * 60_000) return chaveUhCache.valor;
+
+  const campos = await buscarTudo<{ key: string; name: string }>('/v1/dealFields', {}, 100);
+  const alvo = campos.find((c) => (c.name ?? '').trim().toLowerCase() === NOME_CAMPO_UH);
+  const valor = alvo?.key ?? null;
+  chaveUhCache = { em: Date.now(), valor };
+  return valor;
+}
+
+/**
+ * Quantidade de U.Hs do negocio, ou null quando nao ha negocio, o campo esta
+ * vazio ou a conta nao tem o campo. Aceita numero, string ("120") e o formato
+ * objeto `{ value }` que a v2 as vezes usa para campo numerico.
+ */
+export function quantidadeUhDoNegocio(
+  negocio: Negocio | undefined,
+  uhKey: string | null
+): number | null {
+  if (!negocio || !uhKey) return null;
+  const bruto = negocio[uhKey];
+  if (bruto === null || bruto === undefined || bruto === '') return null;
+  const cru =
+    typeof bruto === 'object' && bruto !== null ? (bruto as { value?: unknown }).value : bruto;
+  const n = Number(cru);
+  return Number.isFinite(n) ? n : null;
 }
 
 

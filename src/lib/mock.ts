@@ -23,6 +23,12 @@ import {
 import { addDias, ehDiaUtil, hoje, listarDias, primeiroDiaDoMes, type ISODate } from './dates';
 import type { Atividade, Negocio } from './pipedrive';
 
+/**
+ * Chave do campo "Quantidade UH" no modo mock. Em producao a chave e um hash de
+ * 40 caracteres resolvido pelo nome em runtime; aqui basta um rotulo estavel.
+ */
+export const CHAVE_UH_MOCK = 'quantidade_uh_mock';
+
 /** PRNG mulberry32: pequeno, deterministico, bom o bastante para dado de exemplo. */
 function rng(seed: number) {
   let a = seed >>> 0;
@@ -102,6 +108,8 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
     expected_close_date: expected,
     user_id: { id: dono.userId, name: dono.nome },
     [SDR_FIELD_KEY]: sdrIds,
+    // Unidades habitacionais: hoteis pequenos a medios, entre ~12 e ~200 U.Hs.
+    [CHAVE_UH_MOCK]: 12 + Math.floor(r() * 189),
   } as Negocio;
 });
 

@@ -14,7 +14,12 @@ import {
   soInativos,
   totalDe,
 } from '@/lib/metrics';
-import { buscarAtividades, buscarNegociosPorIds } from '@/lib/pipedrive';
+import {
+  buscarAtividades,
+  buscarNegociosPorIds,
+  quantidadeUhDoNegocio,
+  resolverChaveCampoUh,
+} from '@/lib/pipedrive';
 import type { AgendamentosResposta, ItemAgendamento } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -42,6 +47,7 @@ export async function GET(req: Request) {
       atividades.map((a) => a.deal_id).filter((id): id is number => typeof id === 'number')
     );
     const itens = resolverAgendamentos(atividades, negocios);
+    const uhKey = await resolverChaveCampoUh();
 
     const porFunil = contarPorFunil(itens, unidade);
     const porFunilAlt = contarPorFunil(itens, outraUnidade);
@@ -80,6 +86,7 @@ export async function GET(req: Request) {
           atribuicao: i.atribuicao,
           assunto: i.atividade.subject,
           tipo: i.atividade.type,
+          uhs: quantidadeUhDoNegocio(i.negocio, uhKey),
         })
       ),
     };

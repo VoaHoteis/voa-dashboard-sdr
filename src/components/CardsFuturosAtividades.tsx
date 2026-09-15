@@ -135,6 +135,7 @@ export function CardAgendamentosFuturos({
                 <thead>
                   <tr>
                     <th>Negócio</th>
+                    <th className="num">U.Hs</th>
                     <th>Data</th>
                     <th>Funil</th>
                     <th>SDR</th>
@@ -144,6 +145,9 @@ export function CardAgendamentosFuturos({
                   {d.itens.map((i) => (
                     <tr key={i.atividadeId}>
                       <td>{i.titulo}</td>
+                      <td className="num" style={{ whiteSpace: 'nowrap' }}>
+                        {i.uhs ?? '—'}
+                      </td>
                       <td style={{ whiteSpace: 'nowrap' }}>{formatarBR(i.data)}</td>
                       <td
                         style={{

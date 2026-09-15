@@ -10,7 +10,12 @@ import { NextResponse } from 'next/server';
 import { TIPOS_AGENDAMENTO } from '@/lib/config';
 import { hoje, ultimoDiaDoMes } from '@/lib/dates';
 import { resolverAgendamentos, totalDe, zeroPorFunil } from '@/lib/metrics';
-import { buscarAtividades, buscarNegociosPorIds } from '@/lib/pipedrive';
+import {
+  buscarAtividades,
+  buscarNegociosPorIds,
+  quantidadeUhDoNegocio,
+  resolverChaveCampoUh,
+} from '@/lib/pipedrive';
 import type { FuturosResposta, ItemAgendamento } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -34,6 +39,7 @@ export async function GET(req: Request) {
     );
 
     const itens = resolverAgendamentos(atividades, negocios);
+    const uhKey = await resolverChaveCampoUh();
     const porFunil = zeroPorFunil();
     const lista: ItemAgendamento[] = [];
 
@@ -49,6 +55,7 @@ export async function GET(req: Request) {
         atribuicao: i.atribuicao,
         assunto: i.atividade.subject,
         tipo: i.atividade.type,
+        uhs: quantidadeUhDoNegocio(i.negocio, uhKey),
       });
     }
 
