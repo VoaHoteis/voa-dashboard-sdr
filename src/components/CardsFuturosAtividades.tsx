@@ -251,7 +251,7 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
 
       <div style={{ height: 230, marginTop: 16 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={serie} margin={{ top: 24, right: 4, bottom: 0, left: -20 }}>
+          <BarChart data={serie} margin={{ top: 28, right: 8, bottom: 0, left: -20 }}>
             <CartesianGrid stroke="#20241c" vertical={false} />
             <XAxis
               dataKey="semana"
@@ -264,6 +264,7 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
+              domain={[0, (max: number) => Math.ceil((max * 1.18) / 10) * 10]}
             />
             <Tooltip
               cursor={{ fill: '#ffffff0d' }}
@@ -279,10 +280,11 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
             {TIPOS_ESFORCO.map((t) => (
               <Bar key={t.key} dataKey={t.key} name={t.label} stackId="esforco" fill={t.cor}>
                 {/* O total da semana é desenhado uma única vez, no topo da pilha.
-                    Para aparecer em TODA semana (não só onde o último tipo tem
-                    valor), cada barra só desenha o rótulo quando é o tipo mais
-                    alto com valor > 0 naquela semana — aí o seu topo é o topo da
-                    coluna inteira. */}
+                    Cada barra só desenha o rótulo quando é o tipo mais alto com
+                    valor > 0 naquela semana — aí o topo desse segmento é o topo
+                    da coluna inteira, então o total aparece de forma confiável em
+                    toda semana com atividade. A folga no eixo Y garante que o
+                    número nunca seja cortado. */}
                 <LabelList
                   dataKey={t.key}
                   position="top"
