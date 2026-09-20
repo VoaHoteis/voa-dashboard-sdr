@@ -27,6 +27,7 @@ import { filtrarItens, type Recorte } from '@/lib/detalhe';
 import type {
   AgendamentosResposta,
   AtividadesResposta,
+  EscopoAtividade,
   FuturosResposta,
   ItemAgendamento,
 } from '@/lib/types';
@@ -187,6 +188,148 @@ export function CardAgendamentosFuturos({
   );
 }
 
+const ESCOPOS_ATIVIDADE: { key: EscopoAtividade; label: string; cor: string }[] = [
+  { key: 'total', label: 'Todas', cor: 'var(--texto)' },
+  { key: 'novosNegocios', label: FUNNEL_LABEL.novosNegocios, cor: CORES_FUNIL.novosNegocios },
+  { key: 'salabim', label: FUNNEL_LABEL.salabim, cor: CORES_FUNIL.salabim },
+];
+
+/**
+ * Um card de atividades por SDR. O filtro escolhe o recorte de funil: todas as
+ * atividades, só as de Novos Negócios ou só as de Salabim. A série e o total
+ * exibidos trocam junto, sem nova consulta — a rota já manda os três recortes.
+ */
+function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][number] }) {
+  const [escopo, setEscopo] = useState<EscopoAtividade>('total');
+  const serie = sdr.series[escopo];
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+        <span className="numero medio">{sdr.totais[escopo]}</span>
+        <span className="rotulo">
+          atividades concluídas no mês
+          {escopo !== 'total' && ` · ${FUNNEL_LABEL[escopo]}`}
+        </span>
+      </div>
+
+      <div
+        role="group"
+        aria-label="Filtrar atividades por funil"
+        style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}
+      >
+        {ESCOPOS_ATIVIDADE.map((op) => {
+          const ativo = op.key === escopo;
+          return (
+            <button
+              key={op.key}
+              type="button"
+              onClick={() => setEscopo(op.key)}
+              aria-pressed={ativo}
+              style={{
+                cursor: 'pointer',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: 0.2,
+                padding: '4px 10px',
+                borderRadius: 999,
+                border: `1px solid ${ativo ? op.cor : 'var(--borda)'}`,
+                background: ativo ? op.cor : 'transparent',
+                color: ativo
+                  ? op.key === 'total'
+                    ? 'var(--fundo)'
+                    : '#0B0C0A'
+                  : 'var(--texto-fraco)',
+                transition: 'all .12s ease',
+              }}
+            >
+              {op.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ height: 230, marginTop: 16 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={serie} margin={{ top: 24, right: 4, bottom: 0, left: -20 }}>
+            <CartesianGrid stroke="#20241c" vertical={false} />
+            <XAxis
+              dataKey="semana"
+              tick={{ fill: '#8a9080', fontSize: 11 }}
+              axisLine={{ stroke: '#232720' }}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fill: '#8a9080', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              allowDecimals={false}
+            />
+            <Tooltip
+              cursor={{ fill: '#ffffff0d' }}
+              contentStyle={{
+                background: '#191c17',
+                border: '1px solid #232720',
+                borderRadius: 10,
+                fontSize: 12,
+              }}
+              labelStyle={{ color: '#f1f3ed' }}
+            />
+            <Legend wrapperStyle={{ fontSize: 11, color: '#8a9080' }} iconSize={9} />
+            {TIPOS_ESFORCO.map((t) => (
+              <Bar key={t.key} dataKey={t.key} name={t.label} stackId="esforco" fill={t.cor}>
+                {/* O total da semana é desenhado uma única vez, no topo da pilha.
+                    Para aparecer em TODA semana (não só onde o último tipo tem
+                    valor), cada barra só desenha o rótulo quando é o tipo mais
+                    alto com valor > 0 naquela semana — aí o seu topo é o topo da
+                    coluna inteira. */}
+                <LabelList
+                  dataKey={t.key}
+                  position="top"
+                  content={({ x, y, width, index }) => {
+                    if (index == null) return null;
+                    const linha = serie[index];
+                    if (!linha) return null;
+                    const topo = [...TIPOS_ESFORCO]
+                      .reverse()
+                      .find((tt) => (Number(linha[tt.key]) || 0) > 0);
+                    if (!topo || topo.key !== t.key) return null;
+                    const total = TIPOS_ESFORCO.reduce(
+                      (acc, tt) => acc + (Number(linha[tt.key]) || 0),
+                      0
+                    );
+                    const cx = Number(x) + Number(width) / 2;
+                    return (
+                      <text
+                        x={cx}
+                        y={Number(y) - 6}
+                        fill="#f1f3ed"
+                        fontSize={12}
+                        fontWeight={600}
+                        textAnchor="middle"
+                      >
+                        {total}
+                      </text>
+                    );
+                  }}
+                />
+              </Bar>
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {MOSTRAR_NOTAS && (
+        <p className="nota">
+          Atribuição pelo <strong>executor da atividade</strong> (usuário do Pipedrive), não pelo
+          campo SDR do negócio — aqui a pergunta é quanto esforço a pessoa fez. O recorte por funil
+          usa o negócio vinculado à atividade; atividade sem negócio entra só em “Todas”.
+        </p>
+      )}
+    </>
+  );
+}
+
 /** Card 6 — Atividades por semana, uma barra empilhada por semana do mes. */
 export function CardsAtividadesSemana() {
   const estado = useApi<AtividadesResposta>('/api/atividades');
@@ -203,92 +346,7 @@ export function CardsAtividadesSemana() {
           {(d) => {
             const sdr = d.porSdr.find((x) => x.sdr === cfg.key);
             if (!sdr) return <div className="estado">Sem dados.</div>;
-
-            return (
-              <>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                  <span className="numero medio">{sdr.total}</span>
-                  <span className="rotulo">atividades concluídas no mês</span>
-                </div>
-
-                <div style={{ height: 230, marginTop: 16 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={sdr.series} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                      <CartesianGrid stroke="#20241c" vertical={false} />
-                      <XAxis
-                        dataKey="semana"
-                        tick={{ fill: '#8a9080', fontSize: 11 }}
-                        axisLine={{ stroke: '#232720' }}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: '#8a9080', fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                        allowDecimals={false}
-                      />
-                      <Tooltip
-                        cursor={{ fill: '#ffffff0d' }}
-                        contentStyle={{
-                          background: '#191c17',
-                          border: '1px solid #232720',
-                          borderRadius: 10,
-                          fontSize: 12,
-                        }}
-                        labelStyle={{ color: '#f1f3ed' }}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 11, color: '#8a9080' }} iconSize={9} />
-                      {TIPOS_ESFORCO.map((t, i) => (
-                        <Bar
-                          key={t.key}
-                          dataKey={t.key}
-                          name={t.label}
-                          stackId="esforco"
-                          fill={t.cor}
-                        >
-                          {/* O total vai só na última barra da pilha (o topo),
-                              somando todos os tipos daquela semana. */}
-                          {i === TIPOS_ESFORCO.length - 1 && (
-                            <LabelList
-                              position="top"
-                              content={({ x, y, width, index }) => {
-                                if (index == null) return null;
-                                const linha = sdr.series[index];
-                                const total = TIPOS_ESFORCO.reduce(
-                                  (acc, tt) => acc + (Number(linha?.[tt.key]) || 0),
-                                  0
-                                );
-                                if (!total) return null;
-                                const cx = Number(x) + Number(width) / 2;
-                                return (
-                                  <text
-                                    x={cx}
-                                    y={Number(y) - 6}
-                                    fill="#f1f3ed"
-                                    fontSize={12}
-                                    fontWeight={600}
-                                    textAnchor="middle"
-                                  >
-                                    {total}
-                                  </text>
-                                );
-                              }}
-                            />
-                          )}
-                        </Bar>
-                      ))}
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {MOSTRAR_NOTAS && (
-                  <p className="nota">
-                    Atribuição pelo <strong>executor da atividade</strong> (usuário do Pipedrive),
-                    não pelo campo SDR do negócio — aqui a pergunta é quanto esforço a pessoa fez.
-                  </p>
-                )}
-              </>
-            );
+            return <GraficoAtividadesSdr sdr={sdr} />;
           }}
         </Painel>
       ))}
