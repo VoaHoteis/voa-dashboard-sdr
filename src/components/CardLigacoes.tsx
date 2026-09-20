@@ -1,9 +1,24 @@
 'use client';
 
 import { SDRS } from '@/lib/config';
-import { formatarBR, hoje, nomeDoMes, parse } from '@/lib/dates';
-import type { LigacoesResposta } from '@/lib/types';
+import { diaDaSemana, formatarBR, hoje, nomeDoMes, parse } from '@/lib/dates';
+import type { DiaLigacoes, LigacoesResposta } from '@/lib/types';
 import { Painel, useApi } from './base';
+
+/**
+ * Agrupa os dias úteis em semanas (linhas), quebrando sempre que a segunda-feira
+ * (dow === 1) aparece. Como `dias` já vem sem sábado/domingo, cada linha
+ * representa uma semana de trabalho — sem "buracos" de fim de semana.
+ */
+function agruparPorSemana(dias: DiaLigacoes[]): DiaLigacoes[][] {
+  const semanas: DiaLigacoes[][] = [];
+  for (const dia of dias) {
+    const inicioNovaSemana = diaDaSemana(dia.data) === 1 || semanas.length === 0;
+    if (inicioNovaSemana) semanas.push([]);
+    semanas[semanas.length - 1].push(dia);
+  }
+  return semanas;
+}
 
 /**
  * Card — Ligações de Prospecção por dia.
@@ -62,19 +77,23 @@ export function CardLigacoes() {
                 </p>
 
                 {sdr.dias.length > 0 ? (
-                  <div className="dias-ligacoes">
-                    {sdr.dias.map((dia) => (
-                      <div
-                        key={dia.data}
-                        className="dia-ligacao"
-                        data-batida={dia.batida}
-                        data-hoje={dia.data === d.hoje}
-                        title={`${formatarBR(dia.data)} — ${dia.quantidade} ligações${
-                          dia.batida ? ' (meta batida)' : ''
-                        }`}
-                      >
-                        <span className="n">{dia.quantidade}</span>
-                        <span className="dnum">{parse(dia.data).d}</span>
+                  <div className="semanas-ligacoes">
+                    {agruparPorSemana(sdr.dias).map((semana) => (
+                      <div key={semana[0].data} className="dias-ligacoes">
+                        {semana.map((dia) => (
+                          <div
+                            key={dia.data}
+                            className="dia-ligacao"
+                            data-batida={dia.batida}
+                            data-hoje={dia.data === d.hoje}
+                            title={`${formatarBR(dia.data)} — ${dia.quantidade} ligações${
+                              dia.batida ? ' (meta batida)' : ''
+                            }`}
+                          >
+                            <span className="n">{dia.quantidade}</span>
+                            <span className="dnum">{parse(dia.data).d}</span>
+                          </div>
+                        ))}
                       </div>
                     ))}
                   </div>
