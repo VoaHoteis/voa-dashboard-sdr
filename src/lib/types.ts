@@ -179,16 +179,29 @@ export interface ForecastResposta {
   itens: ItemForecast[];
 }
 
+/**
+ * Recorte do card de atividades por funil.
+ * - 'total'  : todas as atividades da pessoa, com ou sem negocio vinculado;
+ * - 'salabim' / 'novosNegocios': so as ligadas a um negocio daquele funil.
+ *
+ * O total e sempre >= salabim + novosNegocios: atividade sem negocio (ou de
+ * outro pipeline) conta no total mas nao entra em nenhum funil.
+ */
+export type EscopoAtividade = 'total' | FunnelKey;
+
+/** Uma linha por semana: { semana, [tipoKey]: n }, pronto para o Recharts. */
+export type SerieSemana = Array<Record<string, string | number>>;
+
 export interface AtividadesResposta {
   mes: Periodo;
   semanas: string[];
   porSdr: Array<{
     sdr: SdrKey;
     nome: string;
-    total: number;
-    /** Uma linha por semana: { semana, [tipoKey]: n }, pronto para o Recharts. */
-    series: Array<Record<string, string | number>>;
-    porTipo: Record<string, number>;
+    /** Total de atividades concluidas no mes, por escopo de funil. */
+    totais: Record<EscopoAtividade, number>;
+    /** Serie de barras empilhadas por semana, uma para cada escopo de funil. */
+    series: Record<EscopoAtividade, SerieSemana>;
   }>;
 }
 
