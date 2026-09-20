@@ -62,6 +62,8 @@ export interface AgendamentosResposta {
   semSdr: number;
   /** Atribuidos apenas a quem ja saiu do time (campo SDR de negocio antigo). */
   inativos: number;
+  /** Marcados apenas pelo Bot -- canal de agendamento automatico. */
+  bot: number;
   /** Tudo que entrou na conta, para o modal de detalhe. */
   itens: ItemAgendamento[];
 }

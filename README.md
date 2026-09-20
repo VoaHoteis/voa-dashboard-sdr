@@ -240,7 +240,8 @@ Quem aparece está em `PESSOAS` (`config.ts`), com um papel:
 |---|---|---|
 | `sdr` | Juliana, Bárbara | têm meta; aparecem nos cards por SDR, funil e atividades |
 | `closer` | Bruno, João | contam no total e aparecem nos modais, sem meta |
-| `inativo` | Mariana, Daniela, Marcela, Pedro, Bot, Jéssica | contam no total, marcados em âmbar |
+| `bot` | Bot | canal de agendamento automático; conta no total, sem meta, com destaque próprio (não é "quem saiu do time") |
+| `inativo` | Mariana, Daniela, Marcela, Pedro, Jéssica | contam no total, marcados em âmbar |
 
 Sem essa lista, um agendamento de closer ou de quem saiu virava "sem SDR" — o que
 é factualmente errado, porque o campo está preenchido. O efeito era grande: em
