@@ -289,6 +289,48 @@ export async function negociosGanhosFalsos(opts: {
   return out;
 }
 
+/**
+ * Negocios perdidos no periodo, atribuidos pelo proprietario (dono do negocio),
+ * como o funil faz. Volume baixo -- ~2 a 4 por SDR no mes -- divididos entre os
+ * dois funis. Deterministico como o resto do mock.
+ */
+export async function negociosPerdidosFalsos(opts: {
+  inicio: ISODate;
+  fim: ISODate;
+}): Promise<Negocio[]> {
+  const out: Negocio[] = [];
+  let id = 800000;
+
+  for (const dia of listarDias(opts.inicio, opts.fim)) {
+    if (!ehDiaUtil(dia)) continue;
+
+    for (const sdr of SDRS) {
+      const r = rng(hash('perdido:' + dia + ':' + sdr.userId));
+      const quantos = r() < 0.14 ? 1 : 0;
+
+      for (let k = 0; k < quantos; k++) {
+        const r2 = rng(hash('perdido:' + dia + ':' + sdr.userId + ':' + k));
+        const funil = r2() < 0.34 ? 'salabim' : 'novosNegocios';
+        const pipelineId = funil === 'salabim' ? PIPELINES.salabim : PIPELINES.novosNegocios;
+        const titulo = HOTEIS[Math.floor(r2() * HOTEIS.length)];
+
+        out.push({
+          id: id++,
+          title: titulo,
+          pipeline_id: pipelineId,
+          stage_id: STAGES[funil].emContato[0] ?? 0,
+          status: 'lost',
+          undone_activities_count: 0,
+          next_activity_date: null,
+          user_id: { id: sdr.userId, name: sdr.nome },
+          lost_time: dia + ' 12:00:00',
+        } as unknown as Negocio);
+      }
+    }
+  }
+  return out;
+}
+
 /** Escolhe um negocio que tenha a SDR daquele usuario marcada no campo SDR. */
 function negocioDaSdr(r: () => number, userId: number): Negocio {
   const sdr = SDRS.find((s) => s.userId === userId);
