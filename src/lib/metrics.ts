@@ -490,3 +490,9 @@ export function soInativos(sdrs: string[]): boolean {
   if (sdrs.length === 0) return false;
   return sdrs.every((k) => pessoaPorChave(k)?.papel === 'inativo');
 }
+
+/** O agendamento foi feito so pelo Bot? (canal automatico, nao pessoa). */
+export function soBot(sdrs: string[]): boolean {
+  if (sdrs.length === 0) return false;
+  return sdrs.every((k) => pessoaPorChave(k)?.papel === 'bot');
+}

@@ -76,6 +76,18 @@ export function CardAgendamentosTotais({ url }: { url: string }) {
                       </button>
                     </>
                   )}
+                  {!MOSTRAR_NOTAS && d.bot > 0 && (
+                    <>
+                      {' · '}
+                      <button
+                        className="link"
+                        onClick={() => abrir('Agendamentos feitos pelo Bot', { bot: true })}
+                        title="Reuniões marcadas pelo robô de atendimento. É um canal de agendamento próprio — entram no total, mas não na meta de nenhuma SDR."
+                      >
+                        {d.bot} pelo Bot
+                      </button>
+                    </>
+                  )}
                   {!MOSTRAR_NOTAS && d.semSdr > 0 && (
                     <>
                       {' · '}

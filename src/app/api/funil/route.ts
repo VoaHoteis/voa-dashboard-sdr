@@ -15,10 +15,22 @@
  */
 
 import { NextResponse } from 'next/server';
-import { ETAPAS_ORDEM, SDRS, STAGES, type EtapaKey, type FunnelKey } from '@/lib/config';
-import { hoje } from '@/lib/dates';
+import {
+  ETAPAS_ORDEM,
+  PIPELINE_TO_FUNNEL,
+  SDRS,
+  STAGES,
+  type EtapaKey,
+  type FunnelKey,
+} from '@/lib/config';
+import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { resumirFunil } from '@/lib/metrics';
-import { buscarNegociosDaEtapa, donoDoNegocio, type Negocio } from '@/lib/pipedrive';
+import {
+  buscarNegociosDaEtapa,
+  buscarNegociosPerdidos,
+  donoDoNegocio,
+  type Negocio,
+} from '@/lib/pipedrive';
 import type { FunilResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -30,6 +42,26 @@ export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
     const hojeIso = hoje();
+
+    // Perdas so fazem sentido dentro de uma janela; o funil e mensal como os
+    // demais cards de meta, entao contamos os perdidos do mes corrente pela
+    // Data de perda (`lost_time`), atribuidos pelo proprietario do negocio.
+    const periodoPerdidos = { inicio: primeiroDiaDoMes(hojeIso), fim: ultimoDiaDoMes(hojeIso) };
+    const perdidos = await buscarNegociosPerdidos(periodoPerdidos);
+
+    // Agrega uma vez: por funil e por dono (userId). Perda em pipeline fora dos
+    // dois funis acompanhados nao entra, mantendo o mesmo universo das etapas.
+    const perdidosPorSdr = { novosNegocios: {}, salabim: {} } as Record<
+      FunnelKey,
+      Record<number, number>
+    >;
+    for (const d of perdidos) {
+      const funil = PIPELINE_TO_FUNNEL[d.pipeline_id];
+      if (!funil) continue;
+      const dono = donoDoNegocio(d);
+      if (dono === null) continue;
+      perdidosPorSdr[funil][dono] = (perdidosPorSdr[funil][dono] ?? 0) + 1;
+    }
 
     // Uma consulta por stage_id. Etapas com mais de um stage (o "Em Contato" do
     // Salabim soma 77 e 71) viram uma lista so.
@@ -46,6 +78,7 @@ export async function GET(req: Request) {
     }
 
     const resposta: FunilResposta = {
+      periodoPerdidos,
       porSdr: SDRS.map((s) => {
         const funis = {} as FunilResposta['porSdr'][number]['funis'];
 
@@ -59,7 +92,13 @@ export async function GET(req: Request) {
               (d) => donoDoNegocio(d) === s.userId
             );
           }
-          funis[funil] = resumirFunil(meus, hojeIso);
+
+          // Hoteis perdidos deste funil e desta SDR, pela mesma atribuicao por
+          // proprietario. `PIPELINE_TO_FUNNEL` mantem o recorte nos dois funis
+          // acompanhados; perda em outro pipeline nao entra.
+          const perdidos = perdidosPorSdr[funil][s.userId] ?? 0;
+
+          funis[funil] = { ...resumirFunil(meus, hojeIso), perdidos };
         }
 
         return { sdr: s.key, nome: s.nome, funis };

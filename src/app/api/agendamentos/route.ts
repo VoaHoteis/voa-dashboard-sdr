@@ -11,6 +11,7 @@ import {
   agendamentosDaSdr,
   contarPorFunil,
   resolverAgendamentos,
+  soBot,
   soInativos,
   totalDe,
 } from '@/lib/metrics';
@@ -73,6 +74,7 @@ export async function GET(req: Request) {
       }),
       semSdr: itens.filter((i) => i.atribuicao === 'nenhuma').length,
       inativos: itens.filter((i) => soInativos(i.sdrs)).length,
+      bot: itens.filter((i) => soBot(i.sdrs)).length,
       // A lista crua vai junto para o modal de detalhe recortar em memoria --
       // sem uma segunda consulta que poderia discordar do numero exibido.
       itens: itens.map(

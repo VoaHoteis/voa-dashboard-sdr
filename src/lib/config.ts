@@ -36,12 +36,16 @@ export type SdrKey = 'juliana' | 'barbara';
  * Papel de quem pode aparecer atribuido a um agendamento.
  * - 'sdr'     : as duas com meta (Juliana e Barbara);
  * - 'closer'  : Bruno e Joao -- fazem agendamentos, mas nao tem meta de SDR;
+ * - 'bot'     : o robo de atendimento. Nao e pessoa nem SDR que saiu -- e um
+ *               canal de agendamento por si so, que marca reunioes sozinho.
+ *               Conta no total como qualquer canal, mas nao entra na meta de
+ *               nenhuma SDR e NAO deve ser confundido com "quem saiu do time".
  * - 'inativo' : quem saiu do time ou nao atua mais como SDR. Continua no campo
  *               SDR de negocios antigos, entao precisa de nome, senao o
  *               agendamento apareceria como "sem SDR" -- que e falso: o campo
  *               esta preenchido, so nao com alguem ativo.
  */
-export type Papel = 'sdr' | 'closer' | 'inativo';
+export type Papel = 'sdr' | 'closer' | 'inativo' | 'bot';
 
 export interface Pessoa {
   key: string;
@@ -97,7 +101,7 @@ export const PESSOAS: Pessoa[] = [
   { key: 'daniela', nome: 'Daniela', sdrOptionId: 326, papel: 'inativo' },
   { key: 'marcela', nome: 'Marcela', sdrOptionId: 634, papel: 'inativo' },
   { key: 'pedro', nome: 'Pedro Siniscalchi', sdrOptionId: 691, userId: 24237677, papel: 'inativo' },
-  { key: 'bot', nome: 'Bot', sdrOptionId: 627, papel: 'inativo' },
+  { key: 'bot', nome: 'Bot', sdrOptionId: 627, papel: 'bot' },
   { key: 'jessica', nome: 'Jéssica Garcia', userId: 15020508, papel: 'inativo' },
 ];
 
@@ -127,6 +131,7 @@ export const PAPEL_LABEL: Record<Papel, string> = {
   sdr: 'SDR',
   closer: 'closer',
   inativo: 'inativo',
+  bot: 'bot',
 };
 
 /** Meta do time = soma das metas individuais (40 Novos + 20 Salabim = 60). */

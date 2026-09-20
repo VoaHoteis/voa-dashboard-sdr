@@ -62,11 +62,19 @@ export interface AgendamentosResposta {
   semSdr: number;
   /** Atribuidos apenas a quem ja saiu do time (campo SDR de negocio antigo). */
   inativos: number;
+  /** Marcados apenas pelo Bot -- canal de agendamento automatico. */
+  bot: number;
   /** Tudo que entrou na conta, para o modal de detalhe. */
   itens: ItemAgendamento[];
 }
 
 export interface FunilResposta {
+  /**
+   * Janela usada para contar os hoteis perdidos (Data de perda). O funil mostra
+   * negocios abertos "agora", mas perdas so fazem sentido dentro de um periodo;
+   * aqui e sempre o mes corrente, como os demais cards de meta mensal.
+   */
+  periodoPerdidos: Periodo;
   porSdr: Array<{
     sdr: SdrKey;
     nome: string;
@@ -74,6 +82,11 @@ export interface FunilResposta {
       etapas: Record<EtapaKey, number>;
       saude: { emDia: number; atrasado: number; semAtividade: number };
       indiceSaude: number | null;
+      /**
+       * Hoteis marcados como perdidos (Data de perda) no periodo, atribuidos
+       * pelo proprietario do negocio -- mesma regra das etapas do funil.
+       */
+      perdidos: number;
     }>;
   }>;
 }

@@ -251,6 +251,32 @@ export function CardFunilSdr() {
                   </table>
                 </div>
 
+                <div>
+                  <div className="linha-meta">
+                    <span className="rotulo">Hotéis perdidos</span>
+                    <span className="rotulo">
+                      {nomeDoMes(d.periodoPerdidos.inicio)} · Data de perda
+                    </span>
+                  </div>
+
+                  <table className="tabela">
+                    <tbody>
+                      <tr>
+                        <td style={{ color: 'var(--alerta)' }}>Perdidos</td>
+                        {FUNIS.map((f) => (
+                          <td
+                            key={f}
+                            className="num"
+                            title={`Negócios marcados como perdidos em ${FUNNEL_LABEL[f]} neste mês (por proprietário)`}
+                          >
+                            {sdr.funis[f].perdidos}
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
                 <LegendaFunis />
 
                 {MOSTRAR_NOTAS && (

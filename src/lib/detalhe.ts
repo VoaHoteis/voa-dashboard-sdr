@@ -20,6 +20,8 @@ export interface Recorte {
   semSdr?: boolean;
   /** Atribuido apenas a quem ja saiu do time. */
   inativo?: boolean;
+  /** Marcado apenas pelo Bot -- canal de agendamento automatico. */
+  bot?: boolean;
   unidade?: UnidadeContagem;
 }
 
@@ -33,6 +35,11 @@ export function filtrarItens(itens: ItemAgendamento[], r: Recorte): ItemAgendame
   if (r.inativo) {
     out = out.filter(
       (i) => i.sdrs.length > 0 && i.sdrs.every((k) => pessoaPorChave(k)?.papel === 'inativo')
+    );
+  }
+  if (r.bot) {
+    out = out.filter(
+      (i) => i.sdrs.length > 0 && i.sdrs.every((k) => pessoaPorChave(k)?.papel === 'bot')
     );
   }
 

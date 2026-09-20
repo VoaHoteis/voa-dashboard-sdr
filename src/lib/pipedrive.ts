@@ -264,6 +264,35 @@ export async function buscarNegociosGanhos(opts: {
 }
 
 /**
+ * Negocios PERDIDOS no periodo, para a contagem de hoteis perdidos no funil.
+ *
+ * Mesmo padrao da busca de ganhos: a v1 nao filtra por data de perda, entao
+ * pedimos todos os `status=lost` (paginado, com o cache de 60s) e recortamos por
+ * `lost_time` em memoria. `lost_time` vem como "2026-09-05 14:03:00" em UTC; como
+ * no resto do codigo, comparamos so a parte da data -- perto da virada de dia uma
+ * perda pode cair no dia vizinho, aceitavel para uma contagem mensal e evita
+ * carregar conversao de fuso aqui.
+ *
+ * A v1 e de proposito: ela devolve `lost_time`, `pipeline_id` e o dono em
+ * `user_id` (objeto), que e tudo de que a contagem por SDR precisa -- a
+ * atribuicao no funil e pelo proprietario, igual as etapas.
+ */
+export async function buscarNegociosPerdidos(opts: {
+  inicio: ISODate;
+  fim: ISODate;
+}): Promise<Negocio[]> {
+  if (modoMock()) return (await mock()).negociosPerdidosFalsos(opts);
+
+  const todos = await buscarTudo<Negocio>('/v1/deals', { status: 'lost', user_id: 0 });
+  return todos.filter((d) => {
+    const lt = (d as { lost_time?: string | null }).lost_time;
+    if (!lt) return false;
+    const dia = lt.slice(0, 10);
+    return dia >= opts.inicio && dia <= opts.fim;
+  });
+}
+
+/**
  * Todos os negocios ABERTOS da conta, para o card de Forecast.
  *
  * Sem filtro de etapa de proposito: a definicao do forecast e "todo negocio
