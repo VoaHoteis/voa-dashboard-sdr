@@ -57,6 +57,7 @@ export function CardNoShows({ url, urlAgendamentos }: { url: string; urlAgendame
   // mesmo recorte de funil do resto do dashboard.
   const agendamentos = useApi<AgendamentosResposta>(urlAgendamentos);
   const [detalhe, setDetalhe] = useState<{ titulo: string; itens: ItemAgendamento[] } | null>(null);
+  const [porHotelAberto, setPorHotelAberto] = useState(false);
 
   return (
     <>
@@ -105,6 +106,20 @@ export function CardNoShows({ url, urlAgendamentos }: { url: string; urlAgendame
                   </span>
                   <div className="rotulo" style={{ marginTop: 6 }}>
                     % de no-shows no período
+                  </div>
+                </div>
+
+                <div>
+                  <NumeroClicavel
+                    valor={porHotel.length}
+                    classe="numero medio"
+                    cor="var(--alerta)"
+                    aoAbrir={() => setPorHotelAberto(true)}
+                    titulo="Ver os no-shows agrupados por hotel"
+                    desabilitado={porHotel.length === 0}
+                  />
+                  <div className="rotulo" style={{ marginTop: 6 }}>
+                    {porHotel.length === 1 ? 'hotel com no-show' : 'hotéis com no-show'}
                   </div>
                 </div>
 
@@ -158,57 +173,6 @@ export function CardNoShows({ url, urlAgendamentos }: { url: string; urlAgendame
                   )}
                 </div>
               </div>
-
-              <div>
-                <div className="linha-meta">
-                  <span className="rotulo">Por hotel</span>
-                </div>
-
-                {porHotel.length === 0 ? (
-                  <p className="rotulo" style={{ marginTop: 8 }}>
-                    Nenhum no-show com negócio vinculado no período.
-                  </p>
-                ) : (
-                  <ul
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
-                      marginTop: 10,
-                      listStyle: 'none',
-                      padding: 0,
-                    }}
-                  >
-                    {porHotel.map((h) => (
-                      <li
-                        key={h.negocioId}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 16,
-                        }}
-                      >
-                        <button
-                          className="link"
-                          onClick={() =>
-                            setDetalhe({ titulo: `No-shows · ${h.titulo}`, itens: h.itens })
-                          }
-                          title={`Ver os no-shows de ${h.titulo} · abre o negócio no Pipedrive pelo detalhe`}
-                        >
-                          {h.titulo}
-                        </button>
-                        <span
-                          className="numero medio"
-                          style={{ color: 'var(--alerta)', flexShrink: 0 }}
-                        >
-                          {h.total}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
             </div>
           );
         }}
@@ -223,6 +187,52 @@ export function CardNoShows({ url, urlAgendamentos }: { url: string; urlAgendame
           aoFechar={() => setDetalhe(null)}
         >
           <TabelaNegocios itens={detalhe.itens} />
+        </Modal>
+      )}
+
+      {porHotelAberto && estado.dados && (
+        <Modal
+          titulo="No-shows por hotel"
+          subtitulo={`${agruparPorHotel(estado.dados.itens).length} ${
+            agruparPorHotel(estado.dados.itens).length === 1 ? 'hotel' : 'hotéis'
+          }`}
+          aoFechar={() => setPorHotelAberto(false)}
+        >
+          <ul
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              listStyle: 'none',
+              padding: 0,
+            }}
+          >
+            {agruparPorHotel(estado.dados.itens).map((h) => (
+              <li
+                key={h.negocioId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 16,
+                }}
+              >
+                <button
+                  className="link"
+                  onClick={() => {
+                    setPorHotelAberto(false);
+                    setDetalhe({ titulo: `No-shows · ${h.titulo}`, itens: h.itens });
+                  }}
+                  title={`Ver os no-shows de ${h.titulo}`}
+                >
+                  {h.titulo}
+                </button>
+                <span className="numero medio" style={{ color: 'var(--alerta)', flexShrink: 0 }}>
+                  {h.total}
+                </span>
+              </li>
+            ))}
+          </ul>
         </Modal>
       )}
     </>
