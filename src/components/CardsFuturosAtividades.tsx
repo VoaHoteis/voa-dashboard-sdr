@@ -313,13 +313,43 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
             />
             <Tooltip
               cursor={{ fill: '#ffffff0d' }}
-              contentStyle={{
-                background: '#191c17',
-                border: '1px solid #232720',
-                borderRadius: 10,
-                fontSize: 12,
+              content={({ active, payload, label }) => {
+                if (!active || !payload || payload.length === 0) return null;
+                const total = payload.reduce((acc, p) => acc + (Number(p.value) || 0), 0);
+                return (
+                  <div
+                    style={{
+                      background: '#191c17',
+                      border: '1px solid #232720',
+                      borderRadius: 10,
+                      fontSize: 12,
+                      padding: '10px 12px',
+                      minWidth: 180,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                      }}
+                    >
+                      <span style={{ color: '#f1f3ed' }}>{label}</span>
+                      <span style={{ color: 'var(--salabim)', fontSize: 20, fontWeight: 700 }}>
+                        {total}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {payload.map((p) => (
+                        <span key={p.dataKey} style={{ color: p.color }}>
+                          {p.name} : {p.value}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
               }}
-              labelStyle={{ color: '#f1f3ed' }}
             />
             <Legend wrapperStyle={{ fontSize: 11, color: '#8a9080' }} iconSize={9} />
             {TIPOS_ESFORCO.map((t) => (
