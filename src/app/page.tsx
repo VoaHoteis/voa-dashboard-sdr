@@ -245,7 +245,7 @@ function Painel() {
           </div>
 
           <div className="grade cheia">
-            <CardNoShows url={urlNoShows} />
+            <CardNoShows url={urlNoShows} urlAgendamentos={urlFiltro} />
           </div>
 
           <div className="grade">
