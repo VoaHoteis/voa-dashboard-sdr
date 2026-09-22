@@ -29,6 +29,7 @@ import type {
   AtividadesResposta,
   EscopoAtividade,
   FuturosResposta,
+  Granularidade,
   ItemAgendamento,
 } from '@/lib/types';
 import {
@@ -194,14 +195,70 @@ const ESCOPOS_ATIVIDADE: { key: EscopoAtividade; label: string; cor: string }[] 
   { key: 'salabim', label: FUNNEL_LABEL.salabim, cor: CORES_FUNIL.salabim },
 ];
 
+const GRANULARIDADES_ATIVIDADE: { key: Granularidade; label: string }[] = [
+  { key: 'semana', label: 'Semana' },
+  { key: 'mes', label: 'Mês' },
+  { key: 'dia', label: 'Dia' },
+];
+
+/** Pequeno grupo de botões tipo filtro, reaproveitado pelos dois seletores do card. */
+function FiltroPill<K extends string>({
+  opcoes,
+  ativo,
+  aoEscolher,
+  aria,
+  corAtiva,
+}: {
+  opcoes: { key: K; label: string; cor?: string }[];
+  ativo: K;
+  aoEscolher: (key: K) => void;
+  aria: string;
+  corAtiva?: (key: K) => string;
+}) {
+  return (
+    <div role="group" aria-label={aria} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {opcoes.map((op) => {
+        const selecionado = op.key === ativo;
+        const cor = corAtiva ? corAtiva(op.key) : op.cor ?? 'var(--texto)';
+        return (
+          <button
+            key={op.key}
+            type="button"
+            onClick={() => aoEscolher(op.key)}
+            aria-pressed={selecionado}
+            style={{
+              cursor: 'pointer',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: 0.2,
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: `1px solid ${selecionado ? cor : 'var(--borda)'}`,
+              background: selecionado ? cor : 'transparent',
+              color: selecionado ? (op.key === 'total' ? 'var(--fundo)' : '#0B0C0A') : 'var(--texto-fraco)',
+              transition: 'all .12s ease',
+            }}
+          >
+            {op.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
- * Um card de atividades por SDR. O filtro escolhe o recorte de funil: todas as
- * atividades, só as de Novos Negócios ou só as de Salabim. A série e o total
- * exibidos trocam junto, sem nova consulta — a rota já manda os três recortes.
+ * Um card de atividades por SDR. Dois filtros independentes: a granularidade
+ * das barras (semana, mês inteiro ou dia a dia — semana é o padrão ao abrir o
+ * dashboard) e o recorte de funil (todas, Novos Negócios ou Salabim). A série
+ * e o total exibidos trocam junto, sem nova consulta — a rota já manda todas
+ * as combinações prontas.
  */
 function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][number] }) {
+  const [granularidade, setGranularidade] = useState<Granularidade>('semana');
   const [escopo, setEscopo] = useState<EscopoAtividade>('total');
-  const serie = sdr.series[escopo];
+  const serie = sdr.series[granularidade][escopo];
+  const diario = granularidade === 'dia';
 
   return (
     <>
@@ -213,51 +270,39 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
         </span>
       </div>
 
-      <div
-        role="group"
-        aria-label="Filtrar atividades por funil"
-        style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}
-      >
-        {ESCOPOS_ATIVIDADE.map((op) => {
-          const ativo = op.key === escopo;
-          return (
-            <button
-              key={op.key}
-              type="button"
-              onClick={() => setEscopo(op.key)}
-              aria-pressed={ativo}
-              style={{
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: 0.2,
-                padding: '4px 10px',
-                borderRadius: 999,
-                border: `1px solid ${ativo ? op.cor : 'var(--borda)'}`,
-                background: ativo ? op.cor : 'transparent',
-                color: ativo
-                  ? op.key === 'total'
-                    ? 'var(--fundo)'
-                    : '#0B0C0A'
-                  : 'var(--texto-fraco)',
-                transition: 'all .12s ease',
-              }}
-            >
-              {op.label}
-            </button>
-          );
-        })}
+      <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+        <FiltroPill
+          opcoes={GRANULARIDADES_ATIVIDADE}
+          ativo={granularidade}
+          aoEscolher={setGranularidade}
+          aria="Filtrar atividades por período"
+          corAtiva={() => 'var(--texto)'}
+        />
+        <FiltroPill
+          opcoes={ESCOPOS_ATIVIDADE}
+          ativo={escopo}
+          aoEscolher={setEscopo}
+          aria="Filtrar atividades por funil"
+          corAtiva={(k) => ESCOPOS_ATIVIDADE.find((op) => op.key === k)!.cor}
+        />
       </div>
 
       <div style={{ height: 230, marginTop: 16 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={serie} margin={{ top: 28, right: 8, bottom: 0, left: -20 }}>
+          <BarChart
+            data={serie}
+            margin={{ top: 28, right: 8, bottom: diario ? 16 : 0, left: -20 }}
+          >
             <CartesianGrid stroke="#20241c" vertical={false} />
             <XAxis
-              dataKey="semana"
+              dataKey="rotulo"
               tick={{ fill: '#8a9080', fontSize: 11 }}
               axisLine={{ stroke: '#232720' }}
               tickLine={false}
+              interval={diario ? 1 : 0}
+              angle={diario ? -45 : 0}
+              textAnchor={diario ? 'end' : 'middle'}
+              height={diario ? 34 : undefined}
             />
             <YAxis
               tick={{ fill: '#8a9080', fontSize: 11 }}
