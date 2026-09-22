@@ -189,19 +189,26 @@ export interface ForecastResposta {
  */
 export type EscopoAtividade = 'total' | FunnelKey;
 
-/** Uma linha por semana: { semana, [tipoKey]: n }, pronto para o Recharts. */
-export type SerieSemana = Array<Record<string, string | number>>;
+/**
+ * Recorte de tempo do card de atividades.
+ * - 'semana' : uma barra por semana do mes (padrao ao abrir o dashboard);
+ * - 'mes'    : uma unica barra com o mes inteiro;
+ * - 'dia'    : uma barra por dia do mes.
+ */
+export type Granularidade = 'semana' | 'mes' | 'dia';
+
+/** Uma linha de barra: { rotulo, [tipoKey]: n }, pronto para o Recharts. */
+export type SerieBarras = Array<Record<string, string | number>>;
 
 export interface AtividadesResposta {
   mes: Periodo;
-  semanas: string[];
   porSdr: Array<{
     sdr: SdrKey;
     nome: string;
     /** Total de atividades concluidas no mes, por escopo de funil. */
     totais: Record<EscopoAtividade, number>;
-    /** Serie de barras empilhadas por semana, uma para cada escopo de funil. */
-    series: Record<EscopoAtividade, SerieSemana>;
+    /** Serie de barras empilhadas por granularidade e por escopo de funil. */
+    series: Record<Granularidade, Record<EscopoAtividade, SerieBarras>>;
   }>;
 }
 

@@ -16,19 +16,36 @@ import {
   TIPOS_ESFORCO,
   type FunnelKey,
 } from '@/lib/config';
-import { addDias, hoje, primeiroDiaDoMes, semanasDoMes, ultimoDiaDoMes } from '@/lib/dates';
+import {
+  addDias,
+  hoje,
+  listarDias,
+  nomeDoMes,
+  parse,
+  primeiroDiaDoMes,
+  semanasDoMes,
+  ultimoDiaDoMes,
+  type ISODate,
+} from '@/lib/dates';
 import {
   type Atividade,
   buscarAtividades,
   buscarNegociosPorIds,
   dataConclusao,
 } from '@/lib/pipedrive';
-import type { AtividadesResposta, EscopoAtividade, SerieSemana } from '@/lib/types';
+import type { AtividadesResposta, EscopoAtividade, Granularidade, SerieBarras } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
 export const dynamic = 'force-dynamic';
 
 const ESCOPOS: EscopoAtividade[] = ['total', 'salabim', 'novosNegocios'];
+const GRANULARIDADES: Granularidade[] = ['semana', 'mes', 'dia'];
+
+interface Bucket {
+  label: string;
+  inicio: ISODate;
+  fim: ISODate;
+}
 
 export async function GET(req: Request) {
   try {
@@ -36,9 +53,17 @@ export async function GET(req: Request) {
     const ref = hoje();
     const inicio = primeiroDiaDoMes(ref);
     const fim = ultimoDiaDoMes(ref);
-    const semanas = semanasDoMes(ref);
+    const nomeMes = nomeDoMes(ref);
     const tipos = TIPOS_ESFORCO.map((t) => t.key);
     const tiposSet = new Set<string>(tipos);
+
+    // Um conjunto de buckets por granularidade -- todos recortando o mesmo mes
+    // corrente, só a largura da barra muda (semana, mes inteiro ou dia a dia).
+    const buckets: Record<Granularidade, Bucket[]> = {
+      semana: semanasDoMes(ref).map((s) => ({ label: s.label, inicio: s.inicio, fim: s.fim })),
+      mes: [{ label: nomeMes[0].toUpperCase() + nomeMes.slice(1), inicio, fim }],
+      dia: listarDias(inicio, fim).map((d) => ({ label: String(parse(d).d), inicio: d, fim: d })),
+    };
 
     // A busca da API filtra por data MARCADA (due_date), mas contamos por data de
     // CONCLUSÃO. Alargamos a janela ~35 dias para trás para pegar atividades
@@ -75,54 +100,64 @@ export async function GET(req: Request) {
       return PIPELINE_TO_FUNNEL[n.pipeline_id] ?? null;
     };
 
+    // Ligação de Prospecção só conta com negócio vinculado: o discador
+    // automático (Kinbox) gera uma atividade por tentativa, sempre sem negócio
+    // (deal_id null), enquanto a ligação que a SDR faz e marca no CRM fica
+    // ligada a um negócio. Os demais tipos de esforço não têm essa inflação,
+    // então contam como antes.
+    const contaAtividade = (a: Atividade) =>
+      tiposSet.has(a.type) && !(a.type === TIPO_LIGACAO && a.deal_id == null);
+
     const porSdr: AtividadesResposta['porSdr'] = SDRS.map((s) => {
       const atividades = atividadesPorSdr.get(s.key) ?? [];
 
+      // Total do mes, uma unica passada -- nao depende de granularidade.
       const totais: Record<EscopoAtividade, number> = { total: 0, salabim: 0, novosNegocios: 0 };
-      const series: Record<EscopoAtividade, SerieSemana> = {
-        total: [],
-        salabim: [],
-        novosNegocios: [],
-      };
-
-      for (const sem of semanas) {
-        const linhas: Record<EscopoAtividade, Record<string, string | number>> = {
-          total: { semana: sem.label },
-          salabim: { semana: sem.label },
-          novosNegocios: { semana: sem.label },
-        };
-        for (const esc of ESCOPOS) for (const t of tipos) linhas[esc][t] = 0;
-
-        for (const a of atividades) {
-          const d = dataConclusao(a);
-          if (!d || d < sem.inicio || d > sem.fim) continue;
-          if (!tiposSet.has(a.type)) continue;
-          // Ligação de Prospecção só conta com negócio vinculado: o discador
-          // automático (Kinbox) gera uma atividade por tentativa, sempre sem
-          // negócio (deal_id null), enquanto a ligação que a SDR faz e marca no
-          // CRM fica ligada a um negócio. Os demais tipos de esforço não têm
-          // essa inflação, então contam como antes.
-          if (a.type === TIPO_LIGACAO && a.deal_id == null) continue;
-
-          linhas.total[a.type] = (linhas.total[a.type] as number) + 1;
-          totais.total += 1;
-
-          const funil = funilDaAtividade(a);
-          if (funil) {
-            linhas[funil][a.type] = (linhas[funil][a.type] as number) + 1;
-            totais[funil] += 1;
-          }
-        }
-
-        for (const esc of ESCOPOS) series[esc].push(linhas[esc]);
+      for (const a of atividades) {
+        const d = dataConclusao(a);
+        if (!d || d < inicio || d > fim || !contaAtividade(a)) continue;
+        totais.total += 1;
+        const funil = funilDaAtividade(a);
+        if (funil) totais[funil] += 1;
       }
+
+      const series = Object.fromEntries(
+        GRANULARIDADES.map((gran) => {
+          const serie: Record<EscopoAtividade, SerieBarras> = {
+            total: [],
+            salabim: [],
+            novosNegocios: [],
+          };
+
+          for (const b of buckets[gran]) {
+            const linhas: Record<EscopoAtividade, Record<string, string | number>> = {
+              total: { rotulo: b.label },
+              salabim: { rotulo: b.label },
+              novosNegocios: { rotulo: b.label },
+            };
+            for (const esc of ESCOPOS) for (const t of tipos) linhas[esc][t] = 0;
+
+            for (const a of atividades) {
+              const d = dataConclusao(a);
+              if (!d || d < b.inicio || d > b.fim || !contaAtividade(a)) continue;
+
+              linhas.total[a.type] = (linhas.total[a.type] as number) + 1;
+              const funil = funilDaAtividade(a);
+              if (funil) linhas[funil][a.type] = (linhas[funil][a.type] as number) + 1;
+            }
+
+            for (const esc of ESCOPOS) serie[esc].push(linhas[esc]);
+          }
+
+          return [gran, serie];
+        })
+      ) as Record<Granularidade, Record<EscopoAtividade, SerieBarras>>;
 
       return { sdr: s.key, nome: s.nome, totais, series };
     });
 
     const resposta: AtividadesResposta = {
       mes: { inicio, fim },
-      semanas: semanas.map((s) => s.label),
       porSdr,
     };
 
