@@ -341,8 +341,8 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
                       </span>
                     </div>
                     <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {payload.map((p) => (
-                        <span key={p.dataKey} style={{ color: p.color }}>
+                      {payload.map((p, index) => (
+                        <span key={`${String(p.dataKey)}-${index}`} style={{ color: p.color }}>
                           {p.name} : {p.value}
                         </span>
                       ))}
