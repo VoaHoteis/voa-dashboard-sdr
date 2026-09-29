@@ -267,8 +267,8 @@ function Painel() {
       ) : (
         <>
           <p className="aviso">
-            Os cards de Closers mostram o mês corrente: Fechamentos considera negócios ganhos no
-            mês e o Forecast, negócios abertos com fechamento previsto para este mês.
+            Fechamentos considera os negócios ganhos no mês corrente. O Forecast compara os negócios
+            abertos previstos para o mês de referência com os previstos para o mês seguinte.
           </p>
 
           <div className="grade cheia">
