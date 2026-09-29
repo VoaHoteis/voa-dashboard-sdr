@@ -15,6 +15,7 @@ import {
   buscarNegociosPorIds,
   quantidadeUhDoNegocio,
   resolverChaveCampoUh,
+  resolverTiposAgendamento,
 } from '@/lib/pipedrive';
 import type { FuturosResposta, ItemAgendamento } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
     const atividades = await buscarAtividades({
       inicio,
       fim,
-      tipos: TIPOS_AGENDAMENTO,
+      tipos: await resolverTiposAgendamento(TIPOS_AGENDAMENTO),
       concluidas: false,
     });
 
