@@ -16,6 +16,7 @@ import type { ItemAgendamento } from '@/lib/types';
 const NOME_TIPO: Record<string, string> = {
   reuniao_de_apresentacao_gc: 'Reunião de Apresentação Prospecção Executivo',
   meeting: 'Reunião de Apresentação',
+  apresentacao_institucional: 'Reunião de Apresentação',
   visita_presencial: 'Reunião Presencial',
   [TIPO_NO_SHOW]: 'Registro de No Show',
   ...Object.fromEntries(TIPOS_ESFORCO.map((t) => [t.key, t.label])),
