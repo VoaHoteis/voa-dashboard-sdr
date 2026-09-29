@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { PIPELINES } from '@/lib/config';
-import { buscarEtapasDoPipeline, buscarNegociosAbertos } from '@/lib/pipedrive';
+import {
+  buscarEtapasDoPipeline,
+  buscarNegociosAbertos,
+  nomeDoProprietario,
+} from '@/lib/pipedrive';
 import type { FunilClosersResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -23,20 +27,35 @@ export async function GET(req: Request) {
       (etapa) => etapa.id !== STAGE_DISPARO_ENVIADO
     );
     const porEtapa = new Map(etapasVisiveis.map((etapa) => [etapa.id, 0]));
+    const negociosPorEtapa = new Map<number, FunilClosersResposta['etapas'][number]['negocios']>();
 
     for (const negocio of negociosSalabim) {
       if (negocio.stage_id === STAGE_DISPARO_ENVIADO) continue;
       porEtapa.set(negocio.stage_id, (porEtapa.get(negocio.stage_id) ?? 0) + 1);
+      const lista = negociosPorEtapa.get(negocio.stage_id) ?? [];
+      lista.push({
+        negocioId: negocio.id,
+        titulo: negocio.title,
+        proprietario: nomeDoProprietario(negocio),
+      });
+      negociosPorEtapa.set(negocio.stage_id, lista);
     }
 
     const etapas = etapasVisiveis.map((etapa) => ({
       ...etapa,
       total: porEtapa.get(etapa.id) ?? 0,
+      negocios: negociosPorEtapa.get(etapa.id) ?? [],
     }));
 
     for (const [etapaId, total] of porEtapa) {
       if (etapasVisiveis.some((etapa) => etapa.id === etapaId)) continue;
-      etapas.push({ id: etapaId, nome: `Etapa ${etapaId}`, ordem: Number.MAX_SAFE_INTEGER, total });
+      etapas.push({
+        id: etapaId,
+        nome: `Etapa ${etapaId}`,
+        ordem: Number.MAX_SAFE_INTEGER,
+        total,
+        negocios: negociosPorEtapa.get(etapaId) ?? [],
+      });
     }
 
     const resposta: FunilClosersResposta = {
