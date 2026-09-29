@@ -258,6 +258,28 @@ h3 {
   border: 1px solid var(--borda);
   border-radius: 10px;
   background: var(--painel-alto);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.forecast-mes:hover {
+  border-color: var(--texto-fraco);
+}
+
+.forecast-mes:focus-visible {
+  outline: 2px solid var(--novos);
+  outline-offset: 3px;
+}
+
+.forecast-mes.referencia.selecionado {
+  border-color: color-mix(in srgb, var(--novos) 55%, var(--borda));
+}
+
+.forecast-mes.referencia.selecionado .medio {
+  color: var(--novos);
 }
 
 .forecast-mes .medio {
