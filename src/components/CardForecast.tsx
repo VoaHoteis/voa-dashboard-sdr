@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CORES_FUNIL, FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
 import { addDias, hoje, nomeDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { linkDoNegocio } from '@/lib/detalhe';
@@ -24,6 +25,7 @@ function nomeMesAno(data: string): string {
 }
 
 export function CardForecast() {
+  const [mesSelecionado, setMesSelecionado] = useState<'referencia' | 'proximo'>('proximo');
   const referencia = hoje();
   const primeiroDiaProximoMes = addDias(ultimoDiaDoMes(referencia), 1);
   const inicioReferencia = `${referencia.slice(0, 7)}-01`;
@@ -57,7 +59,9 @@ export function CardForecast() {
       estado={estado}
     >
       {({ referencia: atual, proximo }) => {
-        const itens = [...proximo.itens].sort((a, b) => b.valor - a.valor);
+        const forecastSelecionado = mesSelecionado === 'referencia' ? atual : proximo;
+        const dataSelecionada = mesSelecionado === 'referencia' ? referencia : primeiroDiaProximoMes;
+        const itens = [...forecastSelecionado.itens].sort((a, b) => b.valor - a.valor);
         const variacaoValor = proximo.valor - atual.valor;
         const variacaoPercentual = atual.valor > 0 ? (variacaoValor / atual.valor) * 100 : null;
         const variacaoNegocios = proximo.total - atual.total;
@@ -65,20 +69,32 @@ export function CardForecast() {
         return (
           <>
             <div className="forecast-comparacao">
-              <div className="forecast-mes">
+              <button
+                type="button"
+                className={`forecast-mes referencia${mesSelecionado === 'referencia' ? ' selecionado' : ''}`}
+                aria-label={`Ver forecast de ${nomeMesAno(referencia)}`}
+                aria-pressed={mesSelecionado === 'referencia'}
+                onClick={() => setMesSelecionado('referencia')}
+              >
                 <span className="rotulo">Mês de referência · {nomeDoMes(referencia)}</span>
                 <strong className="numero medio">{moeda(atual.valor)}</strong>
                 <span className="rotulo">
                   {atual.total} {atual.total === 1 ? 'negócio previsto' : 'negócios previstos'}
                 </span>
-              </div>
-              <div className="forecast-mes proximo">
+              </button>
+              <button
+                type="button"
+                className={`forecast-mes proximo${mesSelecionado === 'proximo' ? ' selecionado' : ''}`}
+                aria-label={`Ver forecast de ${nomeMesAno(primeiroDiaProximoMes)}`}
+                aria-pressed={mesSelecionado === 'proximo'}
+                onClick={() => setMesSelecionado('proximo')}
+              >
                 <span className="rotulo">Próximo mês · {nomeDoMes(primeiroDiaProximoMes)}</span>
                 <strong className="numero medio">{moeda(proximo.valor)}</strong>
                 <span className="rotulo">
                   {proximo.total} {proximo.total === 1 ? 'negócio previsto' : 'negócios previstos'}
                 </span>
-              </div>
+              </button>
             </div>
 
             <p className="forecast-variacao">
@@ -121,7 +137,7 @@ export function CardForecast() {
 
             <div style={{ marginTop: 24 }}>
               <span className="rotulo">
-                Negócios com fechamento previsto para {nomeDoMes(primeiroDiaProximoMes)} · maior valor primeiro
+                Negócios com fechamento previsto para {nomeDoMes(dataSelecionada)} · maior valor primeiro
               </span>
               <div className="rolagem" style={{ marginTop: 8 }}>
                 <TabelaForecast itens={itens} />
