@@ -179,6 +179,12 @@ export interface ForecastResposta {
   itens: ItemForecast[];
 }
 
+export interface ItemNegocioEtapa {
+  negocioId: number;
+  titulo: string;
+  proprietario: string | null;
+}
+
 export interface FunilClosersResposta {
   funil: string;
   total: number;
@@ -187,6 +193,7 @@ export interface FunilClosersResposta {
     nome: string;
     ordem: number;
     total: number;
+    negocios: ItemNegocioEtapa[];
   }>;
 }
 
