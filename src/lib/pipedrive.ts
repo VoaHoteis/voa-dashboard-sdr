@@ -322,6 +322,31 @@ export async function buscarEtapas(): Promise<Map<number, string>> {
   return m;
 }
 
+export interface EtapaPipeline {
+  id: number;
+  nome: string;
+  ordem: number;
+}
+
+export async function buscarEtapasDoPipeline(pipelineId: number): Promise<EtapaPipeline[]> {
+  if (modoMock()) {
+    const linhas = await (await mock()).etapasDoFunilFalsas(pipelineId);
+    return linhas.map(({ id, name, order_nr }) => ({ id, nome: name, ordem: order_nr }));
+  }
+
+  const linhas = await buscarTudo<{
+    id: number;
+    name: string;
+    pipeline_id: number;
+    order_nr: number;
+  }>('/v1/stages', { pipeline_id: pipelineId });
+
+  return linhas
+    .filter((etapa) => etapa.pipeline_id === pipelineId)
+    .map(({ id, name, order_nr }) => ({ id, nome: name, ordem: order_nr }))
+    .sort((a, b) => a.ordem - b.ordem);
+}
+
 /**
  * Negocios por id, para resolver funil e SDR das atividades do periodo.
  *

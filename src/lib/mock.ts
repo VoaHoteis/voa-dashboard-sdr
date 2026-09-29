@@ -135,6 +135,28 @@ export async function etapasFalsas(): Promise<Map<number, string>> {
   return m;
 }
 
+export async function etapasDoFunilFalsas(
+  pipelineId: number
+): Promise<Array<{ id: number; name: string; pipeline_id: number; order_nr: number }>> {
+  const funil: FunnelKey | null =
+    pipelineId === PIPELINES.salabim
+      ? 'salabim'
+      : pipelineId === PIPELINES.novosNegocios
+        ? 'novosNegocios'
+        : null;
+  if (!funil) return [];
+
+  const etapas: Array<{ id: number; name: string; pipeline_id: number; order_nr: number }> = [];
+  let order_nr = 0;
+  for (const etapa of Object.keys(STAGES[funil]) as EtapaKey[]) {
+    for (const id of STAGES[funil][etapa]) {
+      etapas.push({ id, name: ETAPA_LABEL[etapa], pipeline_id: pipelineId, order_nr });
+      order_nr += 1;
+    }
+  }
+  return etapas;
+}
+
 export async function negociosFalsosPorIds(ids: number[]): Promise<Map<number, Negocio>> {
   const m = new Map<number, Negocio>();
   for (const id of ids) {

@@ -242,6 +242,23 @@ h3 {
   color: var(--texto-fraco);
 }
 
+.funil-closers-total {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.funil-closers-total .medio {
+  color: var(--salabim);
+}
+
+.funil-closers-nota {
+  margin: 0;
+  color: var(--texto-fraco);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .forecast-comparacao {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
