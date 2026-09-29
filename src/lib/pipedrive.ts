@@ -200,17 +200,30 @@ export async function buscarAtividades(opts: {
 }): Promise<Atividade[]> {
   if (modoMock()) return (await mock()).atividadesFalsas(opts);
 
-  return buscarTudo<Atividade>(
-    '/v1/activities',
-    {
-      user_id: opts.userId ?? 0,
-      type: opts.tipos.join(','),
-      start_date: opts.inicio,
-      end_date: opts.fim,
-      done: opts.concluidas ? 1 : 0,
-    },
-    100
+  // A API v1 aceita um único tipo por chamada. Enviar uma lista separada por
+  // vírgulas não aplica um filtro válido e pode ocultar todas as atividades.
+  const atividadesPorTipo = await Promise.all(
+    opts.tipos.map((type) =>
+      buscarTudo<Atividade>(
+        '/v1/activities',
+        {
+          user_id: opts.userId ?? 0,
+          type,
+          start_date: opts.inicio,
+          end_date: opts.fim,
+          done: opts.concluidas ? 1 : 0,
+        },
+        100
+      )
+    )
   );
+
+  const atividadesUnicas = new Map<number, Atividade>();
+  for (const atividade of atividadesPorTipo.flat()) {
+    atividadesUnicas.set(atividade.id, atividade);
+  }
+
+  return Array.from(atividadesUnicas.values());
 }
 
 /**
