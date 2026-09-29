@@ -168,7 +168,7 @@ export interface ItemForecast {
 }
 
 export interface ForecastResposta {
-  /** Mes de referencia da previsao (recorte da Data de fechamento esperada). */
+  /** Mes de referencia da previsao de fechamento (recorte da Data de fechamento esperada). */
   periodo: Periodo;
   /** Quantidade de negocios abertos com fechamento previsto no periodo. */
   total: number;
@@ -178,6 +178,18 @@ export interface ForecastResposta {
   valorPorFunil: PorFunil;
   itens: ItemForecast[];
 }
+
+export interface FunilClosersResposta {
+  funil: string;
+  total: number;
+  etapas: Array<{
+    id: number;
+    nome: string;
+    ordem: number;
+    total: number;
+  }>;
+}
+
 
 /**
  * Recorte do card de atividades por funil.

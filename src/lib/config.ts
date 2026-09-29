@@ -143,16 +143,14 @@ export const METAS_TIME: Record<FunnelKey, number> = {
 export const META_TIME_TOTAL = METAS_TIME.novosNegocios + METAS_TIME.salabim;
 
 /**
- * Um "agendamento" e uma atividade de um destes 3 tipos, concluida, com negocio
- * vinculado num dos dois funis.
- *
- * Fica de fora de proposito o tipo inativo `apresentacao_institucional`
- * ("Reuniao de Apresentacao" duplicado) -- decisao do Joao.
+ * Tipos de atividade que contam como agendamento, vinculados a negócios dos funis
+ * acompanhados. `apresentacao_institucional` corresponde a "Reunião de Apresentação".
  */
 export const TIPOS_AGENDAMENTO = [
   'reuniao_de_apresentacao_gc',
   'meeting',
   'visita_presencial',
+  'apresentacao_institucional',
 ] as const;
 
 /**
