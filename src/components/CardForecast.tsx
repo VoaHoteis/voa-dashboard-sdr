@@ -1,10 +1,10 @@
 'use client';
 
 import { CORES_FUNIL, FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
-import { hoje, nomeDoMes } from '@/lib/dates';
+import { addDias, hoje, nomeDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { linkDoNegocio } from '@/lib/detalhe';
 import type { ForecastResposta, ItemForecast } from '@/lib/types';
-import { BarraFunis, LegendaFunis, Painel, useApi } from './base';
+import { Painel, useApi } from './base';
 
 const FUNIS: FunnelKey[] = ['novosNegocios', 'salabim'];
 
@@ -19,52 +19,110 @@ function moeda(n: number): string {
   return MOEDA.format(n);
 }
 
+function nomeMesAno(data: string): string {
+  return `${nomeDoMes(data)} de ${data.slice(0, 4)}`;
+}
+
 export function CardForecast() {
-  const estado = useApi<ForecastResposta>('/api/forecast');
-  const mes = nomeDoMes(hoje());
+  const referencia = hoje();
+  const primeiroDiaProximoMes = addDias(ultimoDiaDoMes(referencia), 1);
+  const inicioReferencia = `${referencia.slice(0, 7)}-01`;
+  const fimReferencia = ultimoDiaDoMes(referencia);
+  const fimProximoMes = ultimoDiaDoMes(primeiroDiaProximoMes);
+
+  const estadoReferencia = useApi<ForecastResposta>(
+    `/api/forecast?inicio=${inicioReferencia}&fim=${fimReferencia}`
+  );
+  const estadoProximo = useApi<ForecastResposta>(
+    `/api/forecast?inicio=${primeiroDiaProximoMes}&fim=${fimProximoMes}`
+  );
+
+  const estado = {
+    dados:
+      estadoReferencia.dados && estadoProximo.dados
+        ? { referencia: estadoReferencia.dados, proximo: estadoProximo.dados }
+        : null,
+    carregando: estadoReferencia.carregando || estadoProximo.carregando,
+    erro: estadoReferencia.erro || estadoProximo.erro,
+    recarregar: () => {
+      estadoReferencia.recarregar();
+      estadoProximo.recarregar();
+    },
+  };
 
   return (
-    <Painel titulo="Forecast — previsão do mês" periodo={`fecham em ${mes}`} estado={estado}>
-      {(d) => {
-        const itens = [...d.itens].sort((a, b) => b.valor - a.valor);
+    <Painel
+      titulo="Forecast — mês de referência x próximo mês"
+      periodo={`${nomeMesAno(referencia)} → ${nomeMesAno(primeiroDiaProximoMes)}`}
+      estado={estado}
+    >
+      {({ referencia: atual, proximo }) => {
+        const itens = [...proximo.itens].sort((a, b) => b.valor - a.valor);
+        const variacaoValor = proximo.valor - atual.valor;
+        const variacaoPercentual = atual.valor > 0 ? (variacaoValor / atual.valor) * 100 : null;
+        const variacaoNegocios = proximo.total - atual.total;
 
         return (
           <>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-              <span className="numero medio" style={{ color: CORES_FUNIL.salabim }}>
-                {moeda(d.valor)}
-              </span>
-              <span className="rotulo">
-                previstos para fechar ·{' '}
-                <strong style={{ color: 'var(--texto)' }}>{d.total}</strong>{' '}
-                {d.total === 1 ? 'negócio' : 'negócios'}
-              </span>
-            </div>
-
-            <div style={{ marginTop: 22 }}>
-              <div className="linha-meta">
-                <span className="rotulo">Proporção por funil</span>
+            <div className="forecast-comparacao">
+              <div className="forecast-mes">
+                <span className="rotulo">Mês de referência · {nomeDoMes(referencia)}</span>
+                <strong className="numero medio">{moeda(atual.valor)}</strong>
+                <span className="rotulo">
+                  {atual.total} {atual.total === 1 ? 'negócio previsto' : 'negócios previstos'}
+                </span>
               </div>
-              <BarraFunis salabim={d.porFunil.salabim} novos={d.porFunil.novosNegocios} />
+              <div className="forecast-mes proximo">
+                <span className="rotulo">Próximo mês · {nomeDoMes(primeiroDiaProximoMes)}</span>
+                <strong className="numero medio">{moeda(proximo.valor)}</strong>
+                <span className="rotulo">
+                  {proximo.total} {proximo.total === 1 ? 'negócio previsto' : 'negócios previstos'}
+                </span>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 28, marginTop: 18 }}>
-              {FUNIS.map((f) => (
-                <div key={f}>
-                  <span className="numero medio" style={{ color: CORES_FUNIL[f] }}>
-                    {d.porFunil[f]}
-                  </span>
-                  <div className="rotulo" style={{ marginTop: 4 }}>
-                    {FUNNEL_LABEL[f]} · {moeda(d.valorPorFunil[f])}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="forecast-variacao">
+              Variação estimada:{' '}
+              <strong>{variacaoValor > 0 ? '+' : ''}{moeda(variacaoValor)}</strong>
+              {variacaoPercentual !== null && (
+                <> ({variacaoPercentual > 0 ? '+' : ''}{variacaoPercentual.toFixed(1).replace('.', ',')}%)</>
+              )}
+              {' · '}
+              <strong>{variacaoNegocios > 0 ? '+' : ''}{variacaoNegocios}</strong>{' '}
+              {Math.abs(variacaoNegocios) === 1 ? 'negócio' : 'negócios'}
+            </p>
 
-            <LegendaFunis />
+            <div className="rolagem" style={{ marginTop: 22 }}>
+              <table className="tabela">
+                <thead>
+                  <tr>
+                    <th>Funil</th>
+                    <th className="num">Referência</th>
+                    <th className="num">Próximo mês</th>
+                    <th className="num">Valor no próximo mês</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FUNIS.map((funil) => (
+                    <tr key={funil}>
+                      <td style={{ color: CORES_FUNIL[funil], whiteSpace: 'nowrap' }}>
+                        {FUNNEL_LABEL[funil]}
+                      </td>
+                      <td className="num">{atual.porFunil[funil]}</td>
+                      <td className="num">{proximo.porFunil[funil]}</td>
+                      <td className="num" style={{ whiteSpace: 'nowrap' }}>
+                        {moeda(proximo.valorPorFunil[funil])}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <div style={{ marginTop: 24 }}>
-              <span className="rotulo">Negócios com fechamento previsto · maior valor primeiro</span>
+              <span className="rotulo">
+                Negócios com fechamento previsto para {nomeDoMes(primeiroDiaProximoMes)} · maior valor primeiro
+              </span>
               <div className="rolagem" style={{ marginTop: 8 }}>
                 <TabelaForecast itens={itens} />
               </div>
