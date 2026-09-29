@@ -8,7 +8,7 @@
  */
 
 import { PESSOAS, SDR_FIELD_KEY } from './config';
-import type { ISODate } from './dates';
+import { addDias, type ISODate } from './dates';
 
 const BASE_PADRAO = 'https://voahoteis2.pipedrive.com/api';
 
@@ -202,15 +202,17 @@ export async function buscarAtividades(opts: {
 
   // A API v1 aceita um único tipo por chamada. Enviar uma lista separada por
   // vírgulas não aplica um filtro válido e pode ocultar todas as atividades.
+  // O `end_date` da v1 não inclui o último dia: pedindo até 30/09, as reuniões
+  // de 30/09 somem. Pedimos um dia a mais e recortamos por `due_date` aqui.
   const atividadesPorTipo = await Promise.all(
-    opts.tipos.map((type) =>
+    [...new Set(opts.tipos)].map((type) =>
       buscarTudo<Atividade>(
         '/v1/activities',
         {
           user_id: opts.userId ?? 0,
           type,
           start_date: opts.inicio,
-          end_date: opts.fim,
+          end_date: addDias(opts.fim, 1),
           done: opts.concluidas ? 1 : 0,
         },
         100
@@ -220,10 +222,33 @@ export async function buscarAtividades(opts: {
 
   const atividadesUnicas = new Map<number, Atividade>();
   for (const atividade of atividadesPorTipo.flat()) {
+    const dia = atividade.due_date?.slice(0, 10);
+    if (dia && (dia < opts.inicio || dia > opts.fim)) continue;
     atividadesUnicas.set(atividade.id, atividade);
   }
 
   return Array.from(atividadesUnicas.values());
+}
+
+function normalizarNome(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+/**
+ * Chaves dos tipos de atividade de agendamento: as fixas mais qualquer tipo
+ * cadastrado com o nome "Reunião de Apresentação". A chave de um tipo
+ * personalizado é gerada pelo Pipedrive e pode não bater com a lista fixa.
+ */
+export async function resolverTiposAgendamento(fixos: readonly string[]): Promise<string[]> {
+  if (modoMock()) return [...fixos];
+  const tipos = await buscarTudo<{ key_string: string; name: string; active_flag: boolean }>(
+    '/v1/activityTypes',
+    {}
+  );
+  const porNome = tipos
+    .filter((t) => normalizarNome(t.name ?? '') === 'reuniao de apresentacao')
+    .map((t) => t.key_string);
+  return [...new Set([...fixos, ...porNome])];
 }
 
 /**
