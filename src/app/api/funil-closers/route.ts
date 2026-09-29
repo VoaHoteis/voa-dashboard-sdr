@@ -6,6 +6,8 @@ import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
 export const dynamic = 'force-dynamic';
 
+const STAGE_DISPARO_ENVIADO = 70;
+
 export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
@@ -17,19 +19,23 @@ export async function GET(req: Request) {
     const negociosSalabim = negocios.filter(
       (negocio) => negocio.status === 'open' && negocio.pipeline_id === pipelineId
     );
-    const porEtapa = new Map(etapasPipeline.map((etapa) => [etapa.id, 0]));
+    const etapasVisiveis = etapasPipeline.filter(
+      (etapa) => etapa.id !== STAGE_DISPARO_ENVIADO
+    );
+    const porEtapa = new Map(etapasVisiveis.map((etapa) => [etapa.id, 0]));
 
     for (const negocio of negociosSalabim) {
+      if (negocio.stage_id === STAGE_DISPARO_ENVIADO) continue;
       porEtapa.set(negocio.stage_id, (porEtapa.get(negocio.stage_id) ?? 0) + 1);
     }
 
-    const etapas = etapasPipeline.map((etapa) => ({
+    const etapas = etapasVisiveis.map((etapa) => ({
       ...etapa,
       total: porEtapa.get(etapa.id) ?? 0,
     }));
 
     for (const [etapaId, total] of porEtapa) {
-      if (etapasPipeline.some((etapa) => etapa.id === etapaId)) continue;
+      if (etapasVisiveis.some((etapa) => etapa.id === etapaId)) continue;
       etapas.push({ id: etapaId, nome: `Etapa ${etapaId}`, ordem: Number.MAX_SAFE_INTEGER, total });
     }
 
