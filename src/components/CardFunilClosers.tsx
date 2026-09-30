@@ -59,12 +59,13 @@ function TickEtapa({
 }) {
   const nome = payload?.value ?? '';
   const selecionar = () => aoSelecionar(nome);
+  const linhas = quebrarRotulo(nome);
 
   return (
     <text
       x={x}
-      y={y}
-      textAnchor="end"
+      y={y + 14}
+      textAnchor="middle"
       fill="var(--texto-fraco)"
       fontSize={11}
       role="button"
@@ -79,9 +80,31 @@ function TickEtapa({
         }
       }}
     >
-      {nome}
+      {linhas.map((linha, indice) => (
+        <tspan key={linha} x={x} dy={indice === 0 ? 0 : 14}>
+          {linha}
+        </tspan>
+      ))}
     </text>
   );
+}
+
+function quebrarRotulo(nome: string, limite = 14): string[] {
+  const palavras = nome.split(' ');
+  if (nome.length <= limite || palavras.length === 1) return [nome];
+
+  let melhorCorte = 1;
+  let menorDiferenca = Infinity;
+  for (let corte = 1; corte < palavras.length; corte++) {
+    const primeira = palavras.slice(0, corte).join(' ');
+    const segunda = palavras.slice(corte).join(' ');
+    const diferenca = Math.abs(primeira.length - segunda.length);
+    if (diferenca < menorDiferenca) {
+      menorDiferenca = diferenca;
+      melhorCorte = corte;
+    }
+  }
+  return [palavras.slice(0, melhorCorte).join(' '), palavras.slice(melhorCorte).join(' ')];
 }
 
 function ListaNegocios({ etapa }: { etapa: EtapaFunil }) {
@@ -144,16 +167,14 @@ export function CardFunilClosers() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={dados.etapas}
-                      margin={{ top: 22, right: 8, left: -12, bottom: 26 }}
+                      margin={{ top: 22, right: 8, left: -12, bottom: 4 }}
                       accessibilityLayer
                     >
                       <CartesianGrid stroke="var(--borda)" vertical={false} />
                       <XAxis
                         dataKey="nome"
                         interval={0}
-                        angle={-12}
-                        textAnchor="end"
-                        height={62}
+                        height={44}
                         tick={<TickEtapa aoSelecionar={selecionarPorNome} />}
                         axisLine={{ stroke: 'var(--borda)' }}
                         tickLine={false}
