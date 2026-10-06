@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PIPELINES } from '@/lib/config';
+import { FUNNEL_LABEL, PIPELINES, type FunnelKey } from '@/lib/config';
 import {
   buscarEtapasDoPipeline,
   buscarNegociosAbertos,
@@ -10,27 +10,36 @@ import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
 export const dynamic = 'force-dynamic';
 
-const STAGE_DISPARO_ENVIADO = 70;
+/** "Disparo Enviado" so existe no Salabim: e repositorio de leads, fica fora do grafico. */
+const ETAPAS_OCULTAS: Record<FunnelKey, number[]> = {
+  salabim: [70],
+  novosNegocios: [],
+};
+
+function lerFunil(req: Request): FunnelKey {
+  const valor = new URL(req.url).searchParams.get('funil');
+  return valor === 'novosNegocios' ? 'novosNegocios' : 'salabim';
+}
 
 export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
-    const pipelineId = PIPELINES.salabim;
+    const funil = lerFunil(req);
+    const pipelineId = PIPELINES[funil];
+    const ocultas = ETAPAS_OCULTAS[funil];
     const [negocios, etapasPipeline] = await Promise.all([
       buscarNegociosAbertos(),
       buscarEtapasDoPipeline(pipelineId),
     ]);
-    const negociosSalabim = negocios.filter(
+    const negociosDoFunil = negocios.filter(
       (negocio) => negocio.status === 'open' && negocio.pipeline_id === pipelineId
     );
-    const etapasVisiveis = etapasPipeline.filter(
-      (etapa) => etapa.id !== STAGE_DISPARO_ENVIADO
-    );
+    const etapasVisiveis = etapasPipeline.filter((etapa) => !ocultas.includes(etapa.id));
     const porEtapa = new Map(etapasVisiveis.map((etapa) => [etapa.id, 0]));
     const negociosPorEtapa = new Map<number, FunilClosersResposta['etapas'][number]['negocios']>();
 
-    for (const negocio of negociosSalabim) {
-      if (negocio.stage_id === STAGE_DISPARO_ENVIADO) continue;
+    for (const negocio of negociosDoFunil) {
+      if (ocultas.includes(negocio.stage_id)) continue;
       porEtapa.set(negocio.stage_id, (porEtapa.get(negocio.stage_id) ?? 0) + 1);
       const lista = negociosPorEtapa.get(negocio.stage_id) ?? [];
       lista.push({
@@ -59,8 +68,8 @@ export async function GET(req: Request) {
     }
 
     const resposta: FunilClosersResposta = {
-      funil: 'Salabim',
-      total: negociosSalabim.length,
+      funil: FUNNEL_LABEL[funil],
+      total: negociosDoFunil.length,
       etapas: etapas.sort((a, b) => a.ordem - b.ordem),
     };
 

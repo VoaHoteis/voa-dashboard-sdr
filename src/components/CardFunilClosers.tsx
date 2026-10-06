@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import { Modal, Painel, useApi } from '@/components/base';
+import { FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
 import { linkDoNegocio } from '@/lib/detalhe';
 import type { FunilClosersResposta } from '@/lib/types';
 
@@ -138,13 +139,20 @@ function ListaNegocios({ etapa }: { etapa: EtapaFunil }) {
   );
 }
 
-export function CardFunilClosers() {
-  const estado = useApi<FunilClosersResposta>('/api/funil-closers');
+const COR_DO_FUNIL: Record<FunnelKey, string> = {
+  salabim: 'var(--salabim)',
+  novosNegocios: 'var(--novos)',
+};
+
+export function CardFunilClosers({ funil = 'salabim' }: { funil?: FunnelKey }) {
+  const estado = useApi<FunilClosersResposta>(`/api/funil-closers?funil=${funil}`);
   const [etapaSelecionada, setEtapaSelecionada] = useState<EtapaFunil | null>(null);
+  const nomeFunil = FUNNEL_LABEL[funil];
+  const cor = COR_DO_FUNIL[funil];
 
   return (
     <>
-      <Painel titulo="Negócios por etapa · Salabim" estado={estado}>
+      <Painel titulo={`Negócios por etapa · ${nomeFunil}`} estado={estado}>
         {(dados) => {
           const selecionarPorNome = (nome: string) => {
             const etapa = dados.etapas.find((item) => item.nome === nome);
@@ -154,14 +162,16 @@ export function CardFunilClosers() {
           return (
             <div>
               <div className="funil-closers-total">
-                <strong className="medio">{dados.total}</strong>
+                <strong className="medio" style={{ color: cor }}>
+                  {dados.total}
+                </strong>
                 <span className="rotulo">negócios abertos no funil</span>
               </div>
 
               {dados.etapas.length > 0 ? (
                 <div
                   role="group"
-                  aria-label={`Negócios abertos por etapa no funil Salabim. Total: ${dados.total}.`}
+                  aria-label={`Negócios abertos por etapa no funil ${nomeFunil}. Total: ${dados.total}.`}
                   style={{ width: '100%', height: 320, marginTop: 12 }}
                 >
                   <ResponsiveContainer width="100%" height="100%">
@@ -189,7 +199,7 @@ export function CardFunilClosers() {
                       <Tooltip content={<TooltipEtapa />} cursor={{ fill: 'var(--painel-alto)' }} />
                       <Bar
                         dataKey="total"
-                        fill="var(--salabim)"
+                        fill={cor}
                         radius={[4, 4, 0, 0]}
                         maxBarSize={72}
                         isAnimationActive={false}
@@ -213,7 +223,7 @@ export function CardFunilClosers() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <p className="aviso">Nenhuma etapa ativa foi encontrada para o funil Salabim.</p>
+                <p className="aviso">Nenhuma etapa ativa foi encontrada para o funil {nomeFunil}.</p>
               )}
 
               <p className="funil-closers-nota">
