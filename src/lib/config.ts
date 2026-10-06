@@ -30,7 +30,7 @@ export const PIPELINE_TO_FUNNEL: Record<number, FunnelKey> = {
  */
 export const SDR_FIELD_KEY = '8bf893d50586a148d5a5f39bb09198ae3edfb7d5';
 
-export type SdrKey = 'juliana' | 'barbara';
+export type SdrKey = 'juliana' | 'barbara' | 'mariaEduarda';
 
 /**
  * Papel de quem pode aparecer atribuido a um agendamento.
@@ -52,6 +52,12 @@ export interface Pessoa {
   nome: string;
   /** Opcao do campo personalizado "SDR" do negocio. */
   sdrOptionId?: number;
+  /**
+   * Rotulo da opcao no campo "SDR", para quando o id ainda nao e conhecido. O id
+   * e resolvido em runtime via `/v1/dealFields` (ver `garantirOpcoesSdr`). Assim
+   * que o id for descoberto, vale cravar em `sdrOptionId` e remover este campo.
+   */
+  sdrOptionNome?: string;
   /** Usuario do Pipedrive -- dono de negocio e executor de atividade. */
   userId?: number;
   papel: Papel;
@@ -60,13 +66,12 @@ export interface Pessoa {
 
 export interface SdrConfig extends Pessoa {
   key: SdrKey;
-  sdrOptionId: number;
   userId: number;
   papel: 'sdr';
   metas: Record<FunnelKey, number>;
 }
 
-/** Só estas duas têm meta e aparecem nos cards de meta, funil e atividades. */
+/** Só estas têm meta e aparecem nos cards de meta, funil e atividades. */
 export const SDRS: SdrConfig[] = [
   {
     key: 'juliana',
@@ -81,6 +86,14 @@ export const SDRS: SdrConfig[] = [
     nome: 'Bárbara Almeida',
     sdrOptionId: 680,
     userId: 27867501,
+    papel: 'sdr',
+    metas: { novosNegocios: 20, salabim: 10 },
+  },
+  {
+    key: 'mariaEduarda',
+    nome: 'Maria Eduarda',
+    sdrOptionNome: 'Maria Eduarda',
+    userId: 28885760,
     papel: 'sdr',
     metas: { novosNegocios: 20, salabim: 10 },
   },
@@ -134,7 +147,7 @@ export const PAPEL_LABEL: Record<Papel, string> = {
   bot: 'bot',
 };
 
-/** Meta do time = soma das metas individuais (40 Novos + 20 Salabim = 60). */
+/** Meta do time = soma das metas individuais (60 Novos + 30 Salabim = 90). */
 export const METAS_TIME: Record<FunnelKey, number> = {
   novosNegocios: SDRS.reduce((s, x) => s + x.metas.novosNegocios, 0),
   salabim: SDRS.reduce((s, x) => s + x.metas.salabim, 0),
