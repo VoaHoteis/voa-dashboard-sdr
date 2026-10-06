@@ -265,6 +265,7 @@ export async function resolverTiposAgendamento(fixos: readonly string[]): Promis
  */
 export async function buscarNegociosDaEtapa(stageId: number): Promise<Negocio[]> {
   if (modoMock()) return (await mock()).negociosFalsosDaEtapa(stageId);
+  await garantirOpcoesSdr();
 
   return buscarTudo<Negocio>('/v1/deals', {
     stage_id: stageId,
@@ -291,6 +292,7 @@ export async function buscarNegociosGanhos(opts: {
   fim: ISODate;
 }): Promise<Negocio[]> {
   if (modoMock()) return (await mock()).negociosGanhosFalsos(opts);
+  await garantirOpcoesSdr();
 
   const todos = await buscarTudo<Negocio>('/v1/deals', { status: 'won', user_id: 0 });
   return todos.filter((d) => {
@@ -320,6 +322,7 @@ export async function buscarNegociosPerdidos(opts: {
   fim: ISODate;
 }): Promise<Negocio[]> {
   if (modoMock()) return (await mock()).negociosPerdidosFalsos(opts);
+  await garantirOpcoesSdr();
 
   const todos = await buscarTudo<Negocio>('/v1/deals', { status: 'lost', user_id: 0 });
   return todos.filter((d) => {
@@ -344,6 +347,7 @@ export async function buscarNegociosPerdidos(opts: {
  */
 export async function buscarNegociosAbertos(): Promise<Negocio[]> {
   if (modoMock()) return (await mock()).negociosAbertosFalsos();
+  await garantirOpcoesSdr();
   return buscarTudo<Negocio>('/v1/deals', { status: 'open', user_id: 0 });
 }
 
@@ -396,6 +400,7 @@ export async function buscarNegociosPorIds(ids: number[]): Promise<Map<number, N
   const unicos = [...new Set(ids.filter((n) => Number.isFinite(n)))];
   if (unicos.length === 0) return new Map();
   if (modoMock()) return (await mock()).negociosFalsosPorIds(unicos);
+  await garantirOpcoesSdr();
 
   const mapa = new Map<number, Negocio>();
 
@@ -443,6 +448,45 @@ function normalizarNegocioV2(d: Negocio): Negocio {
 const OPCAO_PARA_PESSOA = new Map<number, string>(
   PESSOAS.filter((p) => p.sdrOptionId !== undefined).map((p) => [p.sdrOptionId as number, p.key])
 );
+
+let opcoesSdrResolvidasEm = 0;
+
+/**
+ * Completa `OPCAO_PARA_PESSOA` para quem so tem `sdrOptionNome` (id da opcao
+ * ainda desconhecido), buscando as opcoes do campo SDR em `/v1/dealFields` e
+ * casando pelo rotulo (sem acento/caixa; aceita rotulo que comece pelo nome,
+ * ex.: "Maria Eduarda Souza"). Cacheado por 5 min. Falha aqui nao derruba o
+ * dashboard: a pessoa so fica sem atribuicao ate a proxima tentativa.
+ */
+export async function garantirOpcoesSdr(): Promise<void> {
+  if (modoMock()) return;
+  const pendentes = PESSOAS.filter((p) => p.sdrOptionNome && p.sdrOptionId === undefined);
+  if (pendentes.length === 0) return;
+  if (Date.now() - opcoesSdrResolvidasEm < 5 * 60_000) return;
+
+  try {
+    const campos = await buscarTudo<{
+      key: string;
+      options?: { id: number; label: string }[] | null;
+    }>('/v1/dealFields', {}, 100);
+    const opcoes = campos.find((c) => c.key === SDR_FIELD_KEY)?.options ?? [];
+
+    for (const p of pendentes) {
+      const alvo = normalizarNome(p.sdrOptionNome as string);
+      const opcao =
+        opcoes.find((o) => normalizarNome(o.label ?? '') === alvo) ??
+        opcoes.find((o) => normalizarNome(o.label ?? '').startsWith(alvo));
+      if (opcao) {
+        OPCAO_PARA_PESSOA.set(opcao.id, p.key);
+      } else {
+        console.warn(`[sdr] Opção "${p.sdrOptionNome}" não encontrada no campo SDR do Pipedrive.`);
+      }
+    }
+    opcoesSdrResolvidasEm = Date.now();
+  } catch (e) {
+    console.warn('[sdr] Falha ao resolver opções do campo SDR:', (e as Error).message);
+  }
+}
 
 const USUARIO_PARA_PESSOA = new Map<number, string>(
   PESSOAS.filter((p) => p.userId !== undefined).map((p) => [p.userId as number, p.key])
