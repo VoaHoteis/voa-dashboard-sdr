@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { FUNNEL_LABEL, PIPELINES, type FunnelKey } from '@/lib/config';
+import { FUNNEL_LABEL, PIPELINES, STAGES, type FunnelKey } from '@/lib/config';
 import {
   buscarEtapasDoPipeline,
   buscarNegociosAbertos,
@@ -10,10 +10,18 @@ import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
 export const dynamic = 'force-dynamic';
 
-/** "Disparo Enviado" so existe no Salabim: e repositorio de leads, fica fora do grafico. */
+/**
+ * "Disparo Enviado" so existe no Salabim: e repositorio de leads, fica fora do grafico.
+ * No Novos Negocios, as etapas de pre-venda (SDR) ficam fora da visao do Closer.
+ */
 const ETAPAS_OCULTAS: Record<FunnelKey, number[]> = {
   salabim: [70],
-  novosNegocios: [],
+  novosNegocios: [
+    ...STAGES.novosNegocios.preQualificacao,
+    ...STAGES.novosNegocios.emContato,
+    ...STAGES.novosNegocios.reagendamento,
+    ...STAGES.novosNegocios.apresentacaoAgendada,
+  ],
 };
 
 function lerFunil(req: Request): FunnelKey {
