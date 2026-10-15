@@ -16,6 +16,7 @@ import { CardDetalhamentoSdr, CardFunilSdr } from '@/components/CardsSdr';
 import { CardFechamentos } from '@/components/CardFechamentos';
 import { CardForecast } from '@/components/CardForecast';
 import { CardFunilClosers } from '@/components/CardFunilClosers';
+import { CardsFunilPorCloser } from '@/components/CardsFunilPorCloser';
 import { CardLigacoes } from '@/components/CardLigacoes';
 import { CardNoShows } from '@/components/CardNoShows';
 import {
@@ -278,6 +279,14 @@ function Painel() {
 
           <div className="grade cheia">
             <CardFunilClosers funil="novosNegocios" />
+          </div>
+
+          <div className="grade">
+            <CardsFunilPorCloser funil="salabim" />
+          </div>
+
+          <div className="grade">
+            <CardsFunilPorCloser funil="novosNegocios" />
           </div>
 
           <div className="grade cheia">
