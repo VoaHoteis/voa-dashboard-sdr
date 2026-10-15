@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { FUNNEL_LABEL, PIPELINES, STAGES, type FunnelKey } from '@/lib/config';
+import { CLOSERS, FUNNEL_LABEL, PIPELINES, STAGES, type FunnelKey } from '@/lib/config';
 import {
   buscarEtapasDoPipeline,
   buscarNegociosAbertos,
+  donoDoNegocio,
   nomeDoProprietario,
 } from '@/lib/pipedrive';
 import type { FunilClosersResposta } from '@/lib/types';
@@ -29,6 +30,12 @@ function lerFunil(req: Request): FunnelKey {
   return valor === 'novosNegocios' ? 'novosNegocios' : 'salabim';
 }
 
+/** Recorte opcional por closer (proprietario do negocio). Chave desconhecida = funil inteiro. */
+function lerCloser(req: Request) {
+  const chave = new URL(req.url).searchParams.get('closer');
+  return chave ? CLOSERS.find((c) => c.key === chave) : undefined;
+}
+
 export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
@@ -39,8 +46,12 @@ export async function GET(req: Request) {
       buscarNegociosAbertos(),
       buscarEtapasDoPipeline(pipelineId),
     ]);
+    const closer = lerCloser(req);
     const negociosDoFunil = negocios.filter(
-      (negocio) => negocio.status === 'open' && negocio.pipeline_id === pipelineId
+      (negocio) =>
+        negocio.status === 'open' &&
+        negocio.pipeline_id === pipelineId &&
+        (!closer || donoDoNegocio(negocio) === closer.userId)
     );
     const etapasVisiveis = etapasPipeline.filter((etapa) => !ocultas.includes(etapa.id));
     const porEtapa = new Map(etapasVisiveis.map((etapa) => [etapa.id, 0]));

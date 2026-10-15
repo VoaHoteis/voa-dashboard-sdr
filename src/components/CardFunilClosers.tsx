@@ -108,7 +108,7 @@ function quebrarRotulo(nome: string, limite = 14): string[] {
   return [palavras.slice(0, melhorCorte).join(' '), palavras.slice(melhorCorte).join(' ')];
 }
 
-function ListaNegocios({ etapa }: { etapa: EtapaFunil }) {
+export function ListaNegocios({ etapa }: { etapa: EtapaFunil }) {
   if (etapa.negocios.length === 0) {
     return <p className="nota">Nenhum negócio aberto nesta etapa.</p>;
   }
@@ -139,7 +139,7 @@ function ListaNegocios({ etapa }: { etapa: EtapaFunil }) {
   );
 }
 
-const COR_DO_FUNIL: Record<FunnelKey, string> = {
+export const COR_DO_FUNIL: Record<FunnelKey, string> = {
   salabim: 'var(--salabim)',
   novosNegocios: 'var(--novos)',
 };
