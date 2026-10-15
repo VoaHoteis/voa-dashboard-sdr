@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { CORES_FUNIL, FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
 import { addDias, hoje, nomeDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { linkDoNegocio } from '@/lib/detalhe';
-import type { ForecastResposta, ItemForecast } from '@/lib/types';
+import type { FechamentosResposta, ForecastResposta, ItemForecast } from '@/lib/types';
 import { Painel, useApi } from './base';
 
 const FUNIS: FunnelKey[] = ['novosNegocios', 'salabim'];
@@ -39,16 +39,26 @@ export function CardForecast() {
     `/api/forecast?inicio=${primeiroDiaProximoMes}&fim=${fimProximoMes}`
   );
 
+  const estadoFechamentos = useApi<FechamentosResposta>(
+    `/api/fechamentos?inicio=${inicioReferencia}&fim=${fimReferencia}`
+  );
+
   const estado = {
     dados:
-      estadoReferencia.dados && estadoProximo.dados
-        ? { referencia: estadoReferencia.dados, proximo: estadoProximo.dados }
+      estadoReferencia.dados && estadoProximo.dados && estadoFechamentos.dados
+        ? {
+            referencia: estadoReferencia.dados,
+            proximo: estadoProximo.dados,
+            fechadoNoMes: estadoFechamentos.dados.time.valor,
+          }
         : null,
-    carregando: estadoReferencia.carregando || estadoProximo.carregando,
-    erro: estadoReferencia.erro || estadoProximo.erro,
+    carregando:
+      estadoReferencia.carregando || estadoProximo.carregando || estadoFechamentos.carregando,
+    erro: estadoReferencia.erro || estadoProximo.erro || estadoFechamentos.erro,
     recarregar: () => {
       estadoReferencia.recarregar();
       estadoProximo.recarregar();
+      estadoFechamentos.recarregar();
     },
   };
 
@@ -58,7 +68,7 @@ export function CardForecast() {
       periodo={`${nomeMesAno(referencia)} → ${nomeMesAno(primeiroDiaProximoMes)}`}
       estado={estado}
     >
-      {({ referencia: atual, proximo }) => {
+      {({ referencia: atual, proximo, fechadoNoMes }) => {
         const forecastSelecionado = mesSelecionado === 'referencia' ? atual : proximo;
         const dataSelecionada = mesSelecionado === 'referencia' ? referencia : primeiroDiaProximoMes;
         const itens = [...forecastSelecionado.itens].sort((a, b) => b.valor - a.valor);
@@ -78,6 +88,10 @@ export function CardForecast() {
               >
                 <span className="rotulo">Mês de referência · {nomeDoMes(referencia)}</span>
                 <strong className="numero medio">{moeda(atual.valor)}</strong>
+                <span className="rotulo" style={{ color: 'var(--texto-fraco)' }}>
+                  Forecast + fechado no mês:{' '}
+                  <strong style={{ color: 'var(--texto)' }}>{moeda(atual.valor + fechadoNoMes)}</strong>
+                </span>
                 <span className="rotulo">
                   {atual.total} {atual.total === 1 ? 'negócio previsto' : 'negócios previstos'}
                 </span>
