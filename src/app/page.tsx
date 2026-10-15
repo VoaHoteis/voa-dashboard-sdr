@@ -282,11 +282,7 @@ function Painel() {
           </div>
 
           <div className="grade">
-            <CardsFunilPorCloser funil="salabim" />
-          </div>
-
-          <div className="grade">
-            <CardsFunilPorCloser funil="novosNegocios" />
+            <CardsFunilPorCloser />
           </div>
 
           <div className="grade cheia">

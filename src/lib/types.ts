@@ -197,6 +197,23 @@ export interface FunilClosersResposta {
   }>;
 }
 
+export interface FunilPorCloserResposta {
+  periodoPerdidos: Periodo;
+  /** Linhas da tabela: etapas da visao do Closer, unidas pelo nome entre os funis. */
+  etapas: Array<{ chave: string; nome: string }>;
+  porCloser: Array<{
+    closer: string;
+    nome: string;
+    funis: Record<FunnelKey, {
+      /** Mesma ordem de `etapas`; null quando a etapa nao existe neste funil. */
+      etapas: Array<{ total: number; negocios: ItemNegocioEtapa[] } | null>;
+      saude: { emDia: number; atrasado: number; semAtividade: number };
+      indiceSaude: number | null;
+      perdidos: number;
+    }>;
+  }>;
+}
+
 
 /**
  * Recorte do card de atividades por funil.
