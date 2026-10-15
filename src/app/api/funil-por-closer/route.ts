@@ -49,11 +49,22 @@ const normalizar = (nome: string) =>
     .trim()
     .toLowerCase();
 
+const NOMES_OCULTOS = new Set(
+  ['Em Contato', 'Em Contato Avançado', 'Reagendamento', 'Apresentação Agendada'].map(normalizar)
+);
+
+const AGRUPAMENTOS: Record<string, { chave: string; nome: string }> = Object.fromEntries(
+  ['Negociação - Decisão em andamento', 'Em Negociação'].map((nome) => [
+    normalizar(nome),
+    { chave: 'negociacao', nome: 'Negociação' },
+  ])
+);
+
 interface Linha {
   chave: string;
   nome: string;
   posicao: number;
-  stages: Record<FunnelKey, number | null>;
+  stages: Record<FunnelKey, number[] | null>;
 }
 
 /**
@@ -67,15 +78,17 @@ function montarLinhas(etapasPorFunil: Record<FunnelKey, EtapaPipeline[]>): Linha
   for (const funil of FUNIS) {
     const visiveis = etapasPorFunil[funil];
     visiveis.forEach((etapa, i) => {
-      const chave = normalizar(etapa.nome);
+      const normalizado = normalizar(etapa.nome);
+      const grupo = AGRUPAMENTOS[normalizado];
+      const chave = grupo?.chave ?? normalizado;
       const posicao = visiveis.length > 1 ? i / (visiveis.length - 1) : 0;
       const linha = linhas.get(chave) ?? {
         chave,
-        nome: etapa.nome,
+        nome: grupo?.nome ?? etapa.nome,
         posicao,
         stages: { novosNegocios: null, salabim: null },
       };
-      linha.stages[funil] = etapa.id;
+      linha.stages[funil] = [...(linha.stages[funil] ?? []), etapa.id];
       linha.posicao = Math.min(linha.posicao, posicao);
       linhas.set(chave, linha);
     });
@@ -97,9 +110,11 @@ export async function GET(req: Request) {
       buscarEtapasDoPipeline(PIPELINES.salabim),
     ]);
 
+    const visivel = (funil: FunnelKey) => (e: EtapaPipeline) =>
+      !ETAPAS_OCULTAS[funil].includes(e.id) && !NOMES_OCULTOS.has(normalizar(e.nome));
     const etapasPorFunil: Record<FunnelKey, EtapaPipeline[]> = {
-      novosNegocios: etapasNovos.filter((e) => !ETAPAS_OCULTAS.novosNegocios.includes(e.id)),
-      salabim: etapasSalabim.filter((e) => !ETAPAS_OCULTAS.salabim.includes(e.id)),
+      novosNegocios: etapasNovos.filter(visivel('novosNegocios')),
+      salabim: etapasSalabim.filter(visivel('salabim')),
     };
     const linhas = montarLinhas(etapasPorFunil);
     const visiveis: Record<FunnelKey, Set<number>> = {
@@ -136,9 +151,9 @@ export async function GET(req: Request) {
 
           funis[funil] = {
             etapas: linhas.map((l) => {
-              const stageId = l.stages[funil];
-              if (stageId === null) return null;
-              const lista = porStage.get(stageId) ?? [];
+              const stageIds = l.stages[funil];
+              if (stageIds === null) return null;
+              const lista = stageIds.flatMap((id) => porStage.get(id) ?? []);
               return { total: lista.length, negocios: lista };
             }),
             saude,
