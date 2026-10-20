@@ -211,6 +211,21 @@ export interface PerdasClosersResposta {
   }>;
 }
 
+export interface ConversaoContratosResposta {
+  periodo: Periodo;
+  totalReunioes: number;
+  totalContratos: number;
+  /** Contratos ganhos ÷ reuniões realizadas no mesmo período; null se sem reuniões. */
+  taxaConversao: number | null;
+  porCloser: Array<{
+    closer: string;
+    nome: string;
+    reunioes: number;
+    contratos: number;
+    taxaConversao: number | null;
+  }>;
+}
+
 export interface FunilPorCloserResposta {
   periodoPerdidos: Periodo;
   /** Linhas da tabela: etapas da visao do Closer, unidas pelo nome entre os funis. */
