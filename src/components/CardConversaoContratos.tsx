@@ -1,7 +1,7 @@
 'use client';
 
 import { Painel, useApi } from '@/components/base';
-import { nomeDoMes } from '@/lib/dates';
+import { formatarBR } from '@/lib/dates';
 import type { ConversaoContratosResposta } from '@/lib/types';
 
 function percentual(valor: number | null): string {
@@ -14,8 +14,12 @@ export function CardConversaoContratos() {
 
   return (
     <Painel
-      titulo="Conversão de reuniões em contratos"
-      periodo={estado.dados ? nomeDoMes(estado.dados.periodo.inicio) : 'Mês corrente'}
+      titulo="Conversão de agendamentos em contratos"
+      periodo={
+        estado.dados
+          ? `Mês anterior + mês atual · ${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
+          : 'Últimos 2 meses'
+      }
       estado={estado}
     >
       {(dados) => (
@@ -23,16 +27,16 @@ export function CardConversaoContratos() {
           <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
             <strong
               style={{ color: 'var(--destaque)', fontSize: 38, fontVariantNumeric: 'tabular-nums' }}
-              title="Contratos ganhos no mês divididos pelas reuniões realizadas no mês"
+              title="Contratos ganhos divididos pelos agendamentos concluídos nos últimos dois meses"
             >
               {percentual(dados.taxaConversao)}
             </strong>
             <span className="rotulo">
-              {dados.totalContratos} {dados.totalContratos === 1 ? 'contrato fechado' : 'contratos fechados'}
+              {dados.totalContratos} {dados.totalContratos === 1 ? 'contrato assinado' : 'contratos assinados'}
               {' ÷ '}
-              {dados.totalReunioes} {dados.totalReunioes === 1 ? 'reunião realizada' : 'reuniões realizadas'}
+              {dados.totalAgendamentos} {dados.totalAgendamentos === 1 ? 'agendamento' : 'agendamentos'}
               {' · '}
-              {nomeDoMes(dados.periodo.inicio)}
+              {formatarBR(dados.periodo.inicio)}–{formatarBR(dados.periodo.fim)}
             </span>
           </div>
 
@@ -51,7 +55,7 @@ export function CardConversaoContratos() {
                 <strong style={{ fontSize: 14 }}>{closer.nome}</strong>
                 <span className="rotulo">
                   {closer.contratos} {closer.contratos === 1 ? 'contrato' : 'contratos'} /{' '}
-                  {closer.reunioes} {closer.reunioes === 1 ? 'reunião' : 'reuniões'}
+                  {closer.agendamentos} {closer.agendamentos === 1 ? 'agendamento' : 'agendamentos'}
                 </span>
                 <strong style={{ color: 'var(--destaque)', fontVariantNumeric: 'tabular-nums' }}>
                   {percentual(closer.taxaConversao)}
@@ -61,10 +65,10 @@ export function CardConversaoContratos() {
           </div>
 
           <p className="nota perdas-nota">
-            Taxa calculada como contratos ganhos no mês ÷ reuniões concluídas no mês. Reuniões
-            contabilizadas quando vinculadas a um negócio dos funis acompanhados; contratos atribuídos
-            pelo proprietário do negócio. É um índice mensal, não uma coorte de oportunidades, e pode
-            ultrapassar 100%.
+            Taxa calculada como contratos assinados (negócios ganhos) ÷ agendamentos concluídos, considerando o mês
+            anterior completo e o mês atual até hoje. Os agendamentos precisam estar vinculados a
+            negócios dos funis acompanhados; contratos são atribuídos pelo proprietário. Como não é uma
+            coorte de oportunidades, a taxa pode ultrapassar 100%.
           </p>
         </>
       )}

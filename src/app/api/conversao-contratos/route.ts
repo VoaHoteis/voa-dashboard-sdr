@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { CLOSERS, PIPELINE_TO_FUNNEL, TIPOS_AGENDAMENTO } from '@/lib/config';
-import { addDias, hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
+import { addDias, hoje, primeiroDiaDoMes } from '@/lib/dates';
 import {
   buscarAtividades,
   buscarNegociosGanhos,
   buscarNegociosPorIds,
-  dataConclusao,
   pessoaDoProprietario,
 } from '@/lib/pipedrive';
 import type { ConversaoContratosResposta } from '@/lib/types';
@@ -17,13 +16,13 @@ export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
     const ref = hoje();
-    const inicio = primeiroDiaDoMes(ref);
-    const fim = ultimoDiaDoMes(ref);
+    const inicio = primeiroDiaDoMes(addDias(primeiroDiaDoMes(ref), -1));
+    const fim = ref;
     const tipos = await Promise.all(
       CLOSERS.map(async (closer) => ({
         closer,
         atividades: await buscarAtividades({
-          inicio: addDias(inicio, -35),
+          inicio,
           fim,
           tipos: TIPOS_AGENDAMENTO,
           concluidas: true,
@@ -38,8 +37,8 @@ export async function GET(req: Request) {
     const negocios = await buscarNegociosPorIds(idsNegocios);
 
     const porCloser = tipos.map(({ closer, atividades }) => {
-      const reunioes = atividades.filter((atividade) => {
-        const data = dataConclusao(atividade);
+      const agendamentos = atividades.filter((atividade) => {
+        const data = atividade.due_date?.slice(0, 10);
         if (!data || data < inicio || data > fim || atividade.deal_id == null) return false;
         const negocio = negocios.get(atividade.deal_id);
         return negocio !== undefined && PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined;
@@ -49,19 +48,19 @@ export async function GET(req: Request) {
       return {
         closer: closer.key,
         nome: closer.nome,
-        reunioes,
+        agendamentos,
         contratos,
-        taxaConversao: reunioes > 0 ? (contratos / reunioes) * 100 : null,
+        taxaConversao: agendamentos > 0 ? (contratos / agendamentos) * 100 : null,
       };
     });
-    const totalReunioes = porCloser.reduce((total, closer) => total + closer.reunioes, 0);
+    const totalAgendamentos = porCloser.reduce((total, closer) => total + closer.agendamentos, 0);
     const totalContratos = porCloser.reduce((total, closer) => total + closer.contratos, 0);
 
     const resposta: ConversaoContratosResposta = {
       periodo: { inicio, fim },
-      totalReunioes,
+      totalAgendamentos,
       totalContratos,
-      taxaConversao: totalReunioes > 0 ? (totalContratos / totalReunioes) * 100 : null,
+      taxaConversao: totalAgendamentos > 0 ? (totalContratos / totalAgendamentos) * 100 : null,
       porCloser,
     };
 
