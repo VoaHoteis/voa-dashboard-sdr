@@ -197,6 +197,35 @@ export interface FunilClosersResposta {
   }>;
 }
 
+export interface PerdasClosersResposta {
+  periodo: Periodo;
+  motivos: string[];
+  total: number;
+  etapas: Array<{
+    funil: FunnelKey;
+    etapaId: number;
+    etapa: string;
+    ordem: number;
+    total: number;
+    porMotivo: Record<string, number>;
+  }>;
+}
+
+export interface ConversaoContratosResposta {
+  periodo: Periodo;
+  totalReunioes: number;
+  totalContratos: number;
+  /** Contratos ganhos ÷ reuniões realizadas no mesmo período; null se sem reuniões. */
+  taxaConversao: number | null;
+  porCloser: Array<{
+    closer: string;
+    nome: string;
+    reunioes: number;
+    contratos: number;
+    taxaConversao: number | null;
+  }>;
+}
+
 export interface FunilPorCloserResposta {
   periodoPerdidos: Periodo;
   /** Linhas da tabela: etapas da visao do Closer, unidas pelo nome entre os funis. */

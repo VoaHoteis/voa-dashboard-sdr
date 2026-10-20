@@ -323,6 +323,13 @@ export async function negociosPerdidosFalsos(opts: {
   const out: Negocio[] = [];
   let id = 800000;
 
+  const motivosPerda = [
+    'Sem orçamento',
+    'Sem retorno',
+    'Escolheu concorrente',
+    'Projeto cancelado',
+  ];
+
   for (const dia of listarDias(opts.inicio, opts.fim)) {
     if (!ehDiaUtil(dia)) continue;
 
@@ -348,6 +355,35 @@ export async function negociosPerdidosFalsos(opts: {
           lost_time: dia + ' 12:00:00',
         } as unknown as Negocio);
       }
+    }
+
+    for (const closer of CLOSERS) {
+      const r = rng(hash('perdido-closer:' + dia + ':' + closer.userId));
+      if (r() >= 0.16) continue;
+
+      const funil: FunnelKey = r() < 0.5 ? 'salabim' : 'novosNegocios';
+      const pipelineId = PIPELINES[funil];
+      const etapasVisiveis = [
+        ...STAGES[funil].emContato,
+        ...STAGES[funil].reagendamento,
+        ...STAGES[funil].apresentacaoAgendada,
+      ];
+      const stageId = etapasVisiveis[Math.floor(r() * etapasVisiveis.length)];
+      const motivo = motivosPerda[Math.floor(r() * motivosPerda.length)];
+      const titulo = HOTEIS[Math.floor(r() * HOTEIS.length)];
+
+      out.push({
+        id: id++,
+        title: titulo,
+        pipeline_id: pipelineId,
+        stage_id: stageId,
+        status: 'lost',
+        undone_activities_count: 0,
+        next_activity_date: null,
+        user_id: { id: closer.userId, name: closer.nome },
+        lost_time: dia + ' 12:00:00',
+        lost_reason: motivo,
+      } as unknown as Negocio);
     }
   }
   return out;

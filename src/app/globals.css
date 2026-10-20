@@ -566,6 +566,51 @@ h3 {
   font-size: 13px;
 }
 
+.perdas-resumo {
+  margin: 0 0 12px;
+  color: var(--texto-fraco);
+  font-size: 12.5px;
+}
+
+.perdas-resumo strong {
+  color: var(--alerta);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.perdas-rolagem {
+  max-height: 360px;
+}
+
+.tabela-perdas {
+  min-width: 640px;
+}
+
+.tabela-perdas .perdas-funil {
+  color: var(--texto-fraco);
+  font-size: 11.5px;
+}
+
+.tabela-perdas .perdas-total {
+  color: var(--alerta);
+  font-weight: 600;
+}
+
+.perdas-nota {
+  margin-bottom: 0;
+}
+
+.tabela-perdas th,
+.tabela-perdas td {
+  white-space: nowrap;
+}
+
+.tabela-perdas .perdas-motivo {
+  white-space: normal;
+  min-width: 140px;
+  max-width: 220px;
+}
+
 .tabela th {
   text-align: left;
   font-weight: 500;
