@@ -566,6 +566,18 @@ h3 {
   font-size: 13px;
 }
 
+.perdas-modos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.perdas-modos button[aria-pressed='true'] {
+  border-color: var(--destaque);
+  color: var(--destaque);
+}
+
 .perdas-resumo {
   margin: 0 0 12px;
   color: var(--texto-fraco);
@@ -583,12 +595,11 @@ h3 {
 }
 
 .tabela-perdas {
-  min-width: 640px;
+  min-width: 100%;
 }
 
-.tabela-perdas .perdas-funil {
-  color: var(--texto-fraco);
-  font-size: 11.5px;
+.tabela-perdas td:first-child {
+  white-space: normal;
 }
 
 .tabela-perdas .perdas-total {
@@ -603,12 +614,6 @@ h3 {
 .tabela-perdas th,
 .tabela-perdas td {
   white-space: nowrap;
-}
-
-.tabela-perdas .perdas-motivo {
-  white-space: normal;
-  min-width: 140px;
-  max-width: 220px;
 }
 
 .tabela th {

@@ -199,28 +199,23 @@ export interface FunilClosersResposta {
 
 export interface PerdasClosersResposta {
   periodo: Periodo;
-  motivos: string[];
-  total: number;
-  etapas: Array<{
-    funil: FunnelKey;
-    etapaId: number;
-    etapa: string;
-    ordem: number;
+  porFunil: Record<FunnelKey, {
     total: number;
-    porMotivo: Record<string, number>;
+    etapas: Array<{ etapa: string; total: number }>;
+    motivos: Array<{ motivo: string; total: number }>;
   }>;
 }
 
 export interface ConversaoContratosResposta {
   periodo: Periodo;
-  totalReunioes: number;
+  totalAgendamentos: number;
   totalContratos: number;
-  /** Contratos ganhos ÷ reuniões realizadas no mesmo período; null se sem reuniões. */
+  /** Contratos ganhos ÷ agendamentos concluídos no mesmo período; null se sem agendamentos. */
   taxaConversao: number | null;
   porCloser: Array<{
     closer: string;
     nome: string;
-    reunioes: number;
+    agendamentos: number;
     contratos: number;
     taxaConversao: number | null;
   }>;

@@ -279,7 +279,7 @@ function Painel() {
             <CardConversaoContratos />
           </div>
 
-          <div className="grade cheia">
+          <div className="grade">
             <CardPerdasClosers />
           </div>
 

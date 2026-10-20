@@ -1,74 +1,124 @@
 'use client';
 
-import { Painel, useApi } from '@/components/base';
+import { useState } from 'react';
+import { Painel, useApi, type Estado } from '@/components/base';
 import { FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
-import { nomeDoMes } from '@/lib/dates';
 import type { PerdasClosersResposta } from '@/lib/types';
 
-const FUNIS: FunnelKey[] = ['novosNegocios', 'salabim'];
+type ResumoPerdas = PerdasClosersResposta['porFunil'][FunnelKey];
+type ModoPerdas = 'etapa' | 'motivo';
+
+const FUNIS: FunnelKey[] = ['salabim', 'novosNegocios'];
 
 export function CardPerdasClosers() {
   const estado = useApi<PerdasClosersResposta>('/api/perdas-closers');
 
   return (
+    <>
+      {FUNIS.map((funil) => {
+        const estadoDoFunil: Estado<ResumoPerdas> = {
+          ...estado,
+          dados: estado.dados?.porFunil[funil] ?? null,
+        };
+
+        return <CardPerdasFunil key={funil} funil={funil} estado={estadoDoFunil} />;
+      })}
+    </>
+  );
+}
+
+function CardPerdasFunil({
+  funil,
+  estado,
+}: {
+  funil: FunnelKey;
+  estado: Estado<ResumoPerdas>;
+}) {
+  const [modo, setModo] = useState<ModoPerdas>('etapa');
+
+  return (
     <Painel
-      titulo="Negócios perdidos por etapa e motivo"
-      periodo="Data de perda · mês corrente"
+      titulo={`Negócios perdidos · ${FUNNEL_LABEL[funil]}`}
+      periodo="Data da perda · mês corrente"
       estado={estado}
     >
-      {(dados) => {
-        if (dados.total === 0) {
-          return <p className="nota">Nenhum negócio perdido de closer neste mês.</p>;
-        }
+      {(dados) => (
+        <>
+          <p className="perdas-resumo">
+            <strong>{dados.total}</strong>{' '}
+            {dados.total === 1 ? 'negócio perdido' : 'negócios perdidos'}
+          </p>
 
-        return (
-          <>
-            <p className="perdas-resumo">
-              <strong>{dados.total}</strong> {dados.total === 1 ? 'negócio perdido' : 'negócios perdidos'}
-              {' · '}{nomeDoMes(dados.periodo.inicio)}
-            </p>
+          <div className="perdas-modos" role="group" aria-label="Agrupar negócios perdidos">
+            <button
+              className="botao"
+              type="button"
+              aria-pressed={modo === 'etapa'}
+              onClick={() => setModo('etapa')}
+            >
+              Ver por etapa
+            </button>
+            <button
+              className="botao"
+              type="button"
+              aria-pressed={modo === 'motivo'}
+              onClick={() => setModo('motivo')}
+            >
+              Ver por motivo
+            </button>
+          </div>
+
+          {modo === 'etapa' ? (
             <div className="rolagem perdas-rolagem">
-              <table
-                className="tabela tabela-perdas"
-                aria-label="Quantidade de negócios perdidos por funil, etapa e motivo de perda"
-              >
+              <table className="tabela tabela-perdas" aria-label={`Negócios perdidos por etapa: ${FUNNEL_LABEL[funil]}`}>
                 <thead>
                   <tr>
-                    <th>Funil</th>
                     <th>Etapa</th>
-                    {dados.motivos.map((motivo) => (
-                      <th key={motivo} className="num perdas-motivo">{motivo}</th>
-                    ))}
                     <th className="num">Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {FUNIS.flatMap((funil) =>
-                    dados.etapas
-                      .filter((etapa) => etapa.funil === funil)
-                      .map((etapa) => (
-                        <tr key={`${funil}-${etapa.etapaId}`}>
-                          <td className="perdas-funil">{FUNNEL_LABEL[funil]}</td>
-                          <td>{etapa.etapa}</td>
-                          {dados.motivos.map((motivo) => (
-                            <td key={motivo} className="num">
-                              {etapa.porMotivo[motivo] ?? 0}
-                            </td>
-                          ))}
-                          <td className="num perdas-total">{etapa.total}</td>
-                        </tr>
-                      ))
+                  {dados.etapas.map(({ etapa, total }) => (
+                    <tr key={etapa}>
+                      <td>{etapa}</td>
+                      <td className="num perdas-total">{total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="rolagem perdas-rolagem">
+              <table className="tabela tabela-perdas" aria-label={`Negócios perdidos por motivo: ${FUNNEL_LABEL[funil]}`}>
+                <thead>
+                  <tr>
+                    <th>Motivo</th>
+                    <th className="num">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dados.motivos.map(({ motivo, total }) => (
+                    <tr key={motivo}>
+                      <td>{motivo}</td>
+                      <td className="num perdas-total">{total}</td>
+                    </tr>
+                  ))}
+                  {dados.motivos.length === 0 && (
+                    <tr>
+                      <td colSpan={2}>Nenhum motivo informado.</td>
+                    </tr>
                   )}
                 </tbody>
               </table>
             </div>
-            <p className="nota perdas-nota">
-              Considera negócios perdidos no mês corrente, dos closers ativos, nas etapas exibidas
-              no funil de closers.
-            </p>
-          </>
-        );
-      }}
+          )}
+
+          <p className="nota perdas-nota">
+            Total limitado às etapas definidas para {FUNNEL_LABEL[funil]}, entre negócios perdidos
+            atribuídos a closers ativos.
+          </p>
+        </>
+      )}
     </Painel>
   );
 }
