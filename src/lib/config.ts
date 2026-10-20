@@ -30,7 +30,7 @@ export const PIPELINE_TO_FUNNEL: Record<number, FunnelKey> = {
  */
 export const SDR_FIELD_KEY = '8bf893d50586a148d5a5f39bb09198ae3edfb7d5';
 
-export type SdrKey = 'juliana' | 'barbara' | 'mariaEduarda';
+export type SdrKey = 'juliana' | 'barbara';
 
 /**
  * Papel de quem pode aparecer atribuido a um agendamento.
@@ -89,14 +89,6 @@ export const SDRS: SdrConfig[] = [
     papel: 'sdr',
     metas: { novosNegocios: 20, salabim: 10 },
   },
-  {
-    key: 'mariaEduarda',
-    nome: 'Maria Eduarda',
-    sdrOptionNome: 'Maria Eduarda',
-    userId: 28885760,
-    papel: 'sdr',
-    metas: { novosNegocios: 20, salabim: 10 },
-  },
 ];
 
 /**
@@ -108,6 +100,7 @@ export const SDRS: SdrConfig[] = [
  */
 export const PESSOAS: Pessoa[] = [
   ...SDRS,
+  { key: 'mariaEduarda', nome: 'Maria Eduarda', sdrOptionNome: 'Maria Eduarda', userId: 28885760, papel: 'inativo' },
   { key: 'bruno', nome: 'Bruno Dias', sdrOptionId: 635, userId: 12029818, papel: 'closer' },
   { key: 'joao', nome: 'João Pacheco', sdrOptionId: 636, userId: 12696278, papel: 'closer' },
   { key: 'mariana', nome: 'Mariana Teixeira', sdrOptionId: 267, userId: 23227690, papel: 'inativo' },
