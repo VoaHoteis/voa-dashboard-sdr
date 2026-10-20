@@ -16,6 +16,7 @@ import { CardDetalhamentoSdr, CardFunilSdr } from '@/components/CardsSdr';
 import { CardFechamentos } from '@/components/CardFechamentos';
 import { CardForecast } from '@/components/CardForecast';
 import { CardFunilClosers } from '@/components/CardFunilClosers';
+import { CardPerdasClosers } from '@/components/CardPerdasClosers';
 import { CardsFunilPorCloser } from '@/components/CardsFunilPorCloser';
 import { CardLigacoes } from '@/components/CardLigacoes';
 import { CardNoShows } from '@/components/CardNoShows';
@@ -272,6 +273,10 @@ function Painel() {
             Fechamentos considera os negócios ganhos no mês corrente. O Forecast compara os negócios
             abertos previstos para o mês de referência com os previstos para o mês seguinte.
           </p>
+
+          <div className="grade cheia">
+            <CardPerdasClosers />
+          </div>
 
           <div className="grade cheia">
             <CardFunilClosers funil="salabim" />

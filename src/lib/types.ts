@@ -197,6 +197,20 @@ export interface FunilClosersResposta {
   }>;
 }
 
+export interface PerdasClosersResposta {
+  periodo: Periodo;
+  motivos: string[];
+  total: number;
+  etapas: Array<{
+    funil: FunnelKey;
+    etapaId: number;
+    etapa: string;
+    ordem: number;
+    total: number;
+    porMotivo: Record<string, number>;
+  }>;
+}
+
 export interface FunilPorCloserResposta {
   periodoPerdidos: Periodo;
   /** Linhas da tabela: etapas da visao do Closer, unidas pelo nome entre os funis. */
