@@ -227,6 +227,25 @@ export interface ConversaoContratosResposta {
   }>;
 }
 
+export interface CicloVendasResposta {
+  periodo: Periodo;
+  /** Todos os contratos ganhos dentro da janela analisada. */
+  totalContratos: number;
+  /** Contratos com uma data de agendamento anterior ou igual à assinatura. */
+  contratosComAgendamento: number;
+  /** Contratos sem atividade de agendamento vinculada encontrada. */
+  semAgendamento: number;
+  /** Média simples de dias corridos entre agendamento e assinatura. */
+  diasMedios: number | null;
+  itens: Array<{
+    negocioId: number;
+    hotel: string;
+    agendamento: ISODate;
+    assinatura: ISODate;
+    dias: number;
+  }>;
+}
+
 export interface FunilPorCloserResposta {
   periodoPerdidos: Periodo;
   /** Linhas da tabela: etapas da visao do Closer, unidas pelo nome entre os funis. */

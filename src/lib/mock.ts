@@ -268,11 +268,25 @@ export async function atividadesFalsas(opts: {
   return out;
 }
 
+/** Datas fictícias de primeiro agendamento anteriores à assinatura, para validar o card. */
+export async function primeirosAgendamentosFalsos(
+  negocios: Negocio[]
+): Promise<Map<number, ISODate>> {
+  const datas = new Map<number, ISODate>();
+  for (const negocio of negocios) {
+    const assinatura = (negocio as { won_time?: string }).won_time?.slice(0, 10);
+    if (!assinatura) continue;
+    const r = rng(hash('ciclo:' + negocio.id));
+    if (r() < 0.08) continue;
+    const diasAteAssinatura = 3 + Math.floor(r() * 78);
+    datas.set(negocio.id, addDias(assinatura, -diasAteAssinatura));
+  }
+  return datas;
+}
+
 /**
- * Negocios ganhos no periodo, atribuidos aos closers pelo proprietario.
- *
- * ~12 fechamentos por closer por mes, divididos entre os dois funis, com valor
- * entre R$ 15 mil e R$ 120 mil. Deterministico como o resto do mock.
+ * Negócios ganhos no período, atribuídos aos closers pelo proprietário.
+ * ~12 fechamentos por closer por mês, distribuídos entre os funis.
  */
 export async function negociosGanhosFalsos(opts: {
   inicio: ISODate;

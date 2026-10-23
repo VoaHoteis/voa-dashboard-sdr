@@ -34,14 +34,7 @@ export async function GET(req: Request) {
       return negocio !== undefined && PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined;
     });
 
-    const chavesClosers = new Set(CLOSERS.map((closer) => closer.key));
-    const pertenceAoGrupo = (negocio: (typeof ganhos)[number] | undefined, closerKey: string) => {
-      const closer = pessoaDoProprietario(negocio);
-      return closerKey === 'outros'
-        ? !closer || !chavesClosers.has(closer)
-        : closer === closerKey;
-    };
-    const hoteisDoGrupo = (closerKey: string) => {
+    const hoteisDoCloser = (closerKey: string) => {
       const porHotel = new Map<string, { hotel: string; agendamentos: number; contratos: number }>();
       const itemPara = (nome: string) => {
         const hotel = nome.trim() || 'Hotel sem nome';
@@ -55,10 +48,12 @@ export async function GET(req: Request) {
 
       for (const atividade of agendamentosValidos) {
         const negocio = atividade.deal_id == null ? undefined : negocios.get(atividade.deal_id);
-        if (negocio && pertenceAoGrupo(negocio, closerKey)) itemPara(negocio.title).agendamentos += 1;
+        if (negocio && pessoaDoProprietario(negocio) === closerKey) {
+          itemPara(negocio.title).agendamentos += 1;
+        }
       }
       for (const negocio of ganhos) {
-        if (pertenceAoGrupo(negocio, closerKey)) itemPara(negocio.title).contratos += 1;
+        if (pessoaDoProprietario(negocio) === closerKey) itemPara(negocio.title).contratos += 1;
       }
 
       return [...porHotel.values()].sort((a, b) => a.hotel.localeCompare(b.hotel, 'pt-BR'));
@@ -77,26 +72,9 @@ export async function GET(req: Request) {
         agendamentos,
         contratos,
         taxaConversao: agendamentos > 0 ? (contratos / agendamentos) * 100 : null,
-        hoteis: hoteisDoGrupo(closer.key),
+        hoteis: hoteisDoCloser(closer.key),
       };
     });
-
-    const outrosAgendamentos = agendamentosValidos.filter((atividade) => {
-      const negocio = atividade.deal_id == null ? undefined : negocios.get(atividade.deal_id);
-      return pertenceAoGrupo(negocio, 'outros');
-    }).length;
-    const outrosContratos = ganhos.filter((negocio) => pertenceAoGrupo(negocio, 'outros')).length;
-    if (outrosAgendamentos > 0 || outrosContratos > 0) {
-      porCloser.push({
-        closer: 'outros',
-        nome: 'Outros proprietários',
-        agendamentos: outrosAgendamentos,
-        contratos: outrosContratos,
-        taxaConversao:
-          outrosAgendamentos > 0 ? (outrosContratos / outrosAgendamentos) * 100 : null,
-        hoteis: hoteisDoGrupo('outros'),
-      });
-    }
 
     const totalAgendamentos = agendamentosValidos.length;
     const totalContratos = ganhos.length;
