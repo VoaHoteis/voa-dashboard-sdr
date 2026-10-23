@@ -17,8 +17,8 @@ export function CardConversaoContratos() {
       titulo="Conversão de agendamentos em contratos"
       periodo={
         estado.dados
-          ? `Mês anterior + mês atual · ${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
-          : 'Últimos 2 meses'
+          ? `2 meses anteriores + mês atual · ${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
+          : 'Últimos 3 meses'
       }
       estado={estado}
     >
@@ -27,7 +27,7 @@ export function CardConversaoContratos() {
           <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
             <strong
               style={{ color: 'var(--destaque)', fontSize: 38, fontVariantNumeric: 'tabular-nums' }}
-              title="Contratos ganhos divididos pelos agendamentos concluídos nos últimos dois meses"
+              title="Contratos ganhos divididos por todas as reuniões concluídas nos últimos três meses"
             >
               {percentual(dados.taxaConversao)}
             </strong>
@@ -65,10 +65,10 @@ export function CardConversaoContratos() {
           </div>
 
           <p className="nota perdas-nota">
-            Taxa calculada como contratos assinados (negócios ganhos) ÷ agendamentos concluídos, considerando o mês
-            anterior completo e o mês atual até hoje. Os agendamentos precisam estar vinculados a
-            negócios dos funis acompanhados; contratos são atribuídos pelo proprietário. Como não é uma
-            coorte de oportunidades, a taxa pode ultrapassar 100%.
+            Taxa calculada como contratos assinados (negócios ganhos) ÷ reuniões concluídas nos dois meses
+            anteriores e no mês atual até hoje. Contamos reuniões de todos os usuários, desde que vinculadas
+            a negócios dos funis acompanhados; o detalhamento é atribuído pelo proprietário do negócio.
+            Como não é uma coorte de oportunidades, a taxa pode ultrapassar 100%.
           </p>
         </>
       )}
