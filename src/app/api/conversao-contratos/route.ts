@@ -16,32 +16,29 @@ export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
     const ref = hoje();
-    const inicio = primeiroDiaDoMes(addDias(primeiroDiaDoMes(ref), -1));
+    const fimMesAnterior = addDias(primeiroDiaDoMes(ref), -1);
+    const inicio = primeiroDiaDoMes(addDias(primeiroDiaDoMes(fimMesAnterior), -1));
     const fim = ref;
-    const tipos = await Promise.all(
-      CLOSERS.map(async (closer) => ({
-        closer,
-        atividades: await buscarAtividades({
-          inicio,
-          fim,
-          tipos: TIPOS_AGENDAMENTO,
-          concluidas: true,
-          userId: closer.userId,
-        }),
-      }))
-    );
-    const ganhos = await buscarNegociosGanhos({ inicio, fim });
-    const idsNegocios = tipos
-      .flatMap(({ atividades }) => atividades.map((atividade) => atividade.deal_id))
+    const [atividades, ganhos] = await Promise.all([
+      buscarAtividades({ inicio, fim, tipos: TIPOS_AGENDAMENTO, concluidas: true }),
+      buscarNegociosGanhos({ inicio, fim }),
+    ]);
+    const idsNegocios = atividades
+      .map((atividade) => atividade.deal_id)
       .filter((id): id is number => typeof id === 'number');
     const negocios = await buscarNegociosPorIds(idsNegocios);
+    const agendamentosValidos = atividades.filter((atividade) => {
+      const data = atividade.due_date?.slice(0, 10);
+      if (!data || data < inicio || data > fim || atividade.deal_id == null) return false;
+      const negocio = negocios.get(atividade.deal_id);
+      return negocio !== undefined && PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined;
+    });
 
-    const porCloser = tipos.map(({ closer, atividades }) => {
-      const agendamentos = atividades.filter((atividade) => {
-        const data = atividade.due_date?.slice(0, 10);
-        if (!data || data < inicio || data > fim || atividade.deal_id == null) return false;
-        const negocio = negocios.get(atividade.deal_id);
-        return negocio !== undefined && PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined;
+    const chavesClosers = new Set(CLOSERS.map((closer) => closer.key));
+    const porCloser = CLOSERS.map((closer) => {
+      const agendamentos = agendamentosValidos.filter((atividade) => {
+        const negocio = atividade.deal_id == null ? undefined : negocios.get(atividade.deal_id);
+        return negocio !== undefined && pessoaDoProprietario(negocio) === closer.key;
       }).length;
       const contratos = ganhos.filter((negocio) => pessoaDoProprietario(negocio) === closer.key).length;
 
@@ -53,8 +50,29 @@ export async function GET(req: Request) {
         taxaConversao: agendamentos > 0 ? (contratos / agendamentos) * 100 : null,
       };
     });
-    const totalAgendamentos = porCloser.reduce((total, closer) => total + closer.agendamentos, 0);
-    const totalContratos = porCloser.reduce((total, closer) => total + closer.contratos, 0);
+
+    const outrosAgendamentos = agendamentosValidos.filter((atividade) => {
+      const negocio = atividade.deal_id == null ? undefined : negocios.get(atividade.deal_id);
+      const closer = negocio ? pessoaDoProprietario(negocio) : null;
+      return !closer || !chavesClosers.has(closer);
+    }).length;
+    const outrosContratos = ganhos.filter((negocio) => {
+      const closer = pessoaDoProprietario(negocio);
+      return !closer || !chavesClosers.has(closer);
+    }).length;
+    if (outrosAgendamentos > 0 || outrosContratos > 0) {
+      porCloser.push({
+        closer: 'outros',
+        nome: 'Outros proprietários',
+        agendamentos: outrosAgendamentos,
+        contratos: outrosContratos,
+        taxaConversao:
+          outrosAgendamentos > 0 ? (outrosContratos / outrosAgendamentos) * 100 : null,
+      });
+    }
+
+    const totalAgendamentos = agendamentosValidos.length;
+    const totalContratos = ganhos.length;
 
     const resposta: ConversaoContratosResposta = {
       periodo: { inicio, fim },

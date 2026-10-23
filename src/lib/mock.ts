@@ -181,7 +181,9 @@ export async function atividadesFalsas(opts: {
   const ehAgendamento = opts.tipos.some((t) => (TIPOS_AGENDAMENTO as readonly string[]).includes(t));
   const ehNoShow = opts.tipos.includes(TIPO_NO_SHOW);
   const ehLigacoes = opts.tipos.length === 1 && opts.tipos[0] === TIPO_LIGACAO;
-  const usuarios = opts.userId ? [opts.userId] : SDRS.map((s) => s.userId);
+  const usuarios = opts.userId
+    ? [opts.userId]
+    : [...new Set([...SDRS.map((s) => s.userId), ...CLOSERS.map((c) => c.userId)])];
   let id = 500000;
 
   for (const dia of listarDias(opts.inicio, opts.fim)) {
