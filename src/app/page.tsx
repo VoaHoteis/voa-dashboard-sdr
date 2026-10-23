@@ -17,6 +17,7 @@ import { CardFechamentos } from '@/components/CardFechamentos';
 import { CardForecast } from '@/components/CardForecast';
 import { CardFunilClosers } from '@/components/CardFunilClosers';
 import { CardConversaoContratos } from '@/components/CardConversaoContratos';
+import { CardCicloVendas } from '@/components/CardCicloVendas';
 import { CardPerdasClosers } from '@/components/CardPerdasClosers';
 import { CardsFunilPorCloser } from '@/components/CardsFunilPorCloser';
 import { CardLigacoes } from '@/components/CardLigacoes';
@@ -275,8 +276,9 @@ function Painel() {
             abertos previstos para o mês de referência com os previstos para o mês seguinte.
           </p>
 
-          <div className="grade cheia">
+          <div className="grade">
             <CardConversaoContratos />
+            <CardCicloVendas />
           </div>
 
           <div className="grade">

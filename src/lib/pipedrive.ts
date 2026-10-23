@@ -61,6 +61,7 @@ interface RespostaPipedrive<T> {
   error?: string;
   additional_data?: {
     pagination?: { start: number; limit: number; more_items_in_collection: boolean; next_start?: number };
+    next_cursor?: string | null;
   };
 }
 
@@ -301,6 +302,57 @@ export async function buscarNegociosGanhos(opts: {
     const dia = wt.slice(0, 10);
     return dia >= opts.inicio && dia <= opts.fim;
   });
+}
+
+/**
+ * Primeira data de atividade de agendamento ligada a cada negócio.
+ * A API v2 filtra por um único deal_id, então limitamos a concorrência e usamos
+ * cursor para consultar todo o histórico sem varrer as atividades da conta.
+ */
+export async function buscarPrimeiroAgendamentoPorNegocio(
+  negocios: Negocio[],
+  tipos: readonly string[]
+): Promise<Map<number, ISODate>> {
+  const tiposUnicos = [...new Set(tipos)];
+  if (modoMock()) return (await mock()).primeirosAgendamentosFalsos(negocios);
+
+  const resultado = new Map<number, ISODate>();
+  let indice = 0;
+  const trabalhadores = Array.from({ length: Math.min(4, negocios.length) }, async () => {
+    while (indice < negocios.length) {
+      const negocio = negocios[indice++];
+      const chaveCache = '/v2/activities?deal_id=' + negocio.id + '&types=' + tiposUnicos.join(',');
+      const hit = cache.get(chaveCache);
+      if (hit && Date.now() - hit.em < TTL_MS) {
+        const data = hit.valor as ISODate | null;
+        if (data) resultado.set(negocio.id, data);
+        continue;
+      }
+
+      let cursor: string | undefined;
+      let primeira: ISODate | null = null;
+      for (let pagina = 0; pagina < 60; pagina++) {
+        const resposta = await chamar<Atividade>('/v2/activities', {
+          deal_id: negocio.id,
+          limit: 500,
+          cursor,
+        });
+        for (const atividade of resposta.data ?? []) {
+          const data = atividade.due_date?.slice(0, 10) as ISODate | undefined;
+          if (!data || !tiposUnicos.includes(atividade.type)) continue;
+          if (!primeira || data < primeira) primeira = data;
+        }
+        const proximoCursor = resposta.additional_data?.next_cursor;
+        if (!proximoCursor) break;
+        cursor = proximoCursor;
+      }
+      cache.set(chaveCache, { em: Date.now(), valor: primeira });
+      if (primeira) resultado.set(negocio.id, primeira);
+    }
+  });
+
+  await Promise.all(trabalhadores);
+  return resultado;
 }
 
 /**
