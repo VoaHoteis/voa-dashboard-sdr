@@ -268,18 +268,21 @@ export async function atividadesFalsas(opts: {
   return out;
 }
 
-/** Datas fictícias de primeiro agendamento anteriores à assinatura, para validar o card. */
-export async function primeirosAgendamentosFalsos(
+/** Duas datas fictícias de apresentação anteriores à assinatura, para validar o card. */
+export async function agendamentosPorNegocioFalsos(
   negocios: Negocio[]
-): Promise<Map<number, ISODate>> {
-  const datas = new Map<number, ISODate>();
+): Promise<Map<number, { primeiro: ISODate; maisRecente: ISODate }>> {
+  const datas = new Map<number, { primeiro: ISODate; maisRecente: ISODate }>();
   for (const negocio of negocios) {
     const assinatura = (negocio as { won_time?: string }).won_time?.slice(0, 10);
     if (!assinatura) continue;
     const r = rng(hash('ciclo:' + negocio.id));
     if (r() < 0.08) continue;
-    const diasAteAssinatura = 3 + Math.floor(r() * 78);
-    datas.set(negocio.id, addDias(assinatura, -diasAteAssinatura));
+    const diasAtePrimeira = 20 + Math.floor(r() * 150);
+    const primeiro = addDias(assinatura, -diasAtePrimeira);
+    const diasDaMaisRecente = 1 + Math.floor(r() * Math.min(45, diasAtePrimeira - 1));
+    const maisRecente = r() < 0.35 ? primeiro : addDias(assinatura, -diasDaMaisRecente);
+    datas.set(negocio.id, { primeiro, maisRecente });
   }
   return datas;
 }

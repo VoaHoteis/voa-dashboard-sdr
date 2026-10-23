@@ -305,32 +305,36 @@ export async function buscarNegociosGanhos(opts: {
 }
 
 /**
- * Primeira data de atividade de agendamento ligada a cada negócio.
- * A API v2 filtra por um único deal_id, então limitamos a concorrência e usamos
- * cursor para consultar todo o histórico sem varrer as atividades da conta.
+ * Primeira e mais recente data de apresentação antes da assinatura de cada negócio.
+ * A API v2 filtra por deal_id, então limitamos a concorrência e usamos cursor
+ * para consultar todo o histórico sem varrer as atividades da conta.
  */
-export async function buscarPrimeiroAgendamentoPorNegocio(
+export async function buscarAgendamentosPorNegocio(
   negocios: Negocio[],
   tipos: readonly string[]
-): Promise<Map<number, ISODate>> {
+): Promise<Map<number, { primeiro: ISODate; maisRecente: ISODate }>> {
   const tiposUnicos = [...new Set(tipos)];
-  if (modoMock()) return (await mock()).primeirosAgendamentosFalsos(negocios);
+  if (modoMock()) return (await mock()).agendamentosPorNegocioFalsos(negocios);
 
-  const resultado = new Map<number, ISODate>();
+  const resultado = new Map<number, { primeiro: ISODate; maisRecente: ISODate }>();
   let indice = 0;
   const trabalhadores = Array.from({ length: Math.min(4, negocios.length) }, async () => {
     while (indice < negocios.length) {
       const negocio = negocios[indice++];
-      const chaveCache = '/v2/activities?deal_id=' + negocio.id + '&types=' + tiposUnicos.join(',');
+      const assinatura = (negocio as { won_time?: string | null }).won_time?.slice(0, 10);
+      if (!assinatura) continue;
+
+      const chaveCache = '/v2/activities?deal_id=' + negocio.id + '&types=' + tiposUnicos.join(',') + '&won_time=' + assinatura + '&ciclo=2';
       const hit = cache.get(chaveCache);
       if (hit && Date.now() - hit.em < TTL_MS) {
-        const data = hit.valor as ISODate | null;
-        if (data) resultado.set(negocio.id, data);
+        const datas = hit.valor as { primeiro: ISODate; maisRecente: ISODate } | null;
+        if (datas) resultado.set(negocio.id, datas);
         continue;
       }
 
       let cursor: string | undefined;
       let primeira: ISODate | null = null;
+      let maisRecente: ISODate | null = null;
       for (let pagina = 0; pagina < 60; pagina++) {
         const resposta = await chamar<Atividade>('/v2/activities', {
           deal_id: negocio.id,
@@ -339,15 +343,18 @@ export async function buscarPrimeiroAgendamentoPorNegocio(
         });
         for (const atividade of resposta.data ?? []) {
           const data = atividade.due_date?.slice(0, 10) as ISODate | undefined;
-          if (!data || !tiposUnicos.includes(atividade.type)) continue;
+          if (!data || data > assinatura || !tiposUnicos.includes(atividade.type)) continue;
           if (!primeira || data < primeira) primeira = data;
+          if (!maisRecente || data > maisRecente) maisRecente = data;
         }
         const proximoCursor = resposta.additional_data?.next_cursor;
         if (!proximoCursor) break;
         cursor = proximoCursor;
       }
-      cache.set(chaveCache, { em: Date.now(), valor: primeira });
-      if (primeira) resultado.set(negocio.id, primeira);
+
+      const datas = primeira && maisRecente ? { primeiro: primeira, maisRecente } : null;
+      cache.set(chaveCache, { em: Date.now(), valor: datas });
+      if (datas) resultado.set(negocio.id, datas);
     }
   });
 

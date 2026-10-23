@@ -28,18 +28,37 @@ export function CardCicloVendas() {
       >
         {(resposta) => (
           <>
-            <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
-              <strong
-                style={{ color: 'var(--destaque)', fontSize: 38, fontVariantNumeric: 'tabular-nums' }}
-                title="Média de dias corridos entre o primeiro agendamento vinculado e a assinatura do contrato"
-              >
-                {dias(resposta.diasMedios)} dias
-              </strong>
-              <span className="rotulo">
-                média até a assinatura · {resposta.contratosComAgendamento} de {resposta.totalContratos}{' '}
-                {resposta.totalContratos === 1 ? 'contrato' : 'contratos'} com agendamento encontrado
-              </span>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 16,
+              }}
+            >
+              <div>
+                <strong
+                  style={{ color: 'var(--destaque)', fontSize: 34, fontVariantNumeric: 'tabular-nums' }}
+                  title="Média de dias corridos entre a primeira apresentação e a assinatura do contrato"
+                >
+                  {dias(resposta.diasMediosDesdePrimeira)} dias
+                </strong>
+                <p className="rotulo">Desde a primeira apresentação</p>
+              </div>
+              <div>
+                <strong
+                  style={{ color: 'var(--destaque)', fontSize: 34, fontVariantNumeric: 'tabular-nums' }}
+                  title="Média de dias corridos entre a apresentação mais recente antes da assinatura e o contrato"
+                >
+                  {dias(resposta.diasMediosDesdeUltima)} dias
+                </strong>
+                <p className="rotulo">Desde a apresentação mais recente</p>
+              </div>
             </div>
+
+            <p className="rotulo" style={{ marginTop: 14 }}>
+              {resposta.contratosComAgendamento} de {resposta.totalContratos}{' '}
+              {resposta.totalContratos === 1 ? 'contrato' : 'contratos'} com apresentação encontrada
+            </p>
 
             <div style={{ marginTop: 18 }}>
               <NumeroClicavel
@@ -47,15 +66,16 @@ export function CardCicloVendas() {
                 classe="numero forte"
                 cor="var(--novos)"
                 aoAbrir={() => setDetalheAberto(true)}
-                titulo="Ver datas de agendamento, assinatura e duração de cada ciclo"
+                titulo="Ver primeira e última apresentação, assinatura e duração de cada ciclo"
                 desabilitado={resposta.itens.length === 0}
               />
             </div>
 
             <p className="nota perdas-nota">
-              A média considera dias corridos entre a primeira atividade de agendamento ligada ao negócio
-              e a data de assinatura. Contratos sem agendamento anterior à assinatura ficam fora da média.
-              {resposta.semAgendamento > 0 && ` ${resposta.semAgendamento} contrato(s) sem data válida.`}
+              A primeira média vai da apresentação mais antiga à assinatura; a segunda, da apresentação
+              mais recente registrada até a assinatura. Apresentações posteriores ao fechamento são ignoradas.
+              Contratos sem apresentação vinculada ficam fora das médias.
+              {resposta.semAgendamento > 0 && ` ${resposta.semAgendamento} contrato(s) sem apresentação válida.`}
             </p>
           </>
         )}
@@ -64,25 +84,29 @@ export function CardCicloVendas() {
       {detalheAberto && dados && (
         <Modal
           titulo="Ciclo por negócio"
-          subtitulo={`${dados.contratosComAgendamento} ciclos · média de ${dias(dados.diasMedios)} dias · ${formatarBR(dados.periodo.inicio)} a ${formatarBR(dados.periodo.fim)}`}
+          subtitulo={`${dados.contratosComAgendamento} negócios · primeira apresentação: ${dias(dados.diasMediosDesdePrimeira)} dias · apresentação mais recente: ${dias(dados.diasMediosDesdeUltima)} dias · ${formatarBR(dados.periodo.inicio)} a ${formatarBR(dados.periodo.fim)}`}
           aoFechar={() => setDetalheAberto(false)}
         >
           <table className="tabela">
             <thead>
               <tr>
                 <th>Negócio</th>
-                <th>Agendamento</th>
+                <th>1ª apresentação</th>
+                <th>Última apresentação</th>
                 <th>Assinatura</th>
-                <th className="num">Dias</th>
+                <th className="num">Dias desde 1ª</th>
+                <th className="num">Dias desde última</th>
               </tr>
             </thead>
             <tbody>
               {dados.itens.map((item) => (
                 <tr key={item.negocioId}>
                   <td>{item.hotel}</td>
-                  <td>{formatarBR(item.agendamento)}</td>
+                  <td>{formatarBR(item.primeiroAgendamento)}</td>
+                  <td>{formatarBR(item.ultimoAgendamento)}</td>
                   <td>{formatarBR(item.assinatura)}</td>
-                  <td className="num">{item.dias}</td>
+                  <td className="num">{item.diasDesdePrimeira}</td>
+                  <td className="num">{item.diasDesdeUltima}</td>
                 </tr>
               ))}
             </tbody>
