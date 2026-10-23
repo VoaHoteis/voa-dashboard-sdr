@@ -1,6 +1,7 @@
 'use client';
 
-import { Painel, useApi } from '@/components/base';
+import { useState } from 'react';
+import { Modal, NumeroClicavel, Painel, useApi } from '@/components/base';
 import { formatarBR } from '@/lib/dates';
 import type { ConversaoContratosResposta } from '@/lib/types';
 
@@ -11,17 +12,20 @@ function percentual(valor: number | null): string {
 
 export function CardConversaoContratos() {
   const estado = useApi<ConversaoContratosResposta>('/api/conversao-contratos');
+  const [closerSelecionado, setCloserSelecionado] = useState<string | null>(null);
+  const detalhe = estado.dados?.porCloser.find((closer) => closer.closer === closerSelecionado);
 
   return (
-    <Painel
-      titulo="Conversão de agendamentos em contratos"
-      periodo={
-        estado.dados
-          ? `2 meses anteriores + mês atual · ${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
-          : 'Últimos 3 meses'
-      }
-      estado={estado}
-    >
+    <>
+      <Painel
+        titulo="Conversão de agendamentos em contratos"
+        periodo={
+          estado.dados
+            ? `2 meses anteriores + mês atual · ${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
+            : 'Últimos 3 meses'
+        }
+        estado={estado}
+      >
       {(dados) => (
         <>
           <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
@@ -57,9 +61,13 @@ export function CardConversaoContratos() {
                   {closer.contratos} {closer.contratos === 1 ? 'contrato' : 'contratos'} /{' '}
                   {closer.agendamentos} {closer.agendamentos === 1 ? 'agendamento' : 'agendamentos'}
                 </span>
-                <strong style={{ color: 'var(--destaque)', fontVariantNumeric: 'tabular-nums' }}>
-                  {percentual(closer.taxaConversao)}
-                </strong>
+                <NumeroClicavel
+                  valor={percentual(closer.taxaConversao)}
+                  classe="numero forte"
+                  cor="var(--destaque)"
+                  aoAbrir={() => setCloserSelecionado(closer.closer)}
+                  titulo={`Ver os hotéis que compõem a conversão de ${closer.nome}`}
+                />
               </div>
             ))}
           </div>
@@ -72,6 +80,47 @@ export function CardConversaoContratos() {
           </p>
         </>
       )}
-    </Painel>
+      </Painel>
+
+      {detalhe && estado.dados && (
+        <Modal
+          titulo={`Hotéis na conversão · ${detalhe.nome}`}
+          subtitulo={`${detalhe.contratos} ${detalhe.contratos === 1 ? 'contrato' : 'contratos'} ÷ ${detalhe.agendamentos} ${detalhe.agendamentos === 1 ? 'reunião' : 'reuniões'} · ${formatarBR(estado.dados.periodo.inicio)} a ${formatarBR(estado.dados.periodo.fim)}`}
+          aoFechar={() => setCloserSelecionado(null)}
+        >
+          {detalhe.hoteis.length === 0 ? (
+            <p className="nota" style={{ border: 'none', marginTop: 0 }}>
+              Nenhum hotel compõe a conta deste closer no período.
+            </p>
+          ) : (
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th>Hotel</th>
+                  <th className="num">Reuniões</th>
+                  <th className="num">Contratos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detalhe.hoteis.map((hotel) => (
+                  <tr key={hotel.hotel}>
+                    <td>{hotel.hotel}</td>
+                    <td className="num">{hotel.agendamentos}</td>
+                    <td className="num">{hotel.contratos}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th>Total</th>
+                  <th className="num">{detalhe.agendamentos}</th>
+                  <th className="num">{detalhe.contratos}</th>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </Modal>
+      )}
+    </>
   );
 }

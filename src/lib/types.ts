@@ -218,6 +218,12 @@ export interface ConversaoContratosResposta {
     agendamentos: number;
     contratos: number;
     taxaConversao: number | null;
+    /** Hotéis cuja soma de reuniões e contratos compõe a taxa do closer. */
+    hoteis: Array<{
+      hotel: string;
+      agendamentos: number;
+      contratos: number;
+    }>;
   }>;
 }
 
