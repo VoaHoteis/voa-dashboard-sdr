@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { addDias, hoje, primeiroDiaDoMes } from '@/lib/dates';
 import { TIPOS_AGENDAMENTO } from '@/lib/config';
-import { buscarNegociosGanhos, buscarPrimeiroAgendamentoPorNegocio } from '@/lib/pipedrive';
+import { buscarAgendamentosPorNegocio, buscarNegociosGanhos } from '@/lib/pipedrive';
 import type { CicloVendasResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -22,22 +22,23 @@ export async function GET(req: Request) {
     const fim = ref;
     const periodo = { inicio, fim };
     const ganhos = await buscarNegociosGanhos(periodo);
-    const primeirosAgendamentos = await buscarPrimeiroAgendamentoPorNegocio(
-      ganhos,
-      TIPOS_AGENDAMENTO
-    );
+    const datasAgendamentos = await buscarAgendamentosPorNegocio(ganhos, TIPOS_AGENDAMENTO);
 
     const itens = ganhos.flatMap((negocio) => {
       const assinatura = (negocio as { won_time?: string | null }).won_time?.slice(0, 10);
-      const agendamento = primeirosAgendamentos.get(negocio.id);
-      if (!assinatura || !agendamento || agendamento > assinatura) return [];
+      const agendamentos = datasAgendamentos.get(negocio.id);
+      if (!assinatura || !agendamentos) return [];
 
+      const primeiroAgendamento = agendamentos.primeiro;
+      const ultimoAgendamento = agendamentos.maisRecente;
       return [{
         negocioId: negocio.id,
         hotel: negocio.title.trim() || 'Hotel sem nome',
-        agendamento,
+        primeiroAgendamento,
+        ultimoAgendamento,
         assinatura,
-        dias: diasEntre(agendamento, assinatura),
+        diasDesdePrimeira: diasEntre(primeiroAgendamento, assinatura),
+        diasDesdeUltima: diasEntre(ultimoAgendamento, assinatura),
       }];
     });
 
@@ -46,9 +47,13 @@ export async function GET(req: Request) {
       totalContratos: ganhos.length,
       contratosComAgendamento: itens.length,
       semAgendamento: ganhos.length - itens.length,
-      diasMedios:
+      diasMediosDesdePrimeira:
         itens.length > 0
-          ? itens.reduce((total, item) => total + item.dias, 0) / itens.length
+          ? itens.reduce((total, item) => total + item.diasDesdePrimeira, 0) / itens.length
+          : null,
+      diasMediosDesdeUltima:
+        itens.length > 0
+          ? itens.reduce((total, item) => total + item.diasDesdeUltima, 0) / itens.length
           : null,
       itens: itens.sort((a, b) => b.assinatura.localeCompare(a.assinatura) || a.hotel.localeCompare(b.hotel, 'pt-BR')),
     };

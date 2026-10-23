@@ -231,18 +231,22 @@ export interface CicloVendasResposta {
   periodo: Periodo;
   /** Todos os contratos ganhos dentro da janela analisada. */
   totalContratos: number;
-  /** Contratos com uma data de agendamento anterior ou igual à assinatura. */
+  /** Contratos com ao menos uma atividade de apresentação até a assinatura. */
   contratosComAgendamento: number;
-  /** Contratos sem atividade de agendamento vinculada encontrada. */
+  /** Contratos sem atividade de apresentação vinculada encontrada. */
   semAgendamento: number;
-  /** Média simples de dias corridos entre agendamento e assinatura. */
-  diasMedios: number | null;
+  /** Ciclo contado da primeira apresentação até a assinatura. */
+  diasMediosDesdePrimeira: number | null;
+  /** Ciclo contado da apresentação mais recente antes da assinatura. */
+  diasMediosDesdeUltima: number | null;
   itens: Array<{
     negocioId: number;
     hotel: string;
-    agendamento: ISODate;
+    primeiroAgendamento: ISODate;
+    ultimoAgendamento: ISODate;
     assinatura: ISODate;
-    dias: number;
+    diasDesdePrimeira: number;
+    diasDesdeUltima: number;
   }>;
 }
 
