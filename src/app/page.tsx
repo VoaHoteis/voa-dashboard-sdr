@@ -94,9 +94,12 @@ function Painel() {
   // No-shows seguem o filtro do topo, como os cards 1 e 2: e uma metrica de
   // periodo, e so assim da para compara-la com os agendamentos do mesmo recorte.
   const urlNoShows = `/api/no-shows?inicio=${periodo.inicio}&fim=${periodo.fim}`;
+  const urlConversaoClosers = `/api/conversao-contratos?inicio=${periodo.inicio}&fim=${periodo.fim}`;
+  const urlCicloClosers = `/api/ciclo-vendas?inicio=${periodo.inicio}&fim=${periodo.fim}`;
+  const urlPerdasClosers = `/api/perdas-closers?inicio=${periodo.inicio}&fim=${periodo.fim}`;
+  const urlFechamentos = `/api/fechamentos?inicio=${periodo.inicio}&fim=${periodo.fim}`;
 
-  // Cards 3 a 6 ignoram o filtro do topo: a meta e mensal, entao ritmo, funil,
-  // projecao e esforco so fazem sentido contra o mes corrente.
+  // Indicadores operacionais de SDR continuam ancorados no mês corrente.
   const urlMes = useMemo(
     () =>
       `/api/agendamentos?inicio=${primeiroDiaDoMes(ref)}&fim=${ultimoDiaDoMes(ref)}&unidade=${unidade}`,
@@ -128,8 +131,7 @@ function Painel() {
         </div>
 
         <div className="filtro">
-          {aba === 'sdr' && (
-            <div className="filtro-menu" ref={menuRef}>
+          <div className="filtro-menu" ref={menuRef}>
               <button
                 className="gatilho-filtro"
                 data-aberto={filtroAberto}
@@ -186,24 +188,25 @@ function Painel() {
                     </div>
                   </div>
 
-                  <div className="grupo-filtro">
-                    <span className="rotulo">Contagem</span>
-                    <div className="linha-filtro">
-                      <button
-                        data-ativo={unidade === 'negocios'}
-                        onClick={() =>
-                          setUnidade(unidade === 'atividades' ? 'negocios' : 'atividades')
-                        }
-                        title="Alterna entre contar cada reunião e contar negócios distintos"
-                      >
-                        {unidade === 'atividades' ? 'Contando reuniões' : 'Contando negócios'}
-                      </button>
+                  {aba === 'sdr' && (
+                    <div className="grupo-filtro">
+                      <span className="rotulo">Contagem</span>
+                      <div className="linha-filtro">
+                        <button
+                          data-ativo={unidade === 'negocios'}
+                          onClick={() =>
+                            setUnidade(unidade === 'atividades' ? 'negocios' : 'atividades')
+                          }
+                          title="Alterna entre contar cada reunião e contar negócios distintos"
+                        >
+                          {unidade === 'atividades' ? 'Contando reuniões' : 'Contando negócios'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
+          </div>
 
           <BotaoAtualizar />
         </div>
@@ -272,17 +275,17 @@ function Painel() {
       ) : (
         <>
           <p className="aviso">
-            Fechamentos considera os negócios ganhos no mês corrente. O Forecast compara os negócios
-            abertos previstos para o mês de referência com os previstos para o mês seguinte.
+            Conversão, ciclo de vendas, perdas e fechamentos seguem o período selecionado acima.
+            Funis e Forecast mostram o estado atual dos negócios e a previsão do mês de referência.
           </p>
 
           <div className="grade">
-            <CardConversaoContratos />
-            <CardCicloVendas />
+            <CardConversaoContratos url={urlConversaoClosers} />
+            <CardCicloVendas url={urlCicloClosers} />
           </div>
 
           <div className="grade">
-            <CardPerdasClosers />
+            <CardPerdasClosers url={urlPerdasClosers} />
           </div>
 
           <div className="grade cheia">
@@ -298,7 +301,7 @@ function Painel() {
           </div>
 
           <div className="grade cheia">
-            <CardFechamentos />
+            <CardFechamentos url={urlFechamentos} />
           </div>
 
           <div className="grade cheia">

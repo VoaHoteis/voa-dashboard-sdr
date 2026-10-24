@@ -10,8 +10,8 @@ function percentual(valor: number | null): string {
   return `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 })}%`;
 }
 
-export function CardConversaoContratos() {
-  const estado = useApi<ConversaoContratosResposta>('/api/conversao-contratos');
+export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { url?: string }) {
+  const estado = useApi<ConversaoContratosResposta>(url);
   const [closerSelecionado, setCloserSelecionado] = useState<string | null>(null);
   const detalhe = estado.dados?.porCloser.find((closer) => closer.closer === closerSelecionado);
 
@@ -21,8 +21,8 @@ export function CardConversaoContratos() {
         titulo="Conversão de agendamentos em contratos"
         periodo={
           estado.dados
-            ? `2 meses anteriores + mês atual · ${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
-            : 'Últimos 3 meses'
+            ? `${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
+            : 'Período selecionado'
         }
         estado={estado}
       >
@@ -31,7 +31,7 @@ export function CardConversaoContratos() {
           <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
             <strong
               style={{ color: 'var(--destaque)', fontSize: 38, fontVariantNumeric: 'tabular-nums' }}
-              title="Contratos ganhos divididos por todas as reuniões concluídas nos últimos três meses"
+              title="Contratos ganhos divididos pelas reuniões concluídas no período selecionado"
             >
               {percentual(dados.taxaConversao)}
             </strong>
@@ -73,10 +73,10 @@ export function CardConversaoContratos() {
           </div>
 
           <p className="nota perdas-nota">
-            Taxa calculada como contratos assinados (negócios ganhos) ÷ reuniões concluídas nos dois meses
-            anteriores e no mês atual até hoje. Contamos reuniões de todos os usuários, desde que vinculadas
-            a negócios dos funis acompanhados; o detalhamento é atribuído pelo proprietário do negócio.
-            Como não é uma coorte de oportunidades, a taxa pode ultrapassar 100%.
+            Taxa calculada como contratos assinados (negócios ganhos) ÷ reuniões concluídas no período
+            selecionado. Contamos reuniões de todos os usuários, desde que vinculadas a negócios dos funis
+            acompanhados; o detalhamento é atribuído pelo proprietário do negócio. Como não é uma coorte de
+            oportunidades, a taxa pode ultrapassar 100%.
           </p>
         </>
       )}

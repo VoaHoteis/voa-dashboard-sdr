@@ -42,8 +42,12 @@ function motivoDoNegocio(negocio: { [campo: string]: unknown }): string {
 export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
+    const { searchParams } = new URL(req.url);
     const hojeIso = hoje();
-    const periodo = { inicio: primeiroDiaDoMes(hojeIso), fim: ultimoDiaDoMes(hojeIso) };
+    const periodo = {
+      inicio: searchParams.get('inicio') || primeiroDiaDoMes(hojeIso),
+      fim: searchParams.get('fim') || ultimoDiaDoMes(hojeIso),
+    };
 
     const [negocios, etapasNovos, etapasSalabim] = await Promise.all([
       buscarNegociosPerdidos(periodo),

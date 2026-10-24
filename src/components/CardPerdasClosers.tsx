@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Painel, useApi, type Estado } from '@/components/base';
 import { FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
+import { formatarBR } from '@/lib/dates';
 import type { PerdasClosersResposta } from '@/lib/types';
 
 type ResumoPerdas = PerdasClosersResposta['porFunil'][FunnelKey];
@@ -10,8 +11,11 @@ type ModoPerdas = 'etapa' | 'motivo';
 
 const FUNIS: FunnelKey[] = ['salabim', 'novosNegocios'];
 
-export function CardPerdasClosers() {
-  const estado = useApi<PerdasClosersResposta>('/api/perdas-closers');
+export function CardPerdasClosers({ url = '/api/perdas-closers' }: { url?: string }) {
+  const estado = useApi<PerdasClosersResposta>(url);
+  const periodo = estado.dados
+    ? `${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
+    : 'Período selecionado';
 
   return (
     <>
@@ -21,7 +25,7 @@ export function CardPerdasClosers() {
           dados: estado.dados?.porFunil[funil] ?? null,
         };
 
-        return <CardPerdasFunil key={funil} funil={funil} estado={estadoDoFunil} />;
+        return <CardPerdasFunil key={funil} funil={funil} periodo={periodo} estado={estadoDoFunil} />;
       })}
     </>
   );
@@ -29,9 +33,11 @@ export function CardPerdasClosers() {
 
 function CardPerdasFunil({
   funil,
+  periodo,
   estado,
 }: {
   funil: FunnelKey;
+  periodo: string;
   estado: Estado<ResumoPerdas>;
 }) {
   const [modo, setModo] = useState<ModoPerdas>('etapa');
@@ -39,7 +45,7 @@ function CardPerdasFunil({
   return (
     <Painel
       titulo={`Negócios perdidos · ${FUNNEL_LABEL[funil]}`}
-      periodo="Data da perda · mês corrente"
+      periodo={`Data da perda · ${periodo}`}
       estado={estado}
     >
       {(dados) => (
