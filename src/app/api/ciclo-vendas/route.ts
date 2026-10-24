@@ -16,10 +16,12 @@ function diasEntre(inicio: string, fim: string): number {
 export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
+    const { searchParams } = new URL(req.url);
     const ref = hoje();
     const fimMesAnterior = addDias(primeiroDiaDoMes(ref), -1);
-    const inicio = primeiroDiaDoMes(addDias(primeiroDiaDoMes(fimMesAnterior), -1));
-    const fim = ref;
+    const inicioPadrao = primeiroDiaDoMes(addDias(primeiroDiaDoMes(fimMesAnterior), -1));
+    const inicio = searchParams.get('inicio') || inicioPadrao;
+    const fim = searchParams.get('fim') || ref;
     const periodo = { inicio, fim };
     const ganhos = await buscarNegociosGanhos(periodo);
     const datasAgendamentos = await buscarAgendamentosPorNegocio(ganhos, TIPOS_AGENDAMENTO);

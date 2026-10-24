@@ -47,8 +47,8 @@ interface Detalhe {
   recorte: Recorte;
 }
 
-export function CardFechamentos() {
-  const estado = useApi<FechamentosResposta>('/api/fechamentos');
+export function CardFechamentos({ url = '/api/fechamentos' }: { url?: string }) {
+  const estado = useApi<FechamentosResposta>(url);
   const [detalhe, setDetalhe] = useState<Detalhe | null>(null);
 
   const periodoLabel = estado.dados
@@ -57,7 +57,7 @@ export function CardFechamentos() {
 
   return (
     <>
-      <Painel titulo="Fechamentos do mês" periodo={periodoLabel} estado={estado}>
+      <Painel titulo="Fechamentos do período" periodo={periodoLabel} estado={estado}>
         {(d) => {
           const abrir = (titulo: string, recorte: Recorte) => setDetalhe({ titulo, recorte });
 
@@ -67,7 +67,7 @@ export function CardFechamentos() {
                 <NumeroClicavel
                   valor={d.time.total}
                   cor={CORES_FUNIL.salabim}
-                  aoAbrir={() => abrir('Fechamentos do mês', {})}
+                  aoAbrir={() => abrir('Fechamentos do período', {})}
                   titulo="Ver os negócios ganhos que formam este número"
                   desabilitado={d.time.total === 0}
                 />

@@ -10,8 +10,8 @@ function dias(valor: number | null): string {
   return valor.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 }
 
-export function CardCicloVendas() {
-  const estado = useApi<CicloVendasResposta>('/api/ciclo-vendas');
+export function CardCicloVendas({ url = '/api/ciclo-vendas' }: { url?: string }) {
+  const estado = useApi<CicloVendasResposta>(url);
   const [detalheAberto, setDetalheAberto] = useState(false);
   const dados = estado.dados;
 
@@ -22,7 +22,7 @@ export function CardCicloVendas() {
         periodo={
           dados
             ? `Contratos assinados · ${formatarBR(dados.periodo.inicio)}–${formatarBR(dados.periodo.fim)}`
-            : 'Mês atual + 2 anteriores'
+            : 'Período selecionado'
         }
         estado={estado}
       >
