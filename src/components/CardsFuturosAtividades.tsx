@@ -259,6 +259,8 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
   const [escopo, setEscopo] = useState<EscopoAtividade>('total');
   const serie = sdr.series[granularidade][escopo];
   const diario = granularidade === 'dia';
+  const totalDaLinha = (linha: Record<string, string | number>) =>
+    TIPOS_ESFORCO.reduce((total, tipo) => total + (Number(linha[tipo.key]) || 0), 0);
 
   return (
     <>
@@ -313,9 +315,11 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
             />
             <Tooltip
               cursor={{ fill: '#ffffff0d' }}
-              content={({ active, payload, label }) => {
-                if (!active || !payload || payload.length === 0) return null;
-                const total = payload.reduce((acc, p) => acc + (Number(p.value) || 0), 0);
+              content={({ active, label }) => {
+                if (!active) return null;
+                const linha = serie.find((item) => item.rotulo === label);
+                if (!linha) return null;
+                const total = totalDaLinha(linha);
                 return (
                   <div
                     style={{
@@ -341,9 +345,9 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
                       </span>
                     </div>
                     <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {payload.map((p, index) => (
-                        <span key={`${String(p.dataKey)}-${index}`} style={{ color: p.color }}>
-                          {p.name} : {p.value}
+                      {TIPOS_ESFORCO.map((tipo) => (
+                        <span key={tipo.key} style={{ color: tipo.cor }}>
+                          {tipo.label} : {Number(linha[tipo.key]) || 0}
                         </span>
                       ))}
                     </div>
@@ -371,10 +375,7 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
                       .reverse()
                       .find((tt) => (Number(linha[tt.key]) || 0) > 0);
                     if (!topo || topo.key !== t.key) return null;
-                    const total = TIPOS_ESFORCO.reduce(
-                      (acc, tt) => acc + (Number(linha[tt.key]) || 0),
-                      0
-                    );
+                    const total = totalDaLinha(linha);
                     const cx = Number(x) + Number(width) / 2;
                     return (
                       <text
