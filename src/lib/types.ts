@@ -289,10 +289,10 @@ export interface FunilPorCloserResposta {
 export type EscopoAtividade = 'total' | FunnelKey;
 
 /**
- * Recorte de tempo do card de atividades.
- * - 'semana' : uma barra por semana do mes (padrao ao abrir o dashboard);
- * - 'mes'    : uma unica barra com o mes inteiro;
- * - 'dia'    : uma barra por dia do mes.
+ * Recorte de tempo do card de atividades, sempre dentro do período do dashboard.
+ * - 'semana' : uma barra por semana do período selecionado;
+ * - 'mes'    : uma barra por mês do período selecionado;
+ * - 'dia'    : uma barra por dia do período selecionado.
  */
 export type Granularidade = 'semana' | 'mes' | 'dia';
 
@@ -300,11 +300,11 @@ export type Granularidade = 'semana' | 'mes' | 'dia';
 export type SerieBarras = Array<Record<string, string | number>>;
 
 export interface AtividadesResposta {
-  mes: Periodo;
+  periodo: Periodo;
   porSdr: Array<{
     sdr: SdrKey;
     nome: string;
-    /** Total de atividades concluidas no mes, por escopo de funil. */
+    /** Total de atividades concluídas no período, por escopo de funil. */
     totais: Record<EscopoAtividade, number>;
     /** Serie de barras empilhadas por granularidade e por escopo de funil. */
     series: Record<Granularidade, Record<EscopoAtividade, SerieBarras>>;

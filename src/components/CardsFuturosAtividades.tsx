@@ -21,7 +21,13 @@ import {
   TIPOS_ESFORCO,
   type FunnelKey,
 } from '@/lib/config';
-import { formatarBR, hoje, nomeDoMes } from '@/lib/dates';
+import {
+  formatarBR,
+  hoje,
+  nomeDoMes,
+  primeiroDiaDoMes,
+  ultimoDiaDoMes,
+} from '@/lib/dates';
 import { nomeDaSdr } from '@/lib/metrics';
 import { filtrarItens, type Recorte } from '@/lib/detalhe';
 import type {
@@ -31,6 +37,7 @@ import type {
   FuturosResposta,
   Granularidade,
   ItemAgendamento,
+  Periodo,
 } from '@/lib/types';
 import {
   BarraFunis,
@@ -254,11 +261,29 @@ function FiltroPill<K extends string>({
  * e o total exibidos trocam junto, sem nova consulta — a rota já manda todas
  * as combinações prontas.
  */
-function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][number] }) {
+function rotuloPeriodoAtividades(periodo: Periodo): string {
+  const mesCompleto =
+    periodo.inicio === primeiroDiaDoMes(periodo.inicio) &&
+    periodo.fim === ultimoDiaDoMes(periodo.inicio);
+  return mesCompleto
+    ? nomeDoMes(periodo.inicio)
+    : `${formatarBR(periodo.inicio)}–${formatarBR(periodo.fim)}`;
+}
+
+function GraficoAtividadesSdr({
+  sdr,
+  periodo,
+}: {
+  sdr: AtividadesResposta['porSdr'][number];
+  periodo: Periodo;
+}) {
   const [granularidade, setGranularidade] = useState<Granularidade>('semana');
   const [escopo, setEscopo] = useState<EscopoAtividade>('total');
   const serie = sdr.series[granularidade][escopo];
   const diario = granularidade === 'dia';
+  const mesCompleto =
+    periodo.inicio === primeiroDiaDoMes(periodo.inicio) &&
+    periodo.fim === ultimoDiaDoMes(periodo.inicio);
   const totalDaLinha = (linha: Record<string, string | number>) =>
     TIPOS_ESFORCO.reduce((total, tipo) => total + (Number(linha[tipo.key]) || 0), 0);
 
@@ -267,7 +292,7 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
         <span className="numero medio">{sdr.totais[escopo]}</span>
         <span className="rotulo">
-          atividades concluídas no mês
+          atividades concluídas {mesCompleto ? 'no mês' : 'no período'}
           {escopo !== 'total' && ` · ${FUNNEL_LABEL[escopo]}`}
         </span>
       </div>
@@ -408,9 +433,11 @@ function GraficoAtividadesSdr({ sdr }: { sdr: AtividadesResposta['porSdr'][numbe
   );
 }
 
-/** Card 6 — Atividades por semana, uma barra empilhada por semana do mes. */
-export function CardsAtividadesSemana() {
-  const estado = useApi<AtividadesResposta>('/api/atividades');
+/** Card 6 — Atividades por SDR, no período selecionado pelo dashboard. */
+export function CardsAtividadesSemana({ periodo }: { periodo: Periodo }) {
+  const estado = useApi<AtividadesResposta>(
+    `/api/atividades?inicio=${periodo.inicio}&fim=${periodo.fim}`
+  );
 
   return (
     <>
@@ -418,13 +445,13 @@ export function CardsAtividadesSemana() {
         <Painel
           key={cfg.key}
           titulo={`Atividades · ${cfg.nome}`}
-          periodo={nomeDoMes(estado.dados?.mes.inicio ?? hoje())}
+          periodo={rotuloPeriodoAtividades(periodo)}
           estado={estado}
         >
           {(d) => {
             const sdr = d.porSdr.find((x) => x.sdr === cfg.key);
             if (!sdr) return <div className="estado">Sem dados.</div>;
-            return <GraficoAtividadesSdr sdr={sdr} />;
+            return <GraficoAtividadesSdr sdr={sdr} periodo={periodo} />;
           }}
         </Painel>
       ))}
