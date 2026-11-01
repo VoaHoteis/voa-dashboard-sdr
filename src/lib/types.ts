@@ -216,6 +216,12 @@ export interface ConversaoContratosResposta {
   totalContratos: number;
   /** Contratos ganhos ÷ agendamentos concluídos no mesmo período; null se sem agendamentos. */
   taxaConversao: number | null;
+  /** Mesmas métricas segmentadas pelos funis acompanhados. */
+  porFunil: Record<FunnelKey, {
+    contratos: number;
+    agendamentos: number;
+    taxaConversao: number | null;
+  }>;
   porCloser: Array<{
     closer: string;
     nome: string;

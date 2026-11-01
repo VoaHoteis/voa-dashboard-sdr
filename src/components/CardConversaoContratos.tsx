@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Modal, NumeroClicavel, Painel, useApi } from '@/components/base';
+import { FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
 import { formatarBR } from '@/lib/dates';
 import type { ConversaoContratosResposta } from '@/lib/types';
 
@@ -71,6 +72,30 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
             ))}
           </div>
 
+          <div style={{ display: 'grid', gap: 14, marginTop: 24 }}>
+            <span className="rotulo">Por funil · últimos 90 dias</span>
+            {(['salabim', 'novosNegocios'] as FunnelKey[]).map((funil) => {
+              const metricas = dados.porFunil[funil];
+              return (
+                <div
+                  key={funil}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(100px, 1fr) auto auto',
+                    alignItems: 'baseline',
+                    gap: 16,
+                  }}
+                >
+                  <strong style={{ fontSize: 14 }}>{FUNNEL_LABEL[funil]}</strong>
+                  <span className="rotulo">
+                    {metricas.contratos} {metricas.contratos === 1 ? 'contrato' : 'contratos'} /{' '}
+                    {metricas.agendamentos} {metricas.agendamentos === 1 ? 'agendamento' : 'agendamentos'}
+                  </span>
+                  <span className="numero forte">{percentual(metricas.taxaConversao)}</span>
+                </div>
+              );
+            })}
+          </div>
         </>
       )}
       </Painel>

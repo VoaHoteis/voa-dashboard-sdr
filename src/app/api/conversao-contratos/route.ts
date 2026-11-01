@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { CLOSERS, PIPELINE_TO_FUNNEL, TIPOS_AGENDAMENTO } from '@/lib/config';
+import { CLOSERS, PIPELINE_TO_FUNNEL, TIPOS_AGENDAMENTO, type FunnelKey } from '@/lib/config';
 import { intervaloUltimosDias } from '@/lib/dates';
 import {
   buscarAtividades,
@@ -38,6 +38,30 @@ export async function GET(req: Request) {
       const negocio = negocios.get(atividade.deal_id);
       return negocio !== undefined && PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined;
     });
+
+    const porFunil: ConversaoContratosResposta['porFunil'] = {
+      novosNegocios: { contratos: 0, agendamentos: 0, taxaConversao: null },
+      salabim: { contratos: 0, agendamentos: 0, taxaConversao: null },
+    };
+
+    for (const atividade of agendamentosValidos) {
+      if (atividade.deal_id == null) continue;
+      const negocio = negocios.get(atividade.deal_id);
+      const funil = negocio ? PIPELINE_TO_FUNNEL[negocio.pipeline_id] : undefined;
+      if (funil) porFunil[funil].agendamentos += 1;
+    }
+
+    for (const negocio of ganhos) {
+      const funil = PIPELINE_TO_FUNNEL[negocio.pipeline_id];
+      if (funil) porFunil[funil].contratos += 1;
+    }
+
+    for (const funil of Object.keys(porFunil) as FunnelKey[]) {
+      const metricas = porFunil[funil];
+      metricas.taxaConversao = metricas.agendamentos > 0
+        ? (metricas.contratos / metricas.agendamentos) * 100
+        : null;
+    }
 
     const hoteisDoCloser = (closerKey: string) => {
       const porHotel = new Map<string, { hotel: string; agendamentos: number; contratos: number }>();
@@ -89,6 +113,7 @@ export async function GET(req: Request) {
       totalAgendamentos,
       totalContratos,
       taxaConversao: totalAgendamentos > 0 ? (totalContratos / totalAgendamentos) * 100 : null,
+      porFunil,
       porCloser,
     };
 
