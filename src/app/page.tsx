@@ -238,7 +238,7 @@ function Painel() {
         <p className="aviso">
           O filtro está em {formatarBR(periodo.inicio)}–{formatarBR(periodo.fim)}. Os cards de
           Agendamentos Totais, por SDR e No-shows seguem esse período; Fechamentos, Detalhamento,
-          Funil, Futuros e Atividades continuam no mês corrente, porque as metas são mensais.
+          Funil e Futuros continuam no mês corrente, porque as metas são mensais.
         </p>
       )}
 
@@ -269,7 +269,7 @@ function Painel() {
           </div>
 
           <div className="grade">
-            <CardsAtividadesSemana />
+            <CardsAtividadesSemana periodo={periodo} />
           </div>
 
           <div className="grade">

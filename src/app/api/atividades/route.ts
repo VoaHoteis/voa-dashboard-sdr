@@ -1,5 +1,5 @@
 /**
- * Card 6 — Atividades por semana.
+ * Card 6 — Atividades por SDR no período selecionado.
  *
  * GET /api/atividades
  *
@@ -18,12 +18,13 @@ import {
 } from '@/lib/config';
 import {
   addDias,
+  diaDaSemana,
+  formatarBR,
   hoje,
   listarDias,
   nomeDoMes,
   parse,
   primeiroDiaDoMes,
-  semanasDoMes,
   ultimoDiaDoMes,
   type ISODate,
 } from '@/lib/dates';
@@ -47,28 +48,76 @@ interface Bucket {
   fim: ISODate;
 }
 
+function rotuloSemana(inicio: ISODate, fim: ISODate): string {
+  const primeiro = parse(inicio);
+  const ultimo = parse(fim);
+  return primeiro.y === ultimo.y && primeiro.m === ultimo.m
+    ? `${primeiro.d}–${ultimo.d}`
+    : `${formatarBR(inicio)}–${formatarBR(fim)}`;
+}
+
+function semanasNoPeriodo(inicio: ISODate, fim: ISODate): Bucket[] {
+  const buckets: Bucket[] = [];
+  let cursor = inicio;
+
+  while (cursor <= fim) {
+    const diaSemana = diaDaSemana(cursor);
+    const diasAteDomingo = diaSemana === 0 ? 0 : 7 - diaSemana;
+    const candidato = addDias(cursor, diasAteDomingo);
+    const fimBucket = candidato > fim ? fim : candidato;
+    buckets.push({ label: rotuloSemana(cursor, fimBucket), inicio: cursor, fim: fimBucket });
+    cursor = addDias(fimBucket, 1);
+  }
+
+  return buckets;
+}
+
+function mesesNoPeriodo(inicio: ISODate, fim: ISODate): Bucket[] {
+  const buckets: Bucket[] = [];
+  const mesmoMes = inicio.slice(0, 7) === fim.slice(0, 7);
+
+  for (let cursor = primeiroDiaDoMes(inicio); cursor <= fim; ) {
+    const fimMes = ultimoDiaDoMes(cursor);
+    const inicioBucket = cursor < inicio ? inicio : cursor;
+    const fimBucket = fimMes > fim ? fim : fimMes;
+    const mes = nomeDoMes(cursor);
+    const label = mesmoMes
+      ? `${mes[0].toUpperCase()}${mes.slice(1)}`
+      : `${mes.slice(0, 3)}/${parse(cursor).y}`;
+
+    buckets.push({ label, inicio: inicioBucket, fim: fimBucket });
+    cursor = addDias(fimMes, 1);
+  }
+
+  return buckets;
+}
+
 export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
+    const { searchParams } = new URL(req.url);
     const ref = hoje();
-    const inicio = primeiroDiaDoMes(ref);
-    const fim = ultimoDiaDoMes(ref);
-    const nomeMes = nomeDoMes(ref);
+    const inicio = searchParams.get('inicio') || primeiroDiaDoMes(ref);
+    const fim = searchParams.get('fim') || ultimoDiaDoMes(ref);
+    const mesmoMes = inicio.slice(0, 7) === fim.slice(0, 7);
     const tipos = TIPOS_ESFORCO.map((t) => t.key);
     const tiposSet = new Set<string>(tipos);
 
-    // Um conjunto de buckets por granularidade -- todos recortando o mesmo mes
-    // corrente, só a largura da barra muda (semana, mes inteiro ou dia a dia).
+    // Todas as granularidades respeitam o intervalo escolhido no dashboard.
     const buckets: Record<Granularidade, Bucket[]> = {
-      semana: semanasDoMes(ref).map((s) => ({ label: s.label, inicio: s.inicio, fim: s.fim })),
-      mes: [{ label: nomeMes[0].toUpperCase() + nomeMes.slice(1), inicio, fim }],
-      dia: listarDias(inicio, fim).map((d) => ({ label: String(parse(d).d), inicio: d, fim: d })),
+      semana: semanasNoPeriodo(inicio, fim),
+      mes: mesesNoPeriodo(inicio, fim),
+      dia: listarDias(inicio, fim).map((d) => ({
+        label: mesmoMes ? String(parse(d).d) : formatarBR(d).slice(0, 5),
+        inicio: d,
+        fim: d,
+      })),
     };
 
     // A busca da API filtra por data MARCADA (due_date), mas contamos por data de
     // CONCLUSÃO. Alargamos a janela ~35 dias para trás para pegar atividades
-    // concluídas neste mês que estavam marcadas no mês anterior; o recorte fino
-    // por semana (abaixo) usa a data de conclusão e descarta o excedente.
+    // concluídas no período que estavam marcadas antes dele; os buckets abaixo
+    // usam a data de conclusão e descartam o excedente.
     const janelaInicio = addDias(inicio, -35);
 
     // Busca as atividades das duas SDRs primeiro, junta os negócios de todas e
@@ -111,7 +160,7 @@ export async function GET(req: Request) {
     const porSdr: AtividadesResposta['porSdr'] = SDRS.map((s) => {
       const atividades = atividadesPorSdr.get(s.key) ?? [];
 
-      // Total do mes, uma unica passada -- nao depende de granularidade.
+      // Total do período, uma única passada -- não depende de granularidade.
       const totais: Record<EscopoAtividade, number> = { total: 0, salabim: 0, novosNegocios: 0 };
       for (const a of atividades) {
         const d = dataConclusao(a);
@@ -157,7 +206,7 @@ export async function GET(req: Request) {
     });
 
     const resposta: AtividadesResposta = {
-      mes: { inicio, fim },
+      periodo: { inicio, fim },
       porSdr,
     };
 
