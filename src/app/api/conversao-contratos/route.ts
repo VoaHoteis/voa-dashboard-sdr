@@ -21,10 +21,13 @@ export async function GET(req: Request) {
     const inicioPadrao = primeiroDiaDoMes(addDias(primeiroDiaDoMes(fimMesAnterior), -1));
     const inicio = searchParams.get('inicio') || inicioPadrao;
     const fim = searchParams.get('fim') || ref;
-    const [atividades, ganhos] = await Promise.all([
+    const [atividades, todosGanhos] = await Promise.all([
       buscarAtividades({ inicio, fim, tipos: TIPOS_AGENDAMENTO, concluidas: true }),
       buscarNegociosGanhos({ inicio, fim }),
     ]);
+    const ganhos = todosGanhos.filter(
+      (negocio) => PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined
+    );
     const idsNegocios = atividades
       .map((atividade) => atividade.deal_id)
       .filter((id): id is number => typeof id === 'number');
