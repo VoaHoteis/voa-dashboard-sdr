@@ -2,12 +2,20 @@
 
 import { useState } from 'react';
 import { CORES_FUNIL, FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
-import { formatarBR } from '@/lib/dates';
+import { formatarBR, intervaloUltimosDias } from '@/lib/dates';
 import type { AgendamentosResposta, ItemAgendamento, NoShowsResposta } from '@/lib/types';
 import { BarraFunis, LegendaFunis, Modal, NumeroClicavel, Painel, pct, useApi } from './base';
 import { TabelaNegocios } from './TabelaNegocios';
 
 const FUNIS: FunnelKey[] = ['novosNegocios', 'salabim'];
+
+function urlComPeriodo(url: string, inicio: string, fim: string): string {
+  const [caminho, query = ''] = url.split('?');
+  const parametros = new URLSearchParams(query);
+  parametros.set('inicio', inicio);
+  parametros.set('fim', fim);
+  return `${caminho}?${parametros.toString()}`;
+}
 
 /** Um hotel (negócio) e quantos no-shows ele teve no período. */
 interface NoShowsPorHotel {
@@ -56,6 +64,13 @@ export function CardNoShows({ url, urlAgendamentos }: { url: string; urlAgendame
   // Denominador da taxa: reuniões efetivamente realizadas no mesmo período,
   // mesmo recorte de funil do resto do dashboard.
   const agendamentos = useApi<AgendamentosResposta>(urlAgendamentos);
+  const periodo90Dias = intervaloUltimosDias(90);
+  const estado90Dias = useApi<NoShowsResposta>(
+    urlComPeriodo(url, periodo90Dias.inicio, periodo90Dias.fim)
+  );
+  const agendamentos90Dias = useApi<AgendamentosResposta>(
+    urlComPeriodo(urlAgendamentos, periodo90Dias.inicio, periodo90Dias.fim)
+  );
   const [detalhe, setDetalhe] = useState<{ titulo: string; itens: ItemAgendamento[] } | null>(null);
   const [porHotelAberto, setPorHotelAberto] = useState(false);
 
@@ -78,6 +93,14 @@ export function CardNoShows({ url, urlAgendamentos }: { url: string; urlAgendame
           const taxa =
             realizados !== null && d.total + realizados > 0
               ? d.total / (d.total + realizados)
+              : null;
+          const totalNoShows90Dias = estado90Dias.dados?.total ?? null;
+          const realizados90Dias = agendamentos90Dias.dados?.time.total ?? null;
+          const taxa90Dias =
+            totalNoShows90Dias !== null &&
+            realizados90Dias !== null &&
+            totalNoShows90Dias + realizados90Dias > 0
+              ? totalNoShows90Dias / (totalNoShows90Dias + realizados90Dias)
               : null;
 
           return (
@@ -106,6 +129,16 @@ export function CardNoShows({ url, urlAgendamentos }: { url: string; urlAgendame
                   </span>
                   <div className="rotulo" style={{ marginTop: 6 }}>
                     % de no-shows no período
+                  </div>
+                  <div
+                    className="rotulo"
+                    style={{ marginTop: 8 }}
+                    title="No-shows ÷ (no-shows + reuniões realizadas) nos últimos 90 dias"
+                  >
+                    Média 90 dias:{' '}
+                    <strong style={{ color: 'var(--alerta)' }}>
+                      {taxa90Dias !== null ? pct(taxa90Dias, 1) : '—'}
+                    </strong>
                   </div>
                 </div>
 
