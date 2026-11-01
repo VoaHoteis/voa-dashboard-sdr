@@ -21,8 +21,8 @@ export function CardCicloVendas({ url = '/api/ciclo-vendas' }: { url?: string })
         titulo="Ciclo de vendas"
         periodo={
           dados
-            ? `Contratos assinados · ${formatarBR(dados.periodo.inicio)}–${formatarBR(dados.periodo.fim)}`
-            : 'Período selecionado'
+            ? `Últimos 90 dias · ${formatarBR(dados.periodo.inicio)}–${formatarBR(dados.periodo.fim)}`
+            : 'Últimos 90 dias'
         }
         estado={estado}
       >
@@ -38,7 +38,7 @@ export function CardCicloVendas({ url = '/api/ciclo-vendas' }: { url?: string })
               <div>
                 <strong
                   style={{ color: 'var(--destaque)', fontSize: 34, fontVariantNumeric: 'tabular-nums' }}
-                  title="Média de dias corridos entre a primeira apresentação e a assinatura do contrato"
+                  title="Média de dias entre a primeira apresentação e a assinatura dos negócios ganhos nos últimos 90 dias"
                 >
                   {dias(resposta.diasMediosDesdePrimeira)} dias
                 </strong>
@@ -74,7 +74,8 @@ export function CardCicloVendas({ url = '/api/ciclo-vendas' }: { url?: string })
             <p className="nota perdas-nota">
               A primeira média vai da apresentação mais antiga à assinatura; a segunda, da apresentação
               mais recente registrada até a assinatura. Apresentações posteriores ao fechamento são ignoradas.
-              Contratos sem apresentação vinculada ficam fora das médias.
+              Consideramos negócios ganhos nos funis acompanhados nos últimos 90 dias. Contratos sem
+              apresentação vinculada ficam fora das médias.
               {resposta.semAgendamento > 0 && ` ${resposta.semAgendamento} contrato(s) sem apresentação válida.`}
             </p>
           </>
@@ -84,7 +85,7 @@ export function CardCicloVendas({ url = '/api/ciclo-vendas' }: { url?: string })
       {detalheAberto && dados && (
         <Modal
           titulo="Ciclo por negócio"
-          subtitulo={`${dados.contratosComAgendamento} negócios · primeira apresentação: ${dias(dados.diasMediosDesdePrimeira)} dias · apresentação mais recente: ${dias(dados.diasMediosDesdeUltima)} dias · ${formatarBR(dados.periodo.inicio)} a ${formatarBR(dados.periodo.fim)}`}
+          subtitulo={`${dados.contratosComAgendamento} negócios · últimos 90 dias · primeira apresentação: ${dias(dados.diasMediosDesdePrimeira)} dias · apresentação mais recente: ${dias(dados.diasMediosDesdeUltima)} dias · ${formatarBR(dados.periodo.inicio)} a ${formatarBR(dados.periodo.fim)}`}
           aoFechar={() => setDetalheAberto(false)}
         >
           <table className="tabela">

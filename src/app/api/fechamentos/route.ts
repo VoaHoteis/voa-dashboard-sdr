@@ -7,14 +7,39 @@
  */
 
 import { NextResponse } from 'next/server';
-import { CLOSERS } from '@/lib/config';
+import { CLOSERS, TIPOS_AGENDAMENTO, nomeDaPessoa } from '@/lib/config';
 import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
-import { resolverFechamentos, zeroPorFunil } from '@/lib/metrics';
-import { buscarNegociosGanhos } from '@/lib/pipedrive';
+import { atribuir, resolverFechamentos, zeroPorFunil } from '@/lib/metrics';
+import {
+  buscarAgendamentosPorNegocio,
+  buscarNegociosGanhos,
+  resolverTiposAgendamento,
+  type Negocio,
+} from '@/lib/pipedrive';
 import type { FechamentosResposta, ItemFechamento } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
 export const dynamic = 'force-dynamic';
+
+function textoCampoOrigem(valor: unknown): string | null {
+  if (typeof valor === 'string' && valor.trim()) return valor.trim();
+  if (!valor || typeof valor !== 'object') return null;
+
+  const campo = valor as { name?: unknown; label?: unknown; value?: unknown };
+  for (const candidato of [campo.name, campo.label, campo.value]) {
+    if (typeof candidato === 'string' && candidato.trim()) return candidato.trim();
+  }
+  return null;
+}
+
+function origemDoNegocio(negocio: Negocio): string | null {
+  const campos = negocio as Record<string, unknown>;
+  for (const campo of [campos.origin, campos.source_name, campos.source, campos.channel]) {
+    const origem = textoCampoOrigem(campo);
+    if (origem) return origem;
+  }
+  return null;
+}
 
 export async function GET(req: Request) {
   try {
@@ -24,8 +49,15 @@ export async function GET(req: Request) {
     const inicio = searchParams.get('inicio') || primeiroDiaDoMes(ref);
     const fim = searchParams.get('fim') || ultimoDiaDoMes(ref);
 
-    const ganhos = await buscarNegociosGanhos({ inicio, fim });
+    const [ganhos, tiposApresentacao] = await Promise.all([
+      buscarNegociosGanhos({ inicio, fim }),
+      resolverTiposAgendamento(TIPOS_AGENDAMENTO),
+    ]);
     const itens = resolverFechamentos(ganhos);
+    const apresentacoesPorNegocio = await buscarAgendamentosPorNegocio(
+      itens.map((item) => item.negocio),
+      tiposApresentacao
+    );
 
     const porFunil = zeroPorFunil();
     const valorPorFunil = zeroPorFunil();
@@ -61,18 +93,25 @@ export async function GET(req: Request) {
         total: outrosItens.length,
         valor: outrosItens.reduce((s, i) => s + i.valor, 0),
       },
-      // A lista crua vai junto para o modal de detalhe recortar em memoria, sem
-      // uma segunda consulta que poderia discordar do numero exibido.
-      itens: itens.map(
-        (i): ItemFechamento => ({
+      // Os itens seguem completos para que os recortes do modal não precisem
+      // fazer uma nova consulta e possam manter o mesmo resultado do card.
+      itens: itens.map((i): ItemFechamento => {
+        const temApresentacao = apresentacoesPorNegocio.has(i.negocio.id);
+        const sdrApresentacao = temApresentacao
+          ? atribuir(i.negocio).sdrs.map(nomeDaPessoa).join(', ')
+          : '';
+
+        return {
           negocioId: i.negocio.id,
           titulo: i.negocio.title,
           data: i.data || inicio,
           funil: i.funil,
           closer: i.dono,
+          sdrApresentacao: sdrApresentacao || null,
+          origem: origemDoNegocio(i.negocio),
           valor: i.valor,
-        })
-      ),
+        };
+      }),
     };
 
     return NextResponse.json(resposta);

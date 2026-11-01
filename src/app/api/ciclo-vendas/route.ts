@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { addDias, hoje, primeiroDiaDoMes } from '@/lib/dates';
-import { TIPOS_AGENDAMENTO } from '@/lib/config';
+import { PIPELINE_TO_FUNNEL, TIPOS_AGENDAMENTO } from '@/lib/config';
+import { intervaloUltimosDias } from '@/lib/dates';
 import { buscarAgendamentosPorNegocio, buscarNegociosGanhos } from '@/lib/pipedrive';
 import type { CicloVendasResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
@@ -16,14 +16,11 @@ function diasEntre(inicio: string, fim: string): number {
 export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
-    const { searchParams } = new URL(req.url);
-    const ref = hoje();
-    const fimMesAnterior = addDias(primeiroDiaDoMes(ref), -1);
-    const inicioPadrao = primeiroDiaDoMes(addDias(primeiroDiaDoMes(fimMesAnterior), -1));
-    const inicio = searchParams.get('inicio') || inicioPadrao;
-    const fim = searchParams.get('fim') || ref;
-    const periodo = { inicio, fim };
-    const ganhos = await buscarNegociosGanhos(periodo);
+    const periodo = intervaloUltimosDias(90);
+    const todosGanhos = await buscarNegociosGanhos(periodo);
+    const ganhos = todosGanhos.filter(
+      (negocio) => PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined
+    );
     const datasAgendamentos = await buscarAgendamentosPorNegocio(ganhos, TIPOS_AGENDAMENTO);
 
     const itens = ganhos.flatMap((negocio) => {

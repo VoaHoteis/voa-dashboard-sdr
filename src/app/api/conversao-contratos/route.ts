@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CLOSERS, PIPELINE_TO_FUNNEL, TIPOS_AGENDAMENTO } from '@/lib/config';
-import { addDias, hoje, primeiroDiaDoMes } from '@/lib/dates';
+import { intervaloUltimosDias } from '@/lib/dates';
 import {
   buscarAtividades,
   buscarNegociosGanhos,
@@ -15,15 +15,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
     limparCacheSePedido(req);
-    const { searchParams } = new URL(req.url);
-    const ref = hoje();
-    const fimMesAnterior = addDias(primeiroDiaDoMes(ref), -1);
-    const inicioPadrao = primeiroDiaDoMes(addDias(primeiroDiaDoMes(fimMesAnterior), -1));
-    const inicio = searchParams.get('inicio') || inicioPadrao;
-    const fim = searchParams.get('fim') || ref;
+    const periodo = intervaloUltimosDias(90);
     const [atividades, todosGanhos] = await Promise.all([
-      buscarAtividades({ inicio, fim, tipos: TIPOS_AGENDAMENTO, concluidas: true }),
-      buscarNegociosGanhos({ inicio, fim }),
+      buscarAtividades({ ...periodo, tipos: TIPOS_AGENDAMENTO, concluidas: true }),
+      buscarNegociosGanhos(periodo),
     ]);
     const ganhos = todosGanhos.filter(
       (negocio) => PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined
@@ -34,7 +29,12 @@ export async function GET(req: Request) {
     const negocios = await buscarNegociosPorIds(idsNegocios);
     const agendamentosValidos = atividades.filter((atividade) => {
       const data = atividade.due_date?.slice(0, 10);
-      if (!data || data < inicio || data > fim || atividade.deal_id == null) return false;
+      if (
+        !data ||
+        data < periodo.inicio ||
+        data > periodo.fim ||
+        atividade.deal_id == null
+      ) return false;
       const negocio = negocios.get(atividade.deal_id);
       return negocio !== undefined && PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined;
     });
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
     const totalContratos = ganhos.length;
 
     const resposta: ConversaoContratosResposta = {
-      periodo: { inicio, fim },
+      periodo,
       totalAgendamentos,
       totalContratos,
       taxaConversao: totalAgendamentos > 0 ? (totalContratos / totalAgendamentos) * 100 : null,

@@ -123,6 +123,10 @@ export interface ItemFechamento {
   funil: FunnelKey | null;
   /** Chave de PESSOAS do dono do negocio (o closer), ou null. */
   closer: string | null;
+  /** Responsável pelo agendamento de apresentação mais recente antes do ganho. */
+  sdrApresentacao: string | null;
+  /** Origem informada no Pipedrive, ou null quando não preenchida. */
+  origem: string | null;
   /** Valor do negocio, na moeda da conta (BRL). */
   valor: number;
 }
