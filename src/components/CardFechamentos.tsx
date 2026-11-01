@@ -190,7 +190,7 @@ function TabelaFechamentos({ itens }: { itens: ItemFechamento[] }) {
   }
 
   return (
-    <table className="tabela">
+    <table className="tabela tabela-fechamentos">
       <thead>
         <tr>
           <th>#</th>
@@ -198,6 +198,8 @@ function TabelaFechamentos({ itens }: { itens: ItemFechamento[] }) {
           <th>Ganho em</th>
           <th>Funil</th>
           <th>Closer</th>
+          <th>SDR do agendamento mais recente</th>
+          <th>Origem do negócio</th>
           <th className="num">Valor</th>
         </tr>
       </thead>
@@ -230,6 +232,8 @@ function TabelaFechamentos({ itens }: { itens: ItemFechamento[] }) {
                   </span>
                 )}
               </td>
+              <td style={{ whiteSpace: 'nowrap' }}>{i.sdrApresentacao ?? '—'}</td>
+              <td>{i.origem ?? '—'}</td>
               <td className="num" style={{ whiteSpace: 'nowrap' }}>
                 {moeda(i.valor)}
               </td>

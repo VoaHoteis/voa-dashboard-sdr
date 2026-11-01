@@ -566,6 +566,10 @@ h3 {
   font-size: 13px;
 }
 
+.tabela-fechamentos {
+  min-width: 900px;
+}
+
 .perdas-modos {
   display: flex;
   flex-wrap: wrap;
