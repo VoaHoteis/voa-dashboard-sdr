@@ -180,6 +180,28 @@ export function ritmoDoMes(ref: ISODate = hoje()): RitmoDoMes {
   };
 }
 
+/** Encontra o mesmo ordinal de dias úteis no mês anterior, com referência mínima ao dia 1. */
+export function periodoComparavelMesAnterior(ref: ISODate = hoje()): {
+  inicio: ISODate;
+  fim: ISODate;
+} {
+  const ritmo = ritmoDoMes(ref);
+  const fimMesAnterior = addDias(ritmo.inicio, -1);
+  const inicio = primeiroDiaDoMes(fimMesAnterior);
+  const diasUteis = Math.max(1, ritmo.decorridos);
+  let decorridos = 0;
+  let fim = fimMesAnterior;
+
+  for (const dia of listarDias(inicio, fimMesAnterior)) {
+    if (!ehDiaUtil(dia)) continue;
+    decorridos += 1;
+    fim = dia;
+    if (decorridos >= diasUteis) break;
+  }
+
+  return { inicio, fim };
+}
+
 export interface Semana {
   label: string;
   inicio: ISODate;

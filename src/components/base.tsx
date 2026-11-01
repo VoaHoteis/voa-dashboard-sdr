@@ -203,21 +203,25 @@ export function BarraFunis({ salabim, novos }: { salabim: number; novos: number 
 /**
  * Barra de progresso contra uma meta. Passa de 100% sem vazar do trilho.
  *
- * `marca` desenha um tracejado discreto onde a barra chegaria num cenario
- * hipotetico -- hoje, se os agendamentos ja marcados forem confirmados.
+ * `marca` mostra a projeção das reuniões marcadas; `marcaHistorica` compara
+ * com os agendamentos do mesmo dia útil no mês anterior.
  */
 export function BarraMeta({
   valor,
   meta,
   cor,
   marca,
+  marcaHistorica,
   dica,
+  dicaHistorica,
 }: {
   valor: number;
   meta: number;
   cor: string;
   marca?: number;
+  marcaHistorica?: number;
   dica?: string;
+  dicaHistorica?: string;
 }) {
   const posicao = (n: number) => (meta > 0 ? Math.min(100, (n / meta) * 100) : 0);
   const pct = posicao(valor);
@@ -233,13 +237,20 @@ export function BarraMeta({
       aria-valuenow={valor}
       aria-valuemin={0}
       aria-valuemax={meta}
-      title={dica}
+      title={dica && dicaHistorica ? `${dica} · ${dicaHistorica}` : dica ?? dicaHistorica}
     >
       <span style={{ width: `${pct}%`, background: cor }} />
       {mostrarMarca && (
         <i
           className="marca-projecao"
           style={{ left: `${posicao(marca)}%`, borderColor: cor }}
+          aria-hidden="true"
+        />
+      )}
+      {marcaHistorica !== undefined && (
+        <i
+          className="marca-historica"
+          style={{ left: `${posicao(marcaHistorica)}%` }}
           aria-hidden="true"
         />
       )}
