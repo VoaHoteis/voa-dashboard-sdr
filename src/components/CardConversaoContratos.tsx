@@ -21,8 +21,8 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
         titulo="Conversão de agendamentos em contratos"
         periodo={
           estado.dados
-            ? `${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
-            : 'Período selecionado'
+            ? `Últimos 90 dias · ${formatarBR(estado.dados.periodo.inicio)}–${formatarBR(estado.dados.periodo.fim)}`
+            : 'Últimos 90 dias'
         }
         estado={estado}
       >
@@ -31,7 +31,7 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
           <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
             <strong
               style={{ color: 'var(--destaque)', fontSize: 38, fontVariantNumeric: 'tabular-nums' }}
-              title="Contratos ganhos divididos pelas reuniões concluídas no período selecionado"
+              title="Negócios ganhos nos últimos 90 dias divididos pelas reuniões realizadas nos últimos 90 dias"
             >
               {percentual(dados.taxaConversao)}
             </strong>
@@ -39,8 +39,7 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
               {dados.totalContratos} {dados.totalContratos === 1 ? 'contrato assinado' : 'contratos assinados'}
               {' ÷ '}
               {dados.totalAgendamentos} {dados.totalAgendamentos === 1 ? 'agendamento' : 'agendamentos'}
-              {' · '}
-              {formatarBR(dados.periodo.inicio)}–{formatarBR(dados.periodo.fim)}
+              {' · últimos 90 dias'}
             </span>
           </div>
 
@@ -72,12 +71,6 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
             ))}
           </div>
 
-          <p className="nota perdas-nota">
-            Taxa calculada como negócios ganhos nos funis Novos Negócios e Salabim ÷ reuniões concluídas no
-            período selecionado. Contamos reuniões de todos os usuários, desde que vinculadas a negócios dos
-            funis acompanhados; o detalhamento é atribuído pelo proprietário do negócio. Como não é uma coorte
-            de oportunidades, a taxa pode ultrapassar 100%.
-          </p>
         </>
       )}
       </Painel>
@@ -85,7 +78,7 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
       {detalhe && estado.dados && (
         <Modal
           titulo={`Hotéis na conversão · ${detalhe.nome}`}
-          subtitulo={`${detalhe.contratos} ${detalhe.contratos === 1 ? 'contrato' : 'contratos'} ÷ ${detalhe.agendamentos} ${detalhe.agendamentos === 1 ? 'reunião' : 'reuniões'} · ${formatarBR(estado.dados.periodo.inicio)} a ${formatarBR(estado.dados.periodo.fim)}`}
+          subtitulo={`${detalhe.contratos} ${detalhe.contratos === 1 ? 'contrato' : 'contratos'} ÷ ${detalhe.agendamentos} ${detalhe.agendamentos === 1 ? 'reunião' : 'reuniões'} · últimos 90 dias · ${formatarBR(estado.dados.periodo.inicio)} a ${formatarBR(estado.dados.periodo.fim)}`}
           aoFechar={() => setCloserSelecionado(null)}
         >
           {detalhe.hoteis.length === 0 ? (

@@ -43,6 +43,17 @@ export function addDias(iso: ISODate, n: number): ISODate {
   return toISO(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
 }
 
+export function intervaloUltimosDias(dias: number, fim: ISODate = hoje()): {
+  inicio: ISODate;
+  fim: ISODate;
+} {
+  if (!Number.isInteger(dias) || dias < 1) {
+    throw new RangeError('A quantidade de dias deve ser um inteiro positivo.');
+  }
+
+  return { inicio: addDias(fim, 1 - dias), fim };
+}
+
 export function primeiroDiaDoMes(iso: ISODate): ISODate {
   const { y, m } = parse(iso);
   return toISO(y, m, 1);

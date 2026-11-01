@@ -94,8 +94,6 @@ function Painel() {
   // No-shows seguem o filtro do topo, como os cards 1 e 2: e uma metrica de
   // periodo, e so assim da para compara-la com os agendamentos do mesmo recorte.
   const urlNoShows = `/api/no-shows?inicio=${periodo.inicio}&fim=${periodo.fim}`;
-  const urlConversaoClosers = `/api/conversao-contratos?inicio=${periodo.inicio}&fim=${periodo.fim}`;
-  const urlCicloClosers = `/api/ciclo-vendas?inicio=${periodo.inicio}&fim=${periodo.fim}`;
   const urlPerdasClosers = `/api/perdas-closers?inicio=${periodo.inicio}&fim=${periodo.fim}`;
   const urlFechamentos = `/api/fechamentos?inicio=${periodo.inicio}&fim=${periodo.fim}`;
 
@@ -275,13 +273,14 @@ function Painel() {
       ) : (
         <>
           <p className="aviso">
-            Conversão, ciclo de vendas, perdas e fechamentos seguem o período selecionado acima.
-            Funis e Forecast mostram o estado atual dos negócios e a previsão do mês de referência.
+            Conversão e ciclo de vendas usam sempre os últimos 90 dias; perdas e fechamentos seguem o
+            período selecionado acima. Funis e Forecast mostram o estado atual dos negócios e a previsão
+            do mês de referência.
           </p>
 
           <div className="grade">
-            <CardConversaoContratos url={urlConversaoClosers} />
-            <CardCicloVendas url={urlCicloClosers} />
+            <CardConversaoContratos />
+            <CardCicloVendas />
           </div>
 
           <div className="grade">
