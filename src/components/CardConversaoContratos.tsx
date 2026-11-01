@@ -73,10 +73,10 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
           </div>
 
           <p className="nota perdas-nota">
-            Taxa calculada como contratos assinados (negócios ganhos) ÷ reuniões concluídas no período
-            selecionado. Contamos reuniões de todos os usuários, desde que vinculadas a negócios dos funis
-            acompanhados; o detalhamento é atribuído pelo proprietário do negócio. Como não é uma coorte de
-            oportunidades, a taxa pode ultrapassar 100%.
+            Taxa calculada como negócios ganhos nos funis Novos Negócios e Salabim ÷ reuniões concluídas no
+            período selecionado. Contamos reuniões de todos os usuários, desde que vinculadas a negócios dos
+            funis acompanhados; o detalhamento é atribuído pelo proprietário do negócio. Como não é uma coorte
+            de oportunidades, a taxa pode ultrapassar 100%.
           </p>
         </>
       )}
