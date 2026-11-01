@@ -6,6 +6,7 @@ import {
   addDias,
   formatarBR,
   hoje,
+  periodoComparavelMesAnterior,
   primeiroDiaDoMes,
   ultimoDiaDoMes,
   type ISODate,
@@ -105,6 +106,11 @@ function Painel() {
   );
 
   const mes = useApi<AgendamentosResposta>(urlMes);
+  const urlMesAnterior = useMemo(() => {
+    const comparavel = periodoComparavelMesAnterior(ref);
+    return `/api/agendamentos?inicio=${comparavel.inicio}&fim=${comparavel.fim}&unidade=${unidade}`;
+  }, [ref, unidade]);
+  const mesAnterior = useApi<AgendamentosResposta>(urlMesAnterior);
   // Uma busca so, dividida entre o card 5 e a marca de projecao do card 2.
   const futuros = useApi<FuturosResposta>('/api/agendamentos-futuros');
   const ehMesCorrente = periodo.inicio === primeiroDiaDoMes(ref) && periodo.fim === ultimoDiaDoMes(ref);
@@ -247,7 +253,7 @@ function Painel() {
           </div>
 
           <div className="grade">
-            <CardDetalhamentoSdr estado={mes} />
+            <CardDetalhamentoSdr estado={mes} estadoAnterior={mesAnterior} />
           </div>
 
           <div className="grade cheia">

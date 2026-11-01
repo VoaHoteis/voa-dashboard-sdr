@@ -12,7 +12,7 @@ import {
   SDRS,
   type FunnelKey,
 } from '@/lib/config';
-import { hoje, nomeDoMes, ritmoDoMes } from '@/lib/dates';
+import { formatarBR, hoje, nomeDoMes, ritmoDoMes } from '@/lib/dates';
 import {
   TEMPERATURA_LABEL,
   cadenciaNecessaria,
@@ -40,7 +40,13 @@ const FUNIS: FunnelKey[] = ['novosNegocios', 'salabim'];
  * aponte para outro periodo: a meta e mensal, entao ritmo e temperatura so
  * fazem sentido contra o mes.
  */
-export function CardDetalhamentoSdr({ estado }: { estado: Estado<AgendamentosResposta> }) {
+export function CardDetalhamentoSdr({
+  estado,
+  estadoAnterior,
+}: {
+  estado: Estado<AgendamentosResposta>;
+  estadoAnterior: Estado<AgendamentosResposta>;
+}) {
   const ritmo = ritmoDoMes(hoje());
   const [detalhe, setDetalhe] = useState<{ titulo: string; recorte: Recorte } | null>(null);
 
@@ -60,6 +66,7 @@ export function CardDetalhamentoSdr({ estado }: { estado: Estado<AgendamentosRes
         >
           {(d) => {
             const sdr = d.porSdr.find((x) => x.sdr === cfg.key);
+            const sdrAnterior = estadoAnterior.dados?.porSdr.find((x) => x.sdr === cfg.key);
             if (!sdr) return <div className="estado">Sem dados.</div>;
 
             return (
@@ -75,6 +82,13 @@ export function CardDetalhamentoSdr({ estado }: { estado: Estado<AgendamentosRes
                   );
                   const cadencia = cadenciaNecessaria(realizado, meta, ritmo.restantes);
                   const restante = textoRestante(cadencia);
+                  const marcaHistorica = sdrAnterior?.porFunil[f];
+                  const dicaHistorica =
+                    marcaHistorica !== undefined && estadoAnterior.dados
+                      ? `Mês passado até ${formatarBR(estadoAnterior.dados.periodo.fim)}: ${marcaHistorica} ${
+                          marcaHistorica === 1 ? 'agendamento' : 'agendamentos'
+                        }.`
+                      : undefined;
 
                   return (
                     <div key={f}>
@@ -109,7 +123,13 @@ export function CardDetalhamentoSdr({ estado }: { estado: Estado<AgendamentosRes
                         <span className="rotulo">de {meta}</span>
                       </div>
 
-                      <BarraMeta valor={realizado} meta={meta} cor={CORES_FUNIL[f]} />
+                      <BarraMeta
+                        valor={realizado}
+                        meta={meta}
+                        cor={CORES_FUNIL[f]}
+                        marcaHistorica={marcaHistorica}
+                        dicaHistorica={dicaHistorica}
+                      />
 
                       <div
                         style={{
@@ -135,6 +155,27 @@ export function CardDetalhamentoSdr({ estado }: { estado: Estado<AgendamentosRes
                     </div>
                   );
                 })}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: -8,
+                    color: 'var(--texto-fraco)',
+                    fontSize: 12,
+                  }}
+                >
+                  <i
+                    aria-hidden="true"
+                    style={{
+                      display: 'inline-block',
+                      height: 14,
+                      borderLeft: '2px dashed var(--atencao)',
+                    }}
+                  />
+                  <span>Resultado até o mesmo número de dias úteis do mês passado</span>
+                </div>
 
                 {MOSTRAR_NOTAS && (
                   <p className="nota">
