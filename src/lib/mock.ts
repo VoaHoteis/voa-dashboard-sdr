@@ -322,7 +322,7 @@ export async function negociosGanhosFalsos(opts: {
           next_activity_date: null,
           user_id: closer.userId,
           [SDR_FIELD_KEY]: SDRS[Math.floor(r2() * SDRS.length)].sdrOptionId,
-          origin: ['Indicação', 'Site', 'Prospecção ativa'][Math.floor(r2() * 3)],
+          channel: ['Indicação', 'Site', 'Prospecção ativa'][Math.floor(r2() * 3)],
           value: valor,
           won_time: dia + ' 12:00:00',
         } as unknown as Negocio);
