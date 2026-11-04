@@ -34,11 +34,7 @@ function textoCampoOrigem(valor: unknown): string | null {
 
 function origemDoNegocio(negocio: Negocio): string | null {
   const campos = negocio as Record<string, unknown>;
-  for (const campo of [campos.origin, campos.source_name, campos.source, campos.channel]) {
-    const origem = textoCampoOrigem(campo);
-    if (origem) return origem;
-  }
-  return null;
+  return textoCampoOrigem(campos.channel);
 }
 
 export async function GET(req: Request) {

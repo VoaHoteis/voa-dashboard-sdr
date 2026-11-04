@@ -125,7 +125,7 @@ export interface ItemFechamento {
   closer: string | null;
   /** Responsável pelo agendamento de apresentação mais recente antes do ganho. */
   sdrApresentacao: string | null;
-  /** Origem informada no Pipedrive, ou null quando não preenchida. */
+  /** Valor do campo CANAL no Pipedrive, ou null quando não preenchido. */
   origem: string | null;
   /** Valor do negocio, na moeda da conta (BRL). */
   valor: number;
