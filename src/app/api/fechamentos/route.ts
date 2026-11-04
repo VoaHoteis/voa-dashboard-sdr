@@ -26,16 +26,24 @@ function textoCampoOrigem(
   valor: unknown,
   opcoes: Map<number, string>
 ): string | null {
-  if (typeof valor === 'string' && valor.trim()) return valor.trim();
-  if (typeof valor === 'number') return opcoes.get(valor) ?? String(valor);
+  const comoTexto = (candidato: unknown): string | null => {
+    if (typeof candidato === 'number') return opcoes.get(candidato) ?? String(candidato);
+    if (typeof candidato !== 'string' || !candidato.trim()) return null;
+
+    const texto = candidato.trim();
+    const id = Number(texto);
+    return Number.isSafeInteger(id) ? opcoes.get(id) ?? texto : texto;
+  };
+
+  const textoDireto = comoTexto(valor);
+  if (textoDireto) return textoDireto;
   if (!valor || typeof valor !== 'object') return null;
 
   const campo = valor as { id?: unknown; name?: unknown; label?: unknown; value?: unknown };
-  for (const candidato of [campo.name, campo.label, campo.value]) {
-    if (typeof candidato === 'string' && candidato.trim()) return candidato.trim();
-    if (typeof candidato === 'number') return opcoes.get(candidato) ?? String(candidato);
+  for (const candidato of [campo.name, campo.label, campo.value, campo.id]) {
+    const texto = comoTexto(candidato);
+    if (texto) return texto;
   }
-  if (typeof campo.id === 'number') return opcoes.get(campo.id) ?? String(campo.id);
   return null;
 }
 
@@ -58,7 +66,7 @@ export async function GET(req: Request) {
       resolverTiposAgendamento(TIPOS_AGENDAMENTO),
       buscarCampoNegocioPorNome('CANAL'),
     ]);
-    const opcoesCanal = new Map(campoCanal.options.map((opcao) => [opcao.id, opcao.label]));
+    const opcoesCanal = new Map(campoCanal.options.map((opcao) => [Number(opcao.id), opcao.label]));
     const itens = resolverFechamentos(ganhos);
     const apresentacoesPorNegocio = await buscarAgendamentosPorNegocio(
       itens.map((item) => item.negocio),
