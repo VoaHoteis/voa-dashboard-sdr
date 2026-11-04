@@ -304,6 +304,30 @@ export async function buscarNegociosGanhos(opts: {
   });
 }
 
+export interface DefinicaoCampoNegocio {
+  key: string;
+  options: { id: number; label: string }[];
+}
+
+/** Resolve um campo personalizado pelo rótulo exibido no Pipedrive. */
+export async function buscarCampoNegocioPorNome(nome: string): Promise<DefinicaoCampoNegocio> {
+  if (modoMock()) return { key: 'channel', options: [] };
+
+  const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  const campos = await buscarTudo<{
+    key: string;
+    name: string;
+    options?: { id: number; label: string }[] | null;
+  }>('/v1/dealFields', {}, 100);
+  const campo = campos.find((item) => normalizar(item.name) === normalizar(nome));
+
+  if (!campo) {
+    throw new PipedriveError(`O campo personalizado "${nome}" não foi encontrado no Pipedrive.`);
+  }
+
+  return { key: campo.key, options: campo.options ?? [] };
+}
+
 /**
  * Primeira e mais recente data de apresentação antes da assinatura de cada negócio.
  * A API v2 filtra por deal_id, então limitamos a concorrência e usamos cursor
