@@ -17,7 +17,7 @@ import {
   CORES_FUNIL,
   FUNNEL_LABEL,
   MOSTRAR_NOTAS,
-  SDRS,
+  SDRS_ATIVOS,
   TIPOS_ESFORCO,
   type FunnelKey,
 } from '@/lib/config';
@@ -441,7 +441,7 @@ export function CardsAtividadesSemana({ periodo }: { periodo: Periodo }) {
 
   return (
     <>
-      {SDRS.map((cfg) => (
+      {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}
           titulo={`Atividades · ${cfg.nome}`}

@@ -30,7 +30,7 @@ export const PIPELINE_TO_FUNNEL: Record<number, FunnelKey> = {
  */
 export const SDR_FIELD_KEY = '8bf893d50586a148d5a5f39bb09198ae3edfb7d5';
 
-export type SdrKey = 'juliana' | 'barbara';
+export type SdrKey = 'juliana' | 'barbara' | 'julianaAguiar' | 'wanderson' | 'viviane';
 
 /**
  * Papel de quem pode aparecer atribuido a um agendamento.
@@ -71,7 +71,13 @@ export interface SdrConfig extends Pessoa {
   metas: Record<FunnelKey, number>;
 }
 
-/** Só estas têm meta e aparecem nos cards de meta, funil e atividades. */
+export interface SdrAtivoConfig extends Pessoa {
+  key: SdrKey;
+  userId: number;
+  papel: 'sdr';
+}
+
+/** SDRs com meta individual ativa; a meta do time é calculada apenas por esta lista. */
 export const SDRS: SdrConfig[] = [
   {
     key: 'juliana',
@@ -91,15 +97,41 @@ export const SDRS: SdrConfig[] = [
   },
 ];
 
+/** Todos os SDRs ativos; quem está sem meta continua aparecendo nos indicadores reais. */
+export const SDRS_ATIVOS: SdrAtivoConfig[] = [
+  ...SDRS,
+  {
+    key: 'julianaAguiar',
+    nome: 'Juliana Aguiar',
+    sdrOptionNome: 'Juliana Aguiar',
+    userId: 28966027,
+    papel: 'sdr',
+  },
+  {
+    key: 'wanderson',
+    nome: 'Wanderson',
+    sdrOptionNome: 'Wanderson',
+    userId: 28966016,
+    papel: 'sdr',
+  },
+  {
+    key: 'viviane',
+    nome: 'Viviane',
+    sdrOptionNome: 'Viviane',
+    userId: 28966005,
+    papel: 'sdr',
+  },
+];
+
 /**
  * Todo mundo que pode aparecer atribuido a um agendamento.
  *
- * Cobre as nove opcoes do campo SDR mais quem so aparece como dono de negocio.
- * Sem esta lista, um agendamento do Bruno ou da Mariana caia em "sem SDR", o que
+ * Cobre as opções do campo SDR e quem só aparece como dono de negócio. Sem esta
+ * lista, um agendamento do Bruno ou da Mariana caía em "sem SDR", o que
  * e factualmente errado: o campo esta preenchido.
  */
 export const PESSOAS: Pessoa[] = [
-  ...SDRS,
+  ...SDRS_ATIVOS,
   { key: 'mariaEduarda', nome: 'Maria Eduarda', sdrOptionNome: 'Maria Eduarda', userId: 28885760, papel: 'inativo' },
   { key: 'bruno', nome: 'Bruno Dias', sdrOptionId: 635, userId: 12029818, papel: 'closer' },
   { key: 'joao', nome: 'João Pacheco', sdrOptionId: 636, userId: 12696278, papel: 'closer' },

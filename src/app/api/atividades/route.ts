@@ -11,7 +11,7 @@
 import { NextResponse } from 'next/server';
 import {
   PIPELINE_TO_FUNNEL,
-  SDRS,
+  SDRS_ATIVOS,
   TIPO_LIGACAO,
   TIPOS_ESFORCO,
   type FunnelKey,
@@ -120,13 +120,12 @@ export async function GET(req: Request) {
     // usam a data de conclusão e descartam o excedente.
     const janelaInicio = addDias(inicio, -35);
 
-    // Busca as atividades das duas SDRs primeiro, junta os negócios de todas e
-    // resolve o funil de cada um numa única chamada em lote (v2), em vez de uma
-    // consulta por SDR — mesmo caminho do card de Agendamentos.
+    // Busca as atividades dos SDRs ativos, junta os negócios e resolve o funil
+    // de cada um numa única chamada em lote (v2), em vez de uma consulta por SDR.
     const atividadesPorSdr = new Map<string, Atividade[]>();
     const idsNegocios: number[] = [];
 
-    for (const s of SDRS) {
+    for (const s of SDRS_ATIVOS) {
       const atividades = await buscarAtividades({
         inicio: janelaInicio,
         fim,
@@ -157,7 +156,7 @@ export async function GET(req: Request) {
     const contaAtividade = (a: Atividade) =>
       tiposSet.has(a.type) && !(a.type === TIPO_LIGACAO && a.deal_id == null);
 
-    const porSdr: AtividadesResposta['porSdr'] = SDRS.map((s) => {
+    const porSdr: AtividadesResposta['porSdr'] = SDRS_ATIVOS.map((s) => {
       const atividades = atividadesPorSdr.get(s.key) ?? [];
 
       // Total do período, uma única passada -- não depende de granularidade.
