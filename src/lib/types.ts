@@ -56,7 +56,8 @@ export interface AgendamentosResposta {
     nome: string;
     total: number;
     porFunil: PorFunil;
-    metas: PorFunil;
+    /** Ausente para SDRs sem meta individual neste mês. */
+    metas?: PorFunil;
   }>;
   /** Nem campo SDR nem dono conhecido -- nao da para dizer de quem e. */
   semSdr: number;

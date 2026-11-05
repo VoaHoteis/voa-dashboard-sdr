@@ -18,7 +18,7 @@ import { NextResponse } from 'next/server';
 import {
   ETAPAS_ORDEM,
   PIPELINE_TO_FUNNEL,
-  SDRS,
+  SDRS_ATIVOS,
   STAGES,
   type EtapaKey,
   type FunnelKey,
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
 
     const resposta: FunilResposta = {
       periodoPerdidos,
-      porSdr: SDRS.map((s) => {
+      porSdr: SDRS_ATIVOS.map((s) => {
         const funis = {} as FunilResposta['porSdr'][number]['funis'];
 
         for (const funil of FUNIS) {

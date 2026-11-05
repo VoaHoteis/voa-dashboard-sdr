@@ -43,8 +43,9 @@ export function CardAgendamentosTotais({ url }: { url: string }) {
         {(d) => {
           // A meta de 60 é das SDRs com meta (Juliana e Bárbara), não do time
           // inteiro: o total inclui closers, inativos e agendamentos sem SDR.
-          const totalSdr = d.porSdr.reduce((acc, s) => acc + s.total, 0);
-          const chavesSdr = d.porSdr.map((s) => s.sdr);
+          const sdrsComMeta = d.porSdr.filter((s) => s.metas);
+          const totalSdr = sdrsComMeta.reduce((acc, s) => acc + s.total, 0);
+          const chavesSdr = sdrsComMeta.map((s) => s.sdr);
           const atingido = META_TIME_TOTAL > 0 ? totalSdr / META_TIME_TOTAL : 0;
           const divergem = d.time.total !== d.time.totalAlternativo;
           const abrir = (titulo: string, recorte: Recorte) =>
@@ -237,19 +238,23 @@ export function CardAgendamentoPorSdr({
                         titulo={`Ver todos os agendamentos de ${s.nome}`}
                         desabilitado={s.total === 0}
                       />{' '}
-                      de {s.metas.novosNegocios + s.metas.salabim}
+                      {s.metas ? (
+                        <>de {s.metas.novosNegocios + s.metas.salabim}</>
+                      ) : (
+                        <span>sem meta individual neste mês</span>
+                      )}
                     </span>
                   </div>
 
                   <div style={{ display: 'grid', gap: 12 }}>
                     {FUNIS.map((f) => {
-                      const bateu = s.porFunil[f] >= s.metas[f];
+                      const bateu = s.metas ? s.porFunil[f] >= s.metas[f] : false;
                       const recorte: Recorte = {
                         sdr: s.sdr as SdrKey,
                         funil: f,
                         unidade: d.unidade,
                       };
-                      const projetado = futuros
+                      const projetado = futuros && s.metas
                         ? contarProjecao(d.itens, futuros.itens, recorte)
                         : undefined;
                       const marcados =
@@ -271,7 +276,7 @@ export function CardAgendamentoPorSdr({
                                 titulo={`Ver os negócios de ${s.nome} em ${FUNNEL_LABEL[f]}`}
                                 desabilitado={s.porFunil[f] === 0}
                               />
-                              <span className="rotulo"> / {s.metas[f]}</span>
+                              {s.metas && <span className="rotulo"> / {s.metas[f]}</span>}
                               {bateu && (
                                 <span
                                   className="selo"
@@ -283,21 +288,23 @@ export function CardAgendamentoPorSdr({
                               )}
                             </span>
                           </div>
-                          <BarraMeta
-                            valor={s.porFunil[f]}
-                            meta={s.metas[f]}
-                            cor={CORES_FUNIL[f]}
-                            marca={projetado}
-                            dica={
-                              marcados > 0
-                                ? `Tracejado: ${projetado} de ${s.metas[f]} se ${
-                                    marcados === 1
-                                      ? 'a reunião já marcada for confirmada'
-                                      : `as ${marcados} reuniões já marcadas forem confirmadas`
-                                  }`
-                                : undefined
-                            }
-                          />
+                          {s.metas ? (
+                            <BarraMeta
+                              valor={s.porFunil[f]}
+                              meta={s.metas[f]}
+                              cor={CORES_FUNIL[f]}
+                              marca={projetado}
+                              dica={
+                                marcados > 0
+                                  ? `Tracejado: ${projetado} de ${s.metas[f]} se ${
+                                      marcados === 1
+                                        ? 'a reunião já marcada for confirmada'
+                                        : `as ${marcados} reuniões já marcadas forem confirmadas`
+                                    }`
+                                  : undefined
+                              }
+                            />
+                          ) : null}
                         </div>
                       );
                     })}

@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { METAS_TIME, SDRS, TIPOS_AGENDAMENTO, UNIDADE_PADRAO, type UnidadeContagem } from '@/lib/config';
+import { METAS_TIME, SDRS_ATIVOS, TIPOS_AGENDAMENTO, UNIDADE_PADRAO, type UnidadeContagem } from '@/lib/config';
 import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import {
   agendamentosDaSdr,
@@ -62,14 +62,14 @@ export async function GET(req: Request) {
         totalAlternativo: totalDe(porFunilAlt),
         porFunilAlternativo: porFunilAlt,
       },
-      porSdr: SDRS.map((s) => {
+      porSdr: SDRS_ATIVOS.map((s) => {
         const meus = contarPorFunil(agendamentosDaSdr(itens, s.key), unidade);
         return {
           sdr: s.key,
           nome: s.nome,
           total: totalDe(meus),
           porFunil: meus,
-          metas: s.metas,
+          ...(s.metas ? { metas: s.metas } : {}),
         };
       }),
       semSdr: itens.filter((i) => i.atribuicao === 'nenhuma').length,

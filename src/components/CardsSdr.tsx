@@ -10,6 +10,7 @@ import {
   FUNNEL_LABEL,
   MOSTRAR_NOTAS,
   SDRS,
+  SDRS_ATIVOS,
   type FunnelKey,
 } from '@/lib/config';
 import { formatarBR, hoje, nomeDoMes, ritmoDoMes } from '@/lib/dates';
@@ -68,12 +69,14 @@ export function CardDetalhamentoSdr({
             const sdr = d.porSdr.find((x) => x.sdr === cfg.key);
             const sdrAnterior = estadoAnterior.dados?.porSdr.find((x) => x.sdr === cfg.key);
             if (!sdr) return <div className="estado">Sem dados.</div>;
+            const metas = sdr.metas;
+            if (!metas) return <div className="estado">Sem meta individual neste mês.</div>;
 
             return (
               <div style={{ display: 'grid', gap: 20 }}>
                 {FUNIS.map((f) => {
                   const realizado = sdr.porFunil[f];
-                  const meta = sdr.metas[f];
+                  const meta = metas[f];
                   const { temperatura, esperadoExibido } = classificarRitmo(
                     realizado,
                     meta,
@@ -205,7 +208,7 @@ export function CardFunilSdr() {
 
   return (
     <>
-      {SDRS.map((cfg) => (
+      {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}
           titulo={`Funil · ${cfg.nome}`}
