@@ -310,7 +310,10 @@ export interface DefinicaoCampoNegocio {
 }
 
 /** Resolve um campo personalizado pelo rótulo exibido no Pipedrive. */
-export async function buscarCampoNegocioPorNome(nome: string): Promise<DefinicaoCampoNegocio> {
+export async function buscarCampoNegocioPorNome(
+  nome: string,
+  negocios: Negocio[] = []
+): Promise<DefinicaoCampoNegocio> {
   if (modoMock()) return { key: 'channel', options: [] };
 
   const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
@@ -319,7 +322,31 @@ export async function buscarCampoNegocioPorNome(nome: string): Promise<Definicao
     name: string;
     options?: { id: number; label: string }[] | null;
   }>('/v1/dealFields', {}, 100);
-  const campo = campos.find((item) => normalizar(item.name) === normalizar(nome));
+  const correspondentes = campos.filter((item) => normalizar(item.name) === normalizar(nome));
+  const idDaOpcao = (valor: unknown): number | null => {
+    if (typeof valor === 'number' && Number.isSafeInteger(valor)) return valor;
+    if (typeof valor === 'string' && /^\d+$/.test(valor.trim())) return Number(valor.trim());
+    if (valor && typeof valor === 'object') {
+      const campo = valor as { id?: unknown; value?: unknown };
+      return idDaOpcao(campo.id ?? campo.value);
+    }
+    return null;
+  };
+  const valorCampo = (negocio: Negocio, key: string): unknown => {
+    const camposNegocio = negocio as Record<string, unknown>;
+    const personalizados = camposNegocio.custom_fields as Record<string, unknown> | undefined;
+    return camposNegocio[key] ?? personalizados?.[key];
+  };
+  const pontuacao = (campo: (typeof correspondentes)[number]) => {
+    const ids = new Set((campo.options ?? []).map((opcao) => Number(opcao.id)));
+    return negocios.reduce((total, negocio) => {
+      const id = idDaOpcao(valorCampo(negocio, campo.key));
+      return total + (id !== null && ids.has(id) ? 1 : 0);
+    }, 0);
+  };
+  const campo = [...correspondentes].sort(
+    (a, b) => pontuacao(b) - pontuacao(a) || (b.options?.length ?? 0) - (a.options?.length ?? 0)
+  )[0];
 
   if (!campo) {
     throw new PipedriveError(`O campo personalizado "${nome}" não foi encontrado no Pipedrive.`);

@@ -61,11 +61,11 @@ export async function GET(req: Request) {
     const inicio = searchParams.get('inicio') || primeiroDiaDoMes(ref);
     const fim = searchParams.get('fim') || ultimoDiaDoMes(ref);
 
-    const [ganhos, tiposApresentacao, campoCanal] = await Promise.all([
+    const [ganhos, tiposApresentacao] = await Promise.all([
       buscarNegociosGanhos({ inicio, fim }),
       resolverTiposAgendamento(TIPOS_AGENDAMENTO),
-      buscarCampoNegocioPorNome('CANAL'),
     ]);
+    const campoCanal = await buscarCampoNegocioPorNome('CANAL', ganhos);
     const opcoesCanal = new Map(campoCanal.options.map((opcao) => [Number(opcao.id), opcao.label]));
     const itens = resolverFechamentos(ganhos);
     const apresentacoesPorNegocio = await buscarAgendamentosPorNegocio(
