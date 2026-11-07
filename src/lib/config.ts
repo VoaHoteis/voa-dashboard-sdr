@@ -210,6 +210,11 @@ export const TIPO_NO_SHOW = 'registro_de_no_show';
 export const TIPO_LIGACAO = 'ligacao_de_prospeccao_plan';
 export const META_LIGACOES_DIA = 20;
 
+/** Meta do card de atividades por SDR, válida a partir de segunda-feira, 9/11/2026. */
+export const DATA_INICIO_META_ATIVIDADES = '2026-11-09';
+export const META_ATIVIDADES_POR_DIA = 60;
+export const META_ATIVIDADES_POR_SEMANA = META_ATIVIDADES_POR_DIA * 5;
+
 /** Tipos de atividade de esforco, do card "Atividades por semana". */
 export const TIPOS_ESFORCO = [
   { key: TIPO_LIGACAO, label: 'Ligação de Prospecção', cor: '#C4FF3D' },
