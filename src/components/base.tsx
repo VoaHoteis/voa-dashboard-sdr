@@ -81,7 +81,7 @@ export function ProvedorAtualizacao({ children }: { children: React.ReactNode })
  * aviso nenhum, e foi assim que os cards 3 a 6 passaram dias mostrando zero.
  * Aqui o erro sempre aparece na tela com o motivo e um botao de tentar de novo.
  */
-export function useApi<T>(url: string): Estado<T> {
+export function useApi<T>(url: string, habilitado = true): Estado<T> {
   const [dados, setDados] = useState<T | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -93,6 +93,11 @@ export function useApi<T>(url: string): Estado<T> {
   const recarregar = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
+    if (!habilitado) {
+      setCarregando(false);
+      return;
+    }
+
     let cancelado = false;
 
     // Só um pedido explícito de atualização derruba o cache do servidor. Uma
@@ -125,7 +130,7 @@ export function useApi<T>(url: string): Estado<T> {
     return () => {
       cancelado = true;
     };
-  }, [url, tick, versao, registrar]);
+  }, [url, tick, versao, registrar, habilitado]);
 
   return { dados, carregando, erro, recarregar };
 }
