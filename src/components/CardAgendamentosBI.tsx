@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Bar,
-  BarChart,
   CartesianGrid,
+  ComposedChart,
+  LabelList,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,7 +18,9 @@ import { Painel, useApi } from './base';
 const numeroBR = new Intl.NumberFormat('pt-BR');
 
 export function CardAgendamentosBI() {
+  const [comparar, setComparar] = useState(false);
   const estado = useApi<AgendamentosMensaisResposta>('/api/agendamentos-bi?ano=2026');
+  const estadoAnterior = useApi<AgendamentosMensaisResposta>('/api/agendamentos-bi?ano=2025', comparar);
 
   return (
     <Painel titulo="Agendamentos por mês · 2026" estado={estado}>
@@ -30,8 +35,41 @@ export function CardAgendamentosBI() {
           { sdrs: 0, closers: 0, outros: 0, total: 0 }
         );
 
+        const totaisAnteriores = (estadoAnterior.dados?.meses ?? []).reduce(
+          (total, mes) => total + mes.total,
+          0
+        );
+        const mesesAnteriores = new Map(
+          (estadoAnterior.dados?.meses ?? []).map((mes) => [mes.mes.slice(5), mes.total])
+        );
+        const mesesGrafico = dados.meses.map((mes) => ({
+          ...mes,
+          totalAnterior: mesesAnteriores.get(mes.mes.slice(5)) ?? 0,
+        }));
+
         return (
           <>
+            <div className="bi-controles">
+              <label className="bi-comparacao">
+                <input
+                  type="checkbox"
+                  checked={comparar}
+                  onChange={(evento) => setComparar(evento.target.checked)}
+                />
+                <span>Comparar com 2025</span>
+              </label>
+              {comparar && estadoAnterior.carregando && (
+                <span className="bi-comparacao-status" role="status">
+                  Carregando dados de 2025…
+                </span>
+              )}
+              {comparar && estadoAnterior.erro && (
+                <span className="bi-comparacao-erro" role="alert">
+                  Comparação indisponível: {estadoAnterior.erro}
+                </span>
+              )}
+            </div>
+
             <div className="bi-resumo">
               <div className="bi-total">
                 <strong>{numeroBR.format(totais.total)}</strong>
@@ -52,6 +90,12 @@ export function CardAgendamentosBI() {
                     Outros <strong>{numeroBR.format(totais.outros)}</strong>
                   </span>
                 )}
+                {comparar && estadoAnterior.dados && (
+                  <span>
+                    <i className="bi-cor bi-cor-linha" aria-hidden="true" />
+                    Total 2025 <strong>{numeroBR.format(totaisAnteriores)}</strong>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -62,11 +106,15 @@ export function CardAgendamentosBI() {
                 totais.sdrs
               )} de SDRs, ${numeroBR.format(totais.closers)} de closers e ${numeroBR.format(
                 totais.outros
-              )} de outras atribuições.`}
+              )} de outras atribuições.${
+                comparar && estadoAnterior.dados
+                  ? ` Linha de comparação: total mensal de ${estadoAnterior.dados.ano}.`
+                  : ''
+              }`}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={dados.meses}
+                <ComposedChart
+                  data={mesesGrafico}
                   margin={{ top: 12, right: 8, bottom: 0, left: -16 }}
                   barCategoryGap="28%"
                   accessibilityLayer
@@ -81,6 +129,7 @@ export function CardAgendamentosBI() {
                   />
                   <YAxis
                     allowDecimals={false}
+                    domain={[0, 'dataMax + 5']}
                     tickLine={false}
                     axisLine={false}
                     tick={{ fill: 'var(--texto-fraco)', fontSize: 11 }}
@@ -119,7 +168,39 @@ export function CardAgendamentosBI() {
                     maxBarSize={38}
                     radius={[4, 4, 0, 0]}
                   />
-                </BarChart>
+                  <Line
+                    dataKey="total"
+                    name="Total 2026"
+                    stroke="transparent"
+                    strokeWidth={0}
+                    dot={false}
+                    activeDot={false}
+                    isAnimationActive={false}
+                    legendType="none"
+                  >
+                    <LabelList
+                      dataKey="total"
+                      position="top"
+                      offset={7}
+                      fill="var(--texto-fraco)"
+                      fontSize={11}
+                      formatter={(valor) => numeroBR.format(Number(valor))}
+                    />
+                  </Line>
+                  {comparar && estadoAnterior.dados && (
+                    <Line
+                      type="monotone"
+                      dataKey="totalAnterior"
+                      name="Total 2025"
+                      stroke="var(--atencao)"
+                      strokeWidth={2}
+                      strokeDasharray="6 4"
+                      dot={{ r: 3, fill: 'var(--atencao)' }}
+                      activeDot={{ r: 5 }}
+                      connectNulls
+                    />
+                  )}
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
             <p className="bi-nota">
