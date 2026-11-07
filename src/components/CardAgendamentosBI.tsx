@@ -56,53 +56,54 @@ export function CardAgendamentosBI() {
 
         return (
           <>
-            <div className="bi-controles">
-              <label className="bi-comparacao">
-                <input
-                  type="checkbox"
-                  checked={comparar}
-                  onChange={(evento) => setComparar(evento.target.checked)}
-                />
-                <span>Comparar com {ANO_ANTERIOR}</span>
-              </label>
-              {comparar && estadoAnterior.carregando && (
-                <span className="bi-comparacao-status" role="status">
-                  Carregando dados de {ANO_ANTERIOR}…
-                </span>
-              )}
-              {comparar && estadoAnterior.erro && (
-                <span className="bi-comparacao-erro" role="alert">
-                  Comparação indisponível: {estadoAnterior.erro}
-                </span>
-              )}
-            </div>
-
             <div className="bi-resumo">
               <div className="bi-total">
                 <strong>{numeroBR.format(totais.total)}</strong>
                 <span>agendamentos no ano</span>
               </div>
-              <div className="bi-legenda" aria-label="Resumo por responsável">
-                <span>
-                  <i className="bi-cor" data-tipo="sdrs" aria-hidden="true" />
-                  SDRs <strong>{numeroBR.format(totais.sdrs)}</strong>
-                </span>
-                <span>
-                  <i className="bi-cor" data-tipo="closers" aria-hidden="true" />
-                  Closers <strong>{numeroBR.format(totais.closers)}</strong>
-                </span>
-                {totais.outros > 0 && (
+              <div className="bi-resumo-lateral">
+                <div className="bi-controles">
+                  <button
+                    type="button"
+                    className="bi-historico-botao"
+                    aria-pressed={comparar}
+                    onClick={() => setComparar((ativo) => !ativo)}
+                  >
+                    Exibir histórico do ano anterior
+                  </button>
+                  {comparar && estadoAnterior.carregando && (
+                    <span className="bi-comparacao-status" role="status">
+                      Carregando dados de {ANO_ANTERIOR}…
+                    </span>
+                  )}
+                  {comparar && estadoAnterior.erro && (
+                    <span className="bi-comparacao-erro" role="alert">
+                      Comparação indisponível: {estadoAnterior.erro}
+                    </span>
+                  )}
+                </div>
+                <div className="bi-legenda" aria-label="Resumo por responsável">
                   <span>
-                    <i className="bi-cor" data-tipo="outros" aria-hidden="true" />
-                    Outros <strong>{numeroBR.format(totais.outros)}</strong>
+                    <i className="bi-cor" data-tipo="sdrs" aria-hidden="true" />
+                    SDRs <strong>{numeroBR.format(totais.sdrs)}</strong>
                   </span>
-                )}
-                {comparar && estadoAnterior.dados && (
                   <span>
-                    <i className="bi-cor bi-cor-linha" aria-hidden="true" />
-                    Total {ANO_ANTERIOR} <strong>{numeroBR.format(totaisAnteriores)}</strong>
+                    <i className="bi-cor" data-tipo="closers" aria-hidden="true" />
+                    Closers <strong>{numeroBR.format(totais.closers)}</strong>
                   </span>
-                )}
+                  {totais.outros > 0 && (
+                    <span>
+                      <i className="bi-cor" data-tipo="outros" aria-hidden="true" />
+                      Outros <strong>{numeroBR.format(totais.outros)}</strong>
+                    </span>
+                  )}
+                  {comparar && estadoAnterior.dados && (
+                    <span>
+                      <i className="bi-cor bi-cor-linha" aria-hidden="true" />
+                      Total {ANO_ANTERIOR} <strong>{numeroBR.format(totaisAnteriores)}</strong>
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -217,12 +218,6 @@ export function CardAgendamentosBI() {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-            <p className="bi-nota">
-              Segue o critério dos cards atuais: reuniões concluídas vinculadas aos funis
-              acompanhados, agrupadas pela data do agendamento. A atribuição usa o campo SDR do
-              negócio ou, quando vazio, o proprietário. Registros sem atribuição única de SDR ou
-              closer aparecem como Outros.
-            </p>
           </>
         );
       }}

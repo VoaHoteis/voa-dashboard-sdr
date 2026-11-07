@@ -60,46 +60,47 @@ export function CardFechamentosMensaisBI() {
 
         return (
           <>
-            <div className="bi-controles">
-              <label className="bi-comparacao">
-                <input
-                  type="checkbox"
-                  checked={comparar}
-                  onChange={(evento) => setComparar(evento.target.checked)}
-                />
-                <span>Comparar com {ANO_ANTERIOR}</span>
-              </label>
-              {comparar && estadoAnterior.carregando && (
-                <span className="bi-comparacao-status" role="status">
-                  Carregando dados de {ANO_ANTERIOR}…
-                </span>
-              )}
-              {comparar && estadoAnterior.erro && (
-                <span className="bi-comparacao-erro" role="alert">
-                  Comparação indisponível: {estadoAnterior.erro}
-                </span>
-              )}
-            </div>
-
             <div className="bi-resumo">
               <div className="bi-total">
                 <strong>{numeroBR.format(totalAtual)}</strong>
                 <span>contratos fechados no ano</span>
               </div>
-              <div className="bi-legenda" aria-label="Contratos fechados por funil">
-                {SERIES.map((serie) => (
-                  <span key={serie.chave}>
-                    <i className="bi-cor" data-tipo={serie.chave} aria-hidden="true" />
-                    {serie.nome}{' '}
-                    <strong>{numeroBR.format(totaisPorFunil[serie.chave])}</strong>
-                  </span>
-                ))}
-                {comparar && estadoAnterior.dados && (
-                  <span>
-                    <i className="bi-cor bi-cor-linha" aria-hidden="true" />
-                    Total {ANO_ANTERIOR} <strong>{numeroBR.format(totalAnterior)}</strong>
-                  </span>
-                )}
+              <div className="bi-resumo-lateral">
+                <div className="bi-controles">
+                  <button
+                    type="button"
+                    className="bi-historico-botao"
+                    aria-pressed={comparar}
+                    onClick={() => setComparar((ativo) => !ativo)}
+                  >
+                    Exibir histórico do ano anterior
+                  </button>
+                  {comparar && estadoAnterior.carregando && (
+                    <span className="bi-comparacao-status" role="status">
+                      Carregando dados de {ANO_ANTERIOR}…
+                    </span>
+                  )}
+                  {comparar && estadoAnterior.erro && (
+                    <span className="bi-comparacao-erro" role="alert">
+                      Comparação indisponível: {estadoAnterior.erro}
+                    </span>
+                  )}
+                </div>
+                <div className="bi-legenda" aria-label="Contratos fechados por funil">
+                  {SERIES.map((serie) => (
+                    <span key={serie.chave}>
+                      <i className="bi-cor" data-tipo={serie.chave} aria-hidden="true" />
+                      {serie.nome}{' '}
+                      <strong>{numeroBR.format(totaisPorFunil[serie.chave])}</strong>
+                    </span>
+                  ))}
+                  {comparar && estadoAnterior.dados && (
+                    <span>
+                      <i className="bi-cor bi-cor-linha" aria-hidden="true" />
+                      Total {ANO_ANTERIOR} <strong>{numeroBR.format(totalAnterior)}</strong>
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -199,10 +200,6 @@ export function CardFechamentosMensaisBI() {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-            <p className="bi-nota">
-              Cada barra representa os negócios ganhos no mês, agrupados pelo funil do contrato e
-              pela data de ganho registrada no Pipedrive.
-            </p>
           </>
         );
       }}
