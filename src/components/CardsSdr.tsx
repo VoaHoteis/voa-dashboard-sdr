@@ -9,7 +9,6 @@ import {
   etapaExiste,
   FUNNEL_LABEL,
   MOSTRAR_NOTAS,
-  SDRS,
   SDRS_ATIVOS,
   type FunnelKey,
 } from '@/lib/config';
@@ -25,6 +24,7 @@ import type { AgendamentosResposta, FunilResposta } from '@/lib/types';
 import type { Recorte } from '@/lib/detalhe';
 import {
   BarraMeta,
+  CarrosselSdr,
   LegendaFunis,
   NumeroClicavel,
   Painel,
@@ -53,7 +53,8 @@ export function CardDetalhamentoSdr({
 
   return (
     <>
-      {SDRS.map((cfg) => (
+      <CarrosselSdr titulo="Detalhamento por SDR">
+      {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}
           titulo={`Detalhamento · ${cfg.nome}`}
@@ -70,7 +71,46 @@ export function CardDetalhamentoSdr({
             const sdrAnterior = estadoAnterior.dados?.porSdr.find((x) => x.sdr === cfg.key);
             if (!sdr) return <div className="estado">Sem dados.</div>;
             const metas = sdr.metas;
-            if (!metas) return <div className="estado">Sem meta individual neste mês.</div>;
+            if (!metas) {
+              return (
+                <div style={{ display: 'grid', gap: 20 }}>
+                  {FUNIS.map((f) => {
+                    const realizado = sdr.porFunil[f];
+                    return (
+                      <div key={f}>
+                        <div className="linha-meta">
+                          <span className="rotulo">{FUNNEL_LABEL[f]}</span>
+                          <span className="rotulo">Sem meta individual</span>
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: 8,
+                            margin: '2px 0 8px',
+                          }}
+                        >
+                          <NumeroClicavel
+                            valor={realizado}
+                            classe="numero medio"
+                            cor={CORES_FUNIL[f]}
+                            aoAbrir={() =>
+                              setDetalhe({
+                                titulo: `${cfg.nome} · ${FUNNEL_LABEL[f]} · ${nomeDoMes(ritmo.inicio)}`,
+                                recorte: { sdr: cfg.key, funil: f, unidade: d.unidade },
+                              })
+                            }
+                            titulo={`Ver os ${realizado} agendamentos de ${cfg.nome} em ${FUNNEL_LABEL[f]}`}
+                            desabilitado={realizado === 0}
+                          />
+                          <span className="rotulo">agendamentos no mês</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
 
             return (
               <div style={{ display: 'grid', gap: 20 }}>
@@ -194,6 +234,7 @@ export function CardDetalhamentoSdr({
           }}
         </Painel>
       ))}
+      </CarrosselSdr>
 
       {detalhe && estado.dados && (
         <ModalDetalhe detalhe={detalhe} dados={estado.dados} aoFechar={() => setDetalhe(null)} />
@@ -207,7 +248,7 @@ export function CardFunilSdr() {
   const estado = useApi<FunilResposta>('/api/funil');
 
   return (
-    <>
+    <CarrosselSdr titulo="Funil por SDR">
       {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}
@@ -336,6 +377,6 @@ export function CardFunilSdr() {
           }}
         </Painel>
       ))}
-    </>
+    </CarrosselSdr>
   );
 }

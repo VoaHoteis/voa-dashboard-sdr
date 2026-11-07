@@ -41,6 +41,7 @@ import type {
 } from '@/lib/types';
 import {
   BarraFunis,
+  CarrosselSdr,
   LegendaFunis,
   Modal,
   NumeroClicavel,
@@ -440,7 +441,7 @@ export function CardsAtividadesSemana({ periodo }: { periodo: Periodo }) {
   );
 
   return (
-    <>
+    <CarrosselSdr titulo="Atividades por SDR">
       {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}
@@ -455,6 +456,6 @@ export function CardsAtividadesSemana({ periodo }: { periodo: Periodo }) {
           }}
         </Painel>
       ))}
-    </>
+    </CarrosselSdr>
   );
 }
