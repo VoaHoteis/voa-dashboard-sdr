@@ -212,6 +212,70 @@ h3 {
   grid-template-columns: 1fr;
 }
 
+.carrossel-sdr {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.carrossel-sdr__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.carrossel-sdr__status {
+  color: var(--texto-fraco);
+  font-size: 12px;
+}
+
+.carrossel-sdr__controles {
+  display: flex;
+  gap: 8px;
+}
+
+.carrossel-sdr__botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--painel);
+  color: var(--texto);
+  font: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.carrossel-sdr__botao:hover:not(:disabled) {
+  border-color: var(--texto-fraco);
+  background: var(--painel-alto);
+}
+
+.carrossel-sdr__botao:focus-visible {
+  outline: 2px solid var(--novos);
+  outline-offset: 2px;
+}
+
+.carrossel-sdr__botao:disabled {
+  color: var(--texto-fraco);
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.carrossel-sdr__grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.carrossel-sdr__grade > .card {
+  min-width: 0;
+}
+
 .card {
   background: var(--painel);
   border: 1px solid var(--borda);
@@ -325,6 +389,10 @@ h3 {
 }
 
 @media (max-width: 560px) {
+  .carrossel-sdr__grade {
+    grid-template-columns: 1fr;
+  }
+
   .forecast-comparacao {
     grid-template-columns: 1fr;
   }

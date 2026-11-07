@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Children,
   createContext,
   useCallback,
   useContext,
@@ -8,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from 'react';
 import { CORES_FUNIL, FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
 
@@ -188,7 +190,49 @@ export function Painel<T>({
   );
 }
 
-/** Barra de proporcao entre os dois funis. */
+/** Mostra dois cartões de SDR por página com controles acessíveis de navegação. */
+export function CarrosselSdr({ titulo, children }: { titulo: string; children: ReactNode }) {
+  const [pagina, setPagina] = useState(0);
+  const cards = Children.toArray(children);
+  const totalPaginas = Math.ceil(cards.length / 2);
+  const inicio = pagina * 2;
+  const fim = Math.min(inicio + 2, cards.length);
+
+  return (
+    <section className="carrossel-sdr" aria-label={titulo} aria-roledescription="carrossel">
+      <div className="carrossel-sdr__cabecalho">
+        <span className="carrossel-sdr__status" aria-live="polite" aria-atomic="true">
+          {cards.length > 0 ? `SDRs ${inicio + 1}–${fim} de ${cards.length}` : 'Nenhum SDR'}
+        </span>
+        <div className="carrossel-sdr__controles">
+          <button
+            type="button"
+            className="carrossel-sdr__botao"
+            aria-label={`Ver SDRs anteriores em ${titulo}`}
+            onClick={() => setPagina((atual) => Math.max(0, atual - 1))}
+            disabled={pagina === 0}
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            className="carrossel-sdr__botao"
+            aria-label={`Ver próximos SDRs em ${titulo}`}
+            onClick={() => setPagina((atual) => Math.min(totalPaginas - 1, atual + 1))}
+            disabled={pagina >= totalPaginas - 1}
+          >
+            →
+          </button>
+        </div>
+      </div>
+      <div className="carrossel-sdr__grade" role="group" aria-label={titulo}>
+        {cards.slice(inicio, fim)}
+      </div>
+    </section>
+  );
+}
+
+/** Barra de proporção entre os dois funis. */
 export function BarraFunis({ salabim, novos }: { salabim: number; novos: number }) {
   const total = salabim + novos;
   const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
