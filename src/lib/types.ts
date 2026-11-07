@@ -43,6 +43,18 @@ export interface ItemAgendamento {
   origem: string | null;
 }
 
+export interface AgendamentosMensaisResposta {
+  ano: number;
+  meses: Array<{
+    mes: string;
+    nome: string;
+    sdrs: number;
+    closers: number;
+    outros: number;
+    total: number;
+  }>;
+}
+
 export interface AgendamentosResposta {
   periodo: Periodo;
   unidade: UnidadeContagem;
