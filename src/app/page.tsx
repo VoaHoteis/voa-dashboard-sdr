@@ -23,6 +23,7 @@ import { CardPerdasClosers } from '@/components/CardPerdasClosers';
 import { CardsFunilPorCloser } from '@/components/CardsFunilPorCloser';
 import { CardLigacoes } from '@/components/CardLigacoes';
 import { CardNoShows } from '@/components/CardNoShows';
+import { CardAgendamentosBI } from '@/components/CardAgendamentosBI';
 import {
   CardAgendamentosFuturos,
   CardsAtividadesSemana,
@@ -30,7 +31,7 @@ import {
 import type { AgendamentosResposta, FuturosResposta } from '@/lib/types';
 
 type Atalho = 'este-mes' | 'mes-passado' | 'ultimos-30' | 'custom';
-type Aba = 'sdr' | 'closers';
+type Aba = 'sdr' | 'closers' | 'bi';
 
 function intervalo(atalho: Atalho, ref: ISODate): { inicio: ISODate; fim: ISODate } {
   switch (atalho) {
@@ -135,7 +136,8 @@ function Painel() {
         </div>
 
         <div className="filtro">
-          <div className="filtro-menu" ref={menuRef}>
+          {aba !== 'bi' && (
+            <div className="filtro-menu" ref={menuRef}>
               <button
                 className="gatilho-filtro"
                 data-aberto={filtroAberto}
@@ -210,7 +212,8 @@ function Painel() {
                   )}
                 </div>
               )}
-          </div>
+            </div>
+          )}
 
           <BotaoAtualizar />
         </div>
@@ -221,6 +224,7 @@ function Painel() {
           [
             ['sdr', 'SDRs'],
             ['closers', 'Closers'],
+            ['bi', 'B.I'],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -242,7 +246,11 @@ function Painel() {
         </p>
       )}
 
-      {aba === 'sdr' ? (
+      {aba === 'bi' ? (
+        <div className="grade cheia">
+          <CardAgendamentosBI />
+        </div>
+      ) : aba === 'sdr' ? (
         <>
           <div className="grade">
             <CardAgendamentosTotais url={urlFiltro} />
