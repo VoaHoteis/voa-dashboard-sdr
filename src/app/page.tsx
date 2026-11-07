@@ -24,6 +24,7 @@ import { CardsFunilPorCloser } from '@/components/CardsFunilPorCloser';
 import { CardLigacoes } from '@/components/CardLigacoes';
 import { CardNoShows } from '@/components/CardNoShows';
 import { CardAgendamentosBI } from '@/components/CardAgendamentosBI';
+import { CardFechamentosMensaisBI } from '@/components/CardFechamentosMensaisBI';
 import {
   CardAgendamentosFuturos,
   CardsAtividadesSemana,
@@ -247,8 +248,9 @@ function Painel() {
       )}
 
       {aba === 'bi' ? (
-        <div className="grade cheia">
+        <div className="grade">
           <CardAgendamentosBI />
+          <CardFechamentosMensaisBI />
         </div>
       ) : aba === 'sdr' ? (
         <>

@@ -12,18 +12,25 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { hoje } from '@/lib/dates';
 import type { AgendamentosMensaisResposta } from '@/lib/types';
 import { Painel, useApi } from './base';
+import { TooltipMensalBI } from './TooltipMensalBI';
 
 const numeroBR = new Intl.NumberFormat('pt-BR');
+const ANO_ATUAL = Number(hoje().slice(0, 4));
+const ANO_ANTERIOR = ANO_ATUAL - 1;
 
 export function CardAgendamentosBI() {
   const [comparar, setComparar] = useState(false);
-  const estado = useApi<AgendamentosMensaisResposta>('/api/agendamentos-bi?ano=2026');
-  const estadoAnterior = useApi<AgendamentosMensaisResposta>('/api/agendamentos-bi?ano=2025', comparar);
+  const estado = useApi<AgendamentosMensaisResposta>(`/api/agendamentos-bi?ano=${ANO_ATUAL}`);
+  const estadoAnterior = useApi<AgendamentosMensaisResposta>(
+    `/api/agendamentos-bi?ano=${ANO_ANTERIOR}`,
+    comparar
+  );
 
   return (
-    <Painel titulo="Agendamentos por mês · 2026" estado={estado}>
+    <Painel titulo={`Agendamentos por mês · ${ANO_ATUAL}`} estado={estado}>
       {(dados) => {
         const totais = dados.meses.reduce(
           (soma, mes) => ({
@@ -56,11 +63,11 @@ export function CardAgendamentosBI() {
                   checked={comparar}
                   onChange={(evento) => setComparar(evento.target.checked)}
                 />
-                <span>Comparar com 2025</span>
+                <span>Comparar com {ANO_ANTERIOR}</span>
               </label>
               {comparar && estadoAnterior.carregando && (
                 <span className="bi-comparacao-status" role="status">
-                  Carregando dados de 2025…
+                  Carregando dados de {ANO_ANTERIOR}…
                 </span>
               )}
               {comparar && estadoAnterior.erro && (
@@ -93,7 +100,7 @@ export function CardAgendamentosBI() {
                 {comparar && estadoAnterior.dados && (
                   <span>
                     <i className="bi-cor bi-cor-linha" aria-hidden="true" />
-                    Total 2025 <strong>{numeroBR.format(totaisAnteriores)}</strong>
+                    Total {ANO_ANTERIOR} <strong>{numeroBR.format(totaisAnteriores)}</strong>
                   </span>
                 )}
               </div>
@@ -137,14 +144,21 @@ export function CardAgendamentosBI() {
                   />
                   <Tooltip
                     cursor={{ fill: 'var(--painel-alto)' }}
-                    contentStyle={{
-                      backgroundColor: 'var(--painel-alto)',
-                      border: '1px solid var(--borda)',
-                      borderRadius: 10,
-                      color: 'var(--texto)',
-                    }}
-                    labelStyle={{ color: 'var(--texto)' }}
-                    formatter={(valor, nome) => [numeroBR.format(Number(valor)), nome]}
+                    content={(props) => (
+                      <TooltipMensalBI
+                        {...props}
+                        series={[
+                          { chave: 'sdrs', nome: 'SDRs', cor: 'var(--novos)' },
+                          { chave: 'closers', nome: 'Closers', cor: 'var(--salabim)' },
+                          { chave: 'outros', nome: 'Outros', cor: 'var(--texto-fraco)' },
+                        ]}
+                        chaveTotalAtual="total"
+                        nomeTotalAtual={`Total ${dados.ano}`}
+                        chaveTotalAnterior="totalAnterior"
+                        nomeTotalAnterior={`Total ${ANO_ANTERIOR}`}
+                        mostrarAnterior={comparar && Boolean(estadoAnterior.dados)}
+                      />
+                    )}
                   />
                   <Bar
                     dataKey="sdrs"
@@ -170,7 +184,7 @@ export function CardAgendamentosBI() {
                   />
                   <Line
                     dataKey="total"
-                    name="Total 2026"
+                    name={`Total ${dados.ano}`}
                     stroke="transparent"
                     strokeWidth={0}
                     dot={false}
@@ -191,7 +205,7 @@ export function CardAgendamentosBI() {
                     <Line
                       type="monotone"
                       dataKey="totalAnterior"
-                      name="Total 2025"
+                      name={`Total ${ANO_ANTERIOR}`}
                       stroke="var(--atencao)"
                       strokeWidth={2}
                       strokeDasharray="6 4"

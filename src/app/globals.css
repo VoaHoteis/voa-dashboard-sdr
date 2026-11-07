@@ -762,6 +762,54 @@ h3 {
 
 /* ----------------------------------------------------------- gráfico B.I. */
 
+.bi-tooltip {
+  min-width: 150px;
+  padding: 10px 12px;
+  color: var(--texto);
+  background: var(--painel-alto);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--texto) 18%, transparent);
+}
+
+.bi-tooltip-titulo {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.bi-tooltip-linha,
+.bi-tooltip-total {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.bi-tooltip-linha i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.bi-tooltip-linha strong,
+.bi-tooltip-total strong {
+  margin-left: auto;
+}
+
+.bi-tooltip-total {
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--borda);
+  font-weight: 600;
+}
+
+.bi-tooltip-total-anterior {
+  color: var(--atencao);
+}
+
 .bi-resumo {
   display: flex;
   align-items: flex-end;
