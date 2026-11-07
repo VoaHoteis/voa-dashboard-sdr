@@ -119,6 +119,7 @@ export function ListaNegocios({ etapa }: { etapa: EtapaFunil }) {
         <tr>
           <th>#</th>
           <th>Negócio</th>
+          <th>Origem do lead</th>
           <th>Proprietário</th>
         </tr>
       </thead>
@@ -131,6 +132,7 @@ export function ListaNegocios({ etapa }: { etapa: EtapaFunil }) {
                 {negocio.titulo || `Negócio ${negocio.negocioId}`}
               </a>
             </td>
+            <td>{negocio.origem ?? '—'}</td>
             <td>{negocio.proprietario ?? '—'}</td>
           </tr>
         ))}

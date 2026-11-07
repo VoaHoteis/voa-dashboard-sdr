@@ -10,7 +10,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { META_LIGACOES_DIA, SDRS, TIPO_LIGACAO } from '@/lib/config';
+import { META_LIGACOES_DIA, SDRS_ATIVOS, TIPO_LIGACAO } from '@/lib/config';
 import { addDias, hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { resolverLigacoesDiarias } from '@/lib/metrics';
 import { buscarAtividades } from '@/lib/pipedrive';
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 
     const porSdr: LigacoesResposta['porSdr'] = [];
 
-    for (const s of SDRS) {
+    for (const s of SDRS_ATIVOS) {
       const atividades = await buscarAtividades({
         inicio: janelaInicio,
         fim,

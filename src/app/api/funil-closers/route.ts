@@ -3,6 +3,7 @@ import { CLOSERS, FUNNEL_LABEL, PIPELINES, STAGES, type FunnelKey } from '@/lib/
 import {
   buscarEtapasDoPipeline,
   buscarNegociosAbertos,
+  buscarOrigensDosNegocios,
   donoDoNegocio,
   nomeDoProprietario,
 } from '@/lib/pipedrive';
@@ -53,6 +54,7 @@ export async function GET(req: Request) {
         negocio.pipeline_id === pipelineId &&
         (!closer || donoDoNegocio(negocio) === closer.userId)
     );
+    const origens = await buscarOrigensDosNegocios(negociosDoFunil);
     const etapasVisiveis = etapasPipeline.filter((etapa) => !ocultas.includes(etapa.id));
     const porEtapa = new Map(etapasVisiveis.map((etapa) => [etapa.id, 0]));
     const negociosPorEtapa = new Map<number, FunilClosersResposta['etapas'][number]['negocios']>();
@@ -65,6 +67,7 @@ export async function GET(req: Request) {
         negocioId: negocio.id,
         titulo: negocio.title,
         proprietario: nomeDoProprietario(negocio),
+        origem: origens.get(negocio.id) ?? null,
       });
       negociosPorEtapa.set(negocio.stage_id, lista);
     }

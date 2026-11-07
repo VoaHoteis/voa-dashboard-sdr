@@ -39,6 +39,7 @@ export function TabelaNegocios({ itens }: { itens: ItemAgendamento[] }) {
         <tr>
           <th>#</th>
           <th>Negócio</th>
+          <th>Origem do lead</th>
           <th className="num">U.Hs</th>
           <th>Data</th>
           <th>Funil</th>
@@ -64,6 +65,7 @@ export function TabelaNegocios({ itens }: { itens: ItemAgendamento[] }) {
                 </a>
               )}
             </td>
+            <td>{i.origem ?? '—'}</td>
             <td className="num" style={{ whiteSpace: 'nowrap' }}>
               {i.uhs ?? '—'}
             </td>

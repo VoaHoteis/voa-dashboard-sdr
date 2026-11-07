@@ -21,6 +21,7 @@ import {
   buscarEtapasDoPipeline,
   buscarNegociosAbertos,
   buscarNegociosPerdidos,
+  buscarOrigensDosNegocios,
   donoDoNegocio,
   nomeDoProprietario,
   type EtapaPipeline,
@@ -121,6 +122,10 @@ export async function GET(req: Request) {
       novosNegocios: new Set(etapasPorFunil.novosNegocios.map((e) => e.id)),
       salabim: new Set(etapasPorFunil.salabim.map((e) => e.id)),
     };
+    const negociosComOrigem = negocios.filter(
+      (negocio) => negocio.status === 'open' && PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined
+    );
+    const origens = await buscarOrigensDosNegocios(negociosComOrigem);
 
     const resposta: FunilPorCloserResposta = {
       periodoPerdidos,
@@ -142,7 +147,12 @@ export async function GET(req: Request) {
           const saude = { emDia: 0, atrasado: 0, semAtividade: 0 };
           for (const d of meus) {
             const lista = porStage.get(d.stage_id) ?? [];
-            lista.push({ negocioId: d.id, titulo: d.title, proprietario: nomeDoProprietario(d) });
+            lista.push({
+              negocioId: d.id,
+              titulo: d.title,
+              proprietario: nomeDoProprietario(d),
+              origem: origens.get(d.id) ?? null,
+            });
             porStage.set(d.stage_id, lista);
             saude[statusSaude(d, hojeIso)] += 1;
           }

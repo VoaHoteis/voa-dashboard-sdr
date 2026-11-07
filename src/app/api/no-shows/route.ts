@@ -19,6 +19,7 @@ import { atribuir, totalDe, zeroPorFunil } from '@/lib/metrics';
 import {
   buscarAtividades,
   buscarNegociosPorIds,
+  buscarOrigensDosNegocios,
   quantidadeUhDoNegocio,
   resolverChaveCampoUh,
 } from '@/lib/pipedrive';
@@ -47,7 +48,10 @@ export async function GET(req: Request) {
       atividades.map((a) => a.deal_id).filter((id): id is number => typeof id === 'number')
     );
 
-    const uhKey = await resolverChaveCampoUh();
+    const [uhKey, origens] = await Promise.all([
+      resolverChaveCampoUh(),
+      buscarOrigensDosNegocios([...negocios.values()]),
+    ]);
     const porFunil = zeroPorFunil();
     const itens: ItemAgendamento[] = [];
     const itensForaDaConta: ItemAgendamento[] = [];
@@ -67,6 +71,7 @@ export async function GET(req: Request) {
         assunto: a.subject,
         tipo: a.type,
         uhs: quantidadeUhDoNegocio(negocio, uhKey),
+        origem: negocio ? origens.get(negocio.id) ?? null : null,
       };
 
       if (funil) {

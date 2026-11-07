@@ -12,46 +12,14 @@ import { hoje, primeiroDiaDoMes, ultimoDiaDoMes } from '@/lib/dates';
 import { atribuir, resolverFechamentos, zeroPorFunil } from '@/lib/metrics';
 import {
   buscarAgendamentosPorNegocio,
-  buscarCampoNegocioPorNome,
   buscarNegociosGanhos,
+  buscarOrigensDosNegocios,
   resolverTiposAgendamento,
-  type Negocio,
 } from '@/lib/pipedrive';
 import type { FechamentosResposta, ItemFechamento } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
 export const dynamic = 'force-dynamic';
-
-function textoCampoOrigem(
-  valor: unknown,
-  opcoes: Map<number, string>
-): string | null {
-  const comoTexto = (candidato: unknown): string | null => {
-    if (typeof candidato === 'number') return opcoes.get(candidato) ?? String(candidato);
-    if (typeof candidato !== 'string' || !candidato.trim()) return null;
-
-    const texto = candidato.trim();
-    const id = Number(texto);
-    return Number.isSafeInteger(id) ? opcoes.get(id) ?? texto : texto;
-  };
-
-  const textoDireto = comoTexto(valor);
-  if (textoDireto) return textoDireto;
-  if (!valor || typeof valor !== 'object') return null;
-
-  const campo = valor as { id?: unknown; name?: unknown; label?: unknown; value?: unknown };
-  for (const candidato of [campo.name, campo.label, campo.value, campo.id]) {
-    const texto = comoTexto(candidato);
-    if (texto) return texto;
-  }
-  return null;
-}
-
-function origemDoNegocio(negocio: Negocio, campoKey: string, opcoes: Map<number, string>): string | null {
-  const campos = negocio as Record<string, unknown>;
-  const personalizados = campos.custom_fields as Record<string, unknown> | undefined;
-  return textoCampoOrigem(campos[campoKey] ?? personalizados?.[campoKey], opcoes);
-}
 
 export async function GET(req: Request) {
   try {
@@ -65,8 +33,7 @@ export async function GET(req: Request) {
       buscarNegociosGanhos({ inicio, fim }),
       resolverTiposAgendamento(TIPOS_AGENDAMENTO),
     ]);
-    const campoCanal = await buscarCampoNegocioPorNome('CANAL', ganhos);
-    const opcoesCanal = new Map(campoCanal.options.map((opcao) => [Number(opcao.id), opcao.label]));
+    const origens = await buscarOrigensDosNegocios(ganhos);
     const itens = resolverFechamentos(ganhos);
     const apresentacoesPorNegocio = await buscarAgendamentosPorNegocio(
       itens.map((item) => item.negocio),
@@ -122,7 +89,7 @@ export async function GET(req: Request) {
           funil: i.funil,
           closer: i.dono,
           sdrApresentacao: sdrApresentacao || null,
-          origem: origemDoNegocio(i.negocio, campoCanal.key, opcoesCanal),
+          origem: origens.get(i.negocio.id) ?? null,
           valor: i.valor,
         };
       }),

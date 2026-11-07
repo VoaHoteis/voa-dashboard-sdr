@@ -1,9 +1,9 @@
 'use client';
 
-import { SDRS } from '@/lib/config';
+import { SDRS_ATIVOS } from '@/lib/config';
 import { diaDaSemana, formatarBR, hoje, nomeDoMes, parse } from '@/lib/dates';
 import type { DiaLigacoes, LigacoesResposta } from '@/lib/types';
-import { Painel, useApi } from './base';
+import { CarrosselSdr, Painel, useApi } from './base';
 
 /**
  * Agrupa os dias úteis em semanas (linhas), quebrando sempre que a segunda-feira
@@ -23,8 +23,8 @@ function agruparPorSemana(dias: DiaLigacoes[]): DiaLigacoes[][] {
 /**
  * Card — Ligações de Prospecção por dia.
  *
- * Um painel por SDR (as duas com meta). Mostra a grade de dias úteis do mês,
- * cada um marcado como batido ou não contra a meta diária, mais dois números de
+ * Um painel por SDR ativo. Mostra a grade de dias úteis do mês, cada um marcado
+ * como batido ou não contra a meta diária, mais dois números de
  * leitura rápida: quantos dias do mês bateram a meta e a sequência de dias úteis
  * seguidos na meta.
  */
@@ -32,8 +32,8 @@ export function CardLigacoes() {
   const estado = useApi<LigacoesResposta>('/api/ligacoes');
 
   return (
-    <>
-      {SDRS.map((cfg) => (
+    <CarrosselSdr titulo="Controle de ligações">
+      {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}
           titulo={`Ligações de Prospecção · ${cfg.nome}`}
@@ -105,6 +105,6 @@ export function CardLigacoes() {
           }}
         </Painel>
       ))}
-    </>
+    </CarrosselSdr>
   );
 }

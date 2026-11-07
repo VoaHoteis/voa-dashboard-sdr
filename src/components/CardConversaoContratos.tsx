@@ -115,6 +115,7 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
               <thead>
                 <tr>
                   <th>Hotel</th>
+                  <th>Origem do lead</th>
                   <th className="num">Reuniões</th>
                   <th className="num">Contratos</th>
                 </tr>
@@ -123,6 +124,7 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
                 {detalhe.hoteis.map((hotel) => (
                   <tr key={hotel.hotel}>
                     <td>{hotel.hotel}</td>
+                    <td>{hotel.origens.length ? hotel.origens.join(', ') : '—'}</td>
                     <td className="num">{hotel.agendamentos}</td>
                     <td className="num">{hotel.contratos}</td>
                   </tr>
@@ -131,6 +133,7 @@ export function CardConversaoContratos({ url = '/api/conversao-contratos' }: { u
               <tfoot>
                 <tr>
                   <th>Total</th>
+                  <th></th>
                   <th className="num">{detalhe.agendamentos}</th>
                   <th className="num">{detalhe.contratos}</th>
                 </tr>

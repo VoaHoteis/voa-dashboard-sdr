@@ -22,6 +22,7 @@ interface NoShowsPorHotel {
   negocioId: number;
   titulo: string;
   total: number;
+  origens: string[];
   itens: ItemAgendamento[];
 }
 
@@ -40,11 +41,13 @@ function agruparPorHotel(itens: ItemAgendamento[]): NoShowsPorHotel[] {
     if (atual) {
       atual.total += 1;
       atual.itens.push(item);
+      if (item.origem && !atual.origens.includes(item.origem)) atual.origens.push(item.origem);
     } else {
       porNegocio.set(item.negocioId, {
         negocioId: item.negocioId,
         titulo: item.titulo,
         total: 1,
+        origens: item.origem ? [item.origem] : [],
         itens: [item],
       });
     }
@@ -231,41 +234,39 @@ export function CardNoShows({ url, urlAgendamentos }: { url: string; urlAgendame
           }`}
           aoFechar={() => setPorHotelAberto(false)}
         >
-          <ul
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-              listStyle: 'none',
-              padding: 0,
-            }}
-          >
-            {agruparPorHotel(estado.dados.itens).map((h) => (
-              <li
-                key={h.negocioId}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 16,
-                }}
-              >
-                <button
-                  className="link"
-                  onClick={() => {
-                    setPorHotelAberto(false);
-                    setDetalhe({ titulo: `No-shows · ${h.titulo}`, itens: h.itens });
-                  }}
-                  title={`Ver os no-shows de ${h.titulo}`}
-                >
-                  {h.titulo}
-                </button>
-                <span className="numero medio" style={{ color: 'var(--alerta)', flexShrink: 0 }}>
-                  {h.total}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <table className="tabela">
+            <thead>
+              <tr>
+                <th>Hotel</th>
+                <th>Origem do lead</th>
+                <th className="num">No-shows</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agruparPorHotel(estado.dados.itens).map((h) => (
+                <tr key={h.negocioId}>
+                  <td>
+                    <button
+                      className="link"
+                      onClick={() => {
+                        setPorHotelAberto(false);
+                        setDetalhe({ titulo: `No-shows · ${h.titulo}`, itens: h.itens });
+                      }}
+                      title={`Ver os no-shows de ${h.titulo}`}
+                    >
+                      {h.titulo}
+                    </button>
+                  </td>
+                  <td>{h.origens.length ? h.origens.join(', ') : '—'}</td>
+                  <td className="num">
+                    <span className="numero medio" style={{ color: 'var(--alerta)' }}>
+                      {h.total}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Modal>
       )}
     </>
