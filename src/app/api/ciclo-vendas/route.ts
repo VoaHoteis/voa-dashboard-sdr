@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { PIPELINE_TO_FUNNEL, TIPOS_AGENDAMENTO } from '@/lib/config';
 import { intervaloUltimosDias } from '@/lib/dates';
-import { buscarAgendamentosPorNegocio, buscarNegociosGanhos } from '@/lib/pipedrive';
+import {
+  buscarAgendamentosPorNegocio,
+  buscarNegociosGanhos,
+  buscarOrigensDosNegocios,
+} from '@/lib/pipedrive';
 import type { CicloVendasResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
 
@@ -21,7 +25,10 @@ export async function GET(req: Request) {
     const ganhos = todosGanhos.filter(
       (negocio) => PIPELINE_TO_FUNNEL[negocio.pipeline_id] !== undefined
     );
-    const datasAgendamentos = await buscarAgendamentosPorNegocio(ganhos, TIPOS_AGENDAMENTO);
+    const [datasAgendamentos, origens] = await Promise.all([
+      buscarAgendamentosPorNegocio(ganhos, TIPOS_AGENDAMENTO),
+      buscarOrigensDosNegocios(ganhos),
+    ]);
 
     const itens = ganhos.flatMap((negocio) => {
       const assinatura = (negocio as { won_time?: string | null }).won_time?.slice(0, 10);
@@ -33,6 +40,7 @@ export async function GET(req: Request) {
       return [{
         negocioId: negocio.id,
         hotel: negocio.title.trim() || 'Hotel sem nome',
+        origem: origens.get(negocio.id) ?? null,
         primeiroAgendamento,
         ultimoAgendamento,
         assinatura,

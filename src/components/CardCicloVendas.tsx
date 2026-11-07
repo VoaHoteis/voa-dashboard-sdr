@@ -92,6 +92,7 @@ export function CardCicloVendas({ url = '/api/ciclo-vendas' }: { url?: string })
             <thead>
               <tr>
                 <th>Negócio</th>
+                <th>Origem do lead</th>
                 <th>1ª apresentação</th>
                 <th>Última apresentação</th>
                 <th>Assinatura</th>
@@ -103,6 +104,7 @@ export function CardCicloVendas({ url = '/api/ciclo-vendas' }: { url?: string })
               {dados.itens.map((item) => (
                 <tr key={item.negocioId}>
                   <td>{item.hotel}</td>
+                  <td>{item.origem ?? '—'}</td>
                   <td>{formatarBR(item.primeiroAgendamento)}</td>
                   <td>{formatarBR(item.ultimoAgendamento)}</td>
                   <td>{formatarBR(item.assinatura)}</td>

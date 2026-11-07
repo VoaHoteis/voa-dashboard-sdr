@@ -199,7 +199,7 @@ function TabelaFechamentos({ itens }: { itens: ItemFechamento[] }) {
           <th>Funil</th>
           <th>Closer</th>
           <th>SDR do agendamento mais recente</th>
-          <th>Origem do negócio</th>
+          <th>Origem do lead</th>
           <th className="num">Valor</th>
         </tr>
       </thead>

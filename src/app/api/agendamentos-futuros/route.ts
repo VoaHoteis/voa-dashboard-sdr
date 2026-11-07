@@ -13,6 +13,7 @@ import { resolverAgendamentos, totalDe, zeroPorFunil } from '@/lib/metrics';
 import {
   buscarAtividades,
   buscarNegociosPorIds,
+  buscarOrigensDosNegocios,
   quantidadeUhDoNegocio,
   resolverChaveCampoUh,
   resolverTiposAgendamento,
@@ -40,7 +41,10 @@ export async function GET(req: Request) {
     );
 
     const itens = resolverAgendamentos(atividades, negocios);
-    const uhKey = await resolverChaveCampoUh();
+    const [uhKey, origens] = await Promise.all([
+      resolverChaveCampoUh(),
+      buscarOrigensDosNegocios([...negocios.values()]),
+    ]);
     const porFunil = zeroPorFunil();
     const lista: ItemAgendamento[] = [];
 
@@ -57,6 +61,7 @@ export async function GET(req: Request) {
         assunto: i.atividade.subject,
         tipo: i.atividade.type,
         uhs: quantidadeUhDoNegocio(i.negocio, uhKey),
+        origem: origens.get(i.negocio.id) ?? null,
       });
     }
 

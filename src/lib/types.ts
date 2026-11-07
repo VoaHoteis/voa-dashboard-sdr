@@ -39,6 +39,8 @@ export interface ItemAgendamento {
    * negocio vinculado, o campo esta vazio ou a conta nao tem esse campo.
    */
   uhs: number | null;
+  /** Valor do campo CANAL do negócio, usado como origem do lead. */
+  origem: string | null;
 }
 
 export interface AgendamentosResposta {
@@ -188,6 +190,7 @@ export interface ItemNegocioEtapa {
   negocioId: number;
   titulo: string;
   proprietario: string | null;
+  origem: string | null;
 }
 
 export interface FunilClosersResposta {
@@ -234,6 +237,7 @@ export interface ConversaoContratosResposta {
       hotel: string;
       agendamentos: number;
       contratos: number;
+      origens: string[];
     }>;
   }>;
 }
@@ -253,6 +257,7 @@ export interface CicloVendasResposta {
   itens: Array<{
     negocioId: number;
     hotel: string;
+    origem: string | null;
     primeiroAgendamento: ISODate;
     ultimoAgendamento: ISODate;
     assinatura: ISODate;

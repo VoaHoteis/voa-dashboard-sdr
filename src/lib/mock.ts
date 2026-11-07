@@ -106,6 +106,9 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
     next_activity_date: proxima,
     value: valor,
     expected_close_date: expected,
+    channel: ['Indicação', 'Site', 'Prospecção ativa'][
+      Math.floor(rng(hash('origem:' + titulo))() * 3)
+    ],
     user_id: { id: dono.userId, name: dono.nome },
     [SDR_FIELD_KEY]: sdrIds,
     // Unidades habitacionais: hoteis pequenos a medios, entre ~12 e ~200 U.Hs.

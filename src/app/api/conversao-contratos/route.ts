@@ -5,6 +5,7 @@ import {
   buscarAtividades,
   buscarNegociosGanhos,
   buscarNegociosPorIds,
+  buscarOrigensDosNegocios,
   pessoaDoProprietario,
 } from '@/lib/pipedrive';
 import type { ConversaoContratosResposta } from '@/lib/types';
@@ -27,6 +28,10 @@ export async function GET(req: Request) {
       .map((atividade) => atividade.deal_id)
       .filter((id): id is number => typeof id === 'number');
     const negocios = await buscarNegociosPorIds(idsNegocios);
+    const negociosParaOrigem = [...new Map(
+      [...ganhos, ...negocios.values()].map((negocio) => [negocio.id, negocio] as const)
+    ).values()];
+    const origens = await buscarOrigensDosNegocios(negociosParaOrigem);
     const agendamentosValidos = atividades.filter((atividade) => {
       const data = atividade.due_date?.slice(0, 10);
       if (
@@ -64,25 +69,34 @@ export async function GET(req: Request) {
     }
 
     const hoteisDoCloser = (closerKey: string) => {
-      const porHotel = new Map<string, { hotel: string; agendamentos: number; contratos: number }>();
-      const itemPara = (nome: string) => {
+      const porHotel = new Map<string, {
+        hotel: string;
+        agendamentos: number;
+        contratos: number;
+        origens: string[];
+      }>();
+      const itemPara = (nome: string, negocioId: number) => {
         const hotel = nome.trim() || 'Hotel sem nome';
         let item = porHotel.get(hotel);
         if (!item) {
-          item = { hotel, agendamentos: 0, contratos: 0 };
+          item = { hotel, agendamentos: 0, contratos: 0, origens: [] };
           porHotel.set(hotel, item);
         }
+        const origem = origens.get(negocioId);
+        if (origem && !item.origens.includes(origem)) item.origens.push(origem);
         return item;
       };
 
       for (const atividade of agendamentosValidos) {
         const negocio = atividade.deal_id == null ? undefined : negocios.get(atividade.deal_id);
         if (negocio && pessoaDoProprietario(negocio) === closerKey) {
-          itemPara(negocio.title).agendamentos += 1;
+          itemPara(negocio.title, negocio.id).agendamentos += 1;
         }
       }
       for (const negocio of ganhos) {
-        if (pessoaDoProprietario(negocio) === closerKey) itemPara(negocio.title).contratos += 1;
+        if (pessoaDoProprietario(negocio) === closerKey) {
+          itemPara(negocio.title, negocio.id).contratos += 1;
+        }
       }
 
       return [...porHotel.values()].sort((a, b) => a.hotel.localeCompare(b.hotel, 'pt-BR'));

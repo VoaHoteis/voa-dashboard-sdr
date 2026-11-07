@@ -355,6 +355,47 @@ export async function buscarCampoNegocioPorNome(
   return { key: campo.key, options: campo.options ?? [] };
 }
 
+function textoCampoOrigem(valor: unknown, opcoes: Map<number, string>): string | null {
+  const comoTexto = (candidato: unknown): string | null => {
+    if (typeof candidato === 'number') return opcoes.get(candidato) ?? String(candidato);
+    if (typeof candidato !== 'string' || !candidato.trim()) return null;
+
+    const texto = candidato.trim();
+    const id = Number(texto);
+    return Number.isSafeInteger(id) ? opcoes.get(id) ?? texto : texto;
+  };
+
+  const textoDireto = comoTexto(valor);
+  if (textoDireto) return textoDireto;
+  if (!valor || typeof valor !== 'object') return null;
+
+  const campo = valor as { id?: unknown; name?: unknown; label?: unknown; value?: unknown };
+  for (const candidato of [campo.name, campo.label, campo.value, campo.id]) {
+    const texto = comoTexto(candidato);
+    if (texto) return texto;
+  }
+  return null;
+}
+
+/** Resolve o campo CANAL para cada negócio, usado como origem do lead nas listas. */
+export async function buscarOrigensDosNegocios(
+  negocios: Negocio[]
+): Promise<Map<number, string | null>> {
+  if (negocios.length === 0) return new Map();
+
+  const campoCanal = await buscarCampoNegocioPorNome('CANAL', negocios);
+  const opcoes = new Map(campoCanal.options.map((opcao) => [Number(opcao.id), opcao.label]));
+
+  return new Map(
+    negocios.map((negocio) => {
+      const campos = negocio as Record<string, unknown>;
+      const personalizados = campos.custom_fields as Record<string, unknown> | undefined;
+      const origem = textoCampoOrigem(campos[campoCanal.key] ?? personalizados?.[campoCanal.key], opcoes);
+      return [negocio.id, origem];
+    })
+  );
+}
+
 /**
  * Primeira e mais recente data de apresentação antes da assinatura de cada negócio.
  * A API v2 filtra por deal_id, então limitamos a concorrência e usamos cursor
