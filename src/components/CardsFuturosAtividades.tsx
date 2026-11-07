@@ -357,6 +357,30 @@ function ResumoMetaSemanal({
           <span className="rotulo" style={{ fontSize: 14 }}> / {META_ATIVIDADES_POR_SEMANA}</span>
         </strong>
       </div>
+      {total >= META_ATIVIDADES_POR_SEMANA && (
+        <div
+          role="status"
+          aria-label="Meta semanal batida. Prêmio: Semana que vem mais um dia de home office."
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginTop: 10,
+            padding: '8px 10px',
+            border: '1px solid color-mix(in srgb, var(--salabim) 32%, var(--borda))',
+            borderRadius: 8,
+            background: 'color-mix(in srgb, var(--salabim) 8%, transparent)',
+          }}
+        >
+          <span className="selo" data-t="meta-batida" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+            Meta batida
+          </span>
+          <strong style={{ color: 'var(--texto)', fontSize: 14 }}>
+            Semana que vem + 1 dia de home office
+          </strong>
+        </div>
+      )}
       <div
         role="progressbar"
         aria-label="Progresso da meta semanal"
