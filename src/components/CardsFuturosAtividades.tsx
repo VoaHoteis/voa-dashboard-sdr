@@ -15,13 +15,18 @@ import {
 } from 'recharts';
 import {
   CORES_FUNIL,
+  DATA_INICIO_META_ATIVIDADES,
   FUNNEL_LABEL,
+  META_ATIVIDADES_POR_DIA,
+  META_ATIVIDADES_POR_SEMANA,
   MOSTRAR_NOTAS,
   SDRS_ATIVOS,
   TIPOS_ESFORCO,
   type FunnelKey,
 } from '@/lib/config';
 import {
+  addDias,
+  diaDaSemana,
   formatarBR,
   hoje,
   nomeDoMes,
@@ -273,12 +278,150 @@ function rotuloPeriodoAtividades(periodo: Periodo): string {
     : `${formatarBR(periodo.inicio)}–${formatarBR(periodo.fim)}`;
 }
 
+function semanaDaMeta(ref: string): { periodo: Periodo; ativa: boolean } {
+  const diasAteSegunda = (diaDaSemana(ref) + 6) % 7;
+  const segundaAtual = addDias(ref, -diasAteSegunda);
+  const ativa = ref >= DATA_INICIO_META_ATIVIDADES;
+  const inicio =
+    segundaAtual < DATA_INICIO_META_ATIVIDADES ? DATA_INICIO_META_ATIVIDADES : segundaAtual;
+
+  return { periodo: { inicio, fim: addDias(inicio, 4) }, ativa };
+}
+
+function totalDaLinha(linha: Record<string, string | number>): number {
+  return TIPOS_ESFORCO.reduce((total, tipo) => total + (Number(linha[tipo.key]) || 0), 0);
+}
+
+function ResumoMetaSemanal({
+  sdr,
+  semana,
+  ativa,
+  estado,
+}: {
+  sdr: AtividadesResposta['porSdr'][number]['sdr'];
+  semana: Periodo;
+  ativa: boolean;
+  estado: Estado<AtividadesResposta>;
+}) {
+  const inicioLabel = formatarBR(semana.inicio);
+  const fimLabel = formatarBR(semana.fim);
+
+  if (!ativa) {
+    return (
+      <div style={{ marginBottom: 18, padding: 12, borderRadius: 10, background: 'var(--painel-alto)' }}>
+        <span className="rotulo" style={{ fontSize: 14 }}>Meta semanal · {META_ATIVIDADES_POR_SEMANA} atividades</span>
+        <p className="nota" style={{ margin: '6px 0 0', fontSize: 14 }}>
+          Começa na segunda-feira, {inicioLabel}.
+        </p>
+      </div>
+    );
+  }
+
+  if (estado.carregando) {
+    return (
+      <div className="estado" style={{ marginBottom: 18, fontSize: 14 }}>
+        Carregando a meta semanal…
+      </div>
+    );
+  }
+
+  if (estado.erro || !estado.dados) {
+    return (
+      <div className="nota" style={{ marginBottom: 18, fontSize: 14 }}>
+        Não foi possível carregar a contagem semanal.
+      </div>
+    );
+  }
+
+  const dadosSdr = estado.dados.porSdr.find((item) => item.sdr === sdr);
+  const serieDiaria = dadosSdr?.series.dia.total ?? [];
+  const dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map((rotulo, indice) => ({
+    rotulo,
+    data: addDias(semana.inicio, indice),
+    total: totalDaLinha(serieDiaria[indice] ?? {}),
+  }));
+  const total = dias.reduce((soma, dia) => soma + dia.total, 0);
+  const percentual = Math.round((total / META_ATIVIDADES_POR_SEMANA) * 100);
+
+  return (
+    <section
+      aria-label={`Meta semanal de atividades de ${dadosSdr?.nome ?? sdr}`}
+      style={{ marginBottom: 18, padding: 12, borderRadius: 10, background: 'var(--painel-alto)' }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+        <span className="rotulo" style={{ fontSize: 14 }}>
+          Meta da semana · {inicioLabel}–{fimLabel}
+        </span>
+        <strong className="numero medio" aria-live="polite">
+          {total}
+          <span className="rotulo" style={{ fontSize: 14 }}> / {META_ATIVIDADES_POR_SEMANA}</span>
+        </strong>
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Progresso da meta semanal"
+        aria-valuemin={0}
+        aria-valuemax={META_ATIVIDADES_POR_SEMANA}
+        aria-valuenow={Math.min(total, META_ATIVIDADES_POR_SEMANA)}
+        style={{ height: 5, marginTop: 8, borderRadius: 999, background: 'var(--borda)', overflow: 'hidden' }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${Math.min(percentual, 100)}%`,
+            borderRadius: 999,
+            background: 'var(--salabim)',
+            transition: 'width .2s ease',
+          }}
+        />
+      </div>
+      <div
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, marginTop: 12 }}
+      >
+        {dias.map((dia) => {
+          const progresso = Math.min((dia.total / META_ATIVIDADES_POR_DIA) * 100, 100);
+          return (
+            <div
+              key={dia.data}
+              role="group"
+              aria-label={`${dia.rotulo} ${formatarBR(dia.data)}: ${dia.total} de ${META_ATIVIDADES_POR_DIA} atividades`}
+              style={{ minWidth: 0 }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, fontSize: 14 }}>
+                <span className="rotulo" style={{ fontSize: 14 }}>{dia.rotulo}</span>
+                <strong>{dia.total}</strong>
+              </div>
+              <div
+                role="progressbar"
+                aria-label={`Meta diária de ${dia.rotulo}`}
+                aria-valuemin={0}
+                aria-valuemax={META_ATIVIDADES_POR_DIA}
+                aria-valuenow={Math.min(dia.total, META_ATIVIDADES_POR_DIA)}
+                style={{ height: 3, marginTop: 5, borderRadius: 999, background: 'var(--borda)', overflow: 'hidden' }}
+              >
+                <div style={{ height: '100%', width: `${progresso}%`, background: 'var(--salabim)' }} />
+              </div>
+              <span className="rotulo" style={{ display: 'block', marginTop: 3, fontSize: 14 }}>
+                / {META_ATIVIDADES_POR_DIA}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function GraficoAtividadesSdr({
   sdr,
   periodo,
+  semana,
+  resumoSemanal,
 }: {
   sdr: AtividadesResposta['porSdr'][number];
   periodo: Periodo;
+  semana: { periodo: Periodo; ativa: boolean };
+  resumoSemanal: Estado<AtividadesResposta>;
 }) {
   const [granularidade, setGranularidade] = useState<Granularidade>('semana');
   const [escopo, setEscopo] = useState<EscopoAtividade>('total');
@@ -287,11 +430,14 @@ function GraficoAtividadesSdr({
   const mesCompleto =
     periodo.inicio === primeiroDiaDoMes(periodo.inicio) &&
     periodo.fim === ultimoDiaDoMes(periodo.inicio);
-  const totalDaLinha = (linha: Record<string, string | number>) =>
-    TIPOS_ESFORCO.reduce((total, tipo) => total + (Number(linha[tipo.key]) || 0), 0);
-
   return (
     <>
+      <ResumoMetaSemanal
+        sdr={sdr.sdr}
+        semana={semana.periodo}
+        ativa={semana.ativa}
+        estado={resumoSemanal}
+      />
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
         <span className="numero medio">{sdr.totais[escopo]}</span>
         <span className="rotulo">
@@ -441,6 +587,10 @@ export function CardsAtividadesSemana({ periodo }: { periodo: Periodo }) {
   const estado = useApi<AtividadesResposta>(
     `/api/atividades?inicio=${periodo.inicio}&fim=${periodo.fim}`
   );
+  const semana = semanaDaMeta(hoje());
+  const resumoSemanal = useApi<AtividadesResposta>(
+    `/api/atividades?inicio=${semana.periodo.inicio}&fim=${semana.periodo.fim}`
+  );
 
   return (
     <CarrosselSdr titulo="Atividades por SDR">
@@ -454,7 +604,14 @@ export function CardsAtividadesSemana({ periodo }: { periodo: Periodo }) {
           {(d) => {
             const sdr = d.porSdr.find((x) => x.sdr === cfg.key);
             if (!sdr) return <div className="estado">Sem dados.</div>;
-            return <GraficoAtividadesSdr sdr={sdr} periodo={periodo} />;
+            return (
+              <GraficoAtividadesSdr
+                sdr={sdr}
+                periodo={periodo}
+                semana={semana}
+                resumoSemanal={resumoSemanal}
+              />
+            );
           }}
         </Painel>
       ))}
