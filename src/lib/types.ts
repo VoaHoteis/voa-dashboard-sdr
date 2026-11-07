@@ -55,6 +55,16 @@ export interface AgendamentosMensaisResposta {
   }>;
 }
 
+export interface FechamentosMensaisResposta {
+  ano: number;
+  meses: Array<{
+    mes: string;
+    nome: string;
+    porFunil: PorFunil;
+    total: number;
+  }>;
+}
+
 export interface AgendamentosResposta {
   periodo: Periodo;
   unidade: UnidadeContagem;
