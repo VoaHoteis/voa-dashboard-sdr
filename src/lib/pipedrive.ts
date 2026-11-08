@@ -406,7 +406,7 @@ function valoresCampoNegocio(valor: unknown, opcoes: Map<number, string>): strin
   return texto ? [texto] : [];
 }
 
-/** Conta negócios abertos por opção ou texto do campo personalizado. */
+/** Conta negócios com campo preenchido por opção ou texto personalizado. */
 export async function contarNegociosPorCampo(
   negocios: Negocio[],
   nome: string
@@ -421,7 +421,7 @@ export async function contarNegociosPorCampo(
     const valores = new Set(
       valoresCampoNegocio(camposNegocio[campo.key] ?? personalizados?.[campo.key], opcoes)
     );
-    if (valores.size === 0) valores.add('Não informado');
+    if (valores.size === 0) continue;
 
     for (const valor of valores) contagens.set(valor, (contagens.get(valor) ?? 0) + 1);
   }

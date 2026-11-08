@@ -21,7 +21,6 @@ function CardDistribuicaoNegocios({
         <GraficoPizzaBI
           campo={campo === 'channelManager' ? 'CHANNEL' : 'PMS'}
           dados={dados[campo]}
-          totalNegocios={dados.totalNegocios}
         />
       )}
     </Painel>

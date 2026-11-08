@@ -65,6 +65,21 @@ const HOTEIS = [
 const CHANNEL_MANAGERS = ['Omnibees', 'Cloudbeds', 'SiteMinder', 'Desbravador'];
 const PMS_SYSTEMS = ['Desbravador', 'HSystem', 'Cloudbeds', 'HITS'];
 
+function camposMercadoFalsos(titulo: string) {
+  const sorteioChannel = rng(hash('channel-manager:' + titulo))();
+  const sorteioPms = rng(hash('pms:' + titulo))();
+  const channelManager =
+    sorteioChannel < 0.1
+      ? ''
+      : CHANNEL_MANAGERS[Math.floor(sorteioChannel * CHANNEL_MANAGERS.length) % CHANNEL_MANAGERS.length];
+  const pms =
+    sorteioPms < 0.1
+      ? ''
+      : PMS_SYSTEMS[Math.floor(sorteioPms * PMS_SYSTEMS.length) % PMS_SYSTEMS.length];
+
+  return { channel_manager_mock: channelManager, pms_mock: pms };
+}
+
 /** Base fixa de negocios: 40 hoteis espalhados pelos dois funis e pelas etapas. */
 const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
   const r = rng(hash(titulo));
@@ -98,16 +113,7 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
   // Dono do negocio no formato objeto da v1 ({id, name}), alternando entre os
   // closers, para o card de Forecast ter um proprietario nomeado para exibir.
   const dono = CLOSERS[i % CLOSERS.length];
-  const sorteioChannel = rng(hash('channel-manager:' + titulo))();
-  const sorteioPms = rng(hash('pms:' + titulo))();
-  const channelManager =
-    sorteioChannel < 0.1
-      ? ''
-      : CHANNEL_MANAGERS[Math.floor(sorteioChannel * CHANNEL_MANAGERS.length) % CHANNEL_MANAGERS.length];
-  const pms =
-    sorteioPms < 0.1
-      ? ''
-      : PMS_SYSTEMS[Math.floor(sorteioPms * PMS_SYSTEMS.length) % PMS_SYSTEMS.length];
+  const { channel_manager_mock: channelManager, pms_mock: pms } = camposMercadoFalsos(titulo);
 
   return {
     id: 1000 + i,
@@ -368,8 +374,10 @@ export async function negociosPerdidosFalsos(opts: {
     'Escolheu concorrente',
     'Projeto cancelado',
   ];
+  const inicioMock =
+    opts.inicio < addDias(opts.fim, -365) ? addDias(opts.fim, -365) : opts.inicio;
 
-  for (const dia of listarDias(opts.inicio, opts.fim)) {
+  for (const dia of listarDias(inicioMock, opts.fim)) {
     if (!ehDiaUtil(dia)) continue;
 
     for (const sdr of SDRS) {
@@ -391,6 +399,7 @@ export async function negociosPerdidosFalsos(opts: {
           undone_activities_count: 0,
           next_activity_date: null,
           user_id: { id: sdr.userId, name: sdr.nome },
+          ...camposMercadoFalsos(titulo),
           lost_time: dia + ' 12:00:00',
         } as unknown as Negocio);
       }
@@ -420,6 +429,7 @@ export async function negociosPerdidosFalsos(opts: {
         undone_activities_count: 0,
         next_activity_date: null,
         user_id: { id: closer.userId, name: closer.nome },
+        ...camposMercadoFalsos(titulo),
         lost_time: dia + ' 12:00:00',
         lost_reason: motivo,
       } as unknown as Negocio);
