@@ -65,6 +65,17 @@ export interface FechamentosMensaisResposta {
   }>;
 }
 
+export interface ContagemValorNegocio {
+  nome: string;
+  quantidade: number;
+}
+
+export interface NegociosMercadoResposta {
+  totalNegocios: number;
+  channelManager: ContagemValorNegocio[];
+  pms: ContagemValorNegocio[];
+}
+
 export interface AgendamentosResposta {
   periodo: Periodo;
   unidade: UnidadeContagem;
