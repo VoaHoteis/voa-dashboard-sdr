@@ -71,7 +71,6 @@ export interface ContagemValorNegocio {
 }
 
 export interface NegociosMercadoResposta {
-  totalNegocios: number;
   channelManager: ContagemValorNegocio[];
   pms: ContagemValorNegocio[];
 }

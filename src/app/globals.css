@@ -961,32 +961,9 @@ h3 {
 }
 
 .bi-distribuicao__grafico {
-  position: relative;
   width: min(100%, 260px);
   height: 220px;
   margin-inline: auto;
-}
-
-.bi-distribuicao__centro {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  pointer-events: none;
-}
-
-.bi-distribuicao__centro strong {
-  color: var(--texto);
-  font-size: 24px;
-  font-variant-numeric: tabular-nums;
-}
-
-.bi-distribuicao__centro span {
-  color: var(--texto-fraco);
-  font-size: 11px;
 }
 
 .bi-distribuicao__legenda {
@@ -1002,7 +979,7 @@ h3 {
 
 .bi-distribuicao__item {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -1021,13 +998,9 @@ h3 {
   overflow-wrap: anywhere;
 }
 
-.bi-distribuicao__item strong {
-  color: var(--texto);
-  font-variant-numeric: tabular-nums;
-}
-
 .bi-distribuicao__percentual {
-  min-width: 42px;
+  min-width: 48px;
+  color: var(--texto);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

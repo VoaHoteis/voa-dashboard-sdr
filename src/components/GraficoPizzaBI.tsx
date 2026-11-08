@@ -10,17 +10,14 @@ const PALETA = [
   'var(--alerta)',
   'var(--texto-fraco)',
 ];
-const numeroBR = new Intl.NumberFormat('pt-BR');
 const percentualBR = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 
 export function GraficoPizzaBI({
   campo,
   dados,
-  totalNegocios,
 }: {
   campo: string;
   dados: ContagemValorNegocio[];
-  totalNegocios: number;
 }) {
   const totalValores = dados.reduce((total, item) => total + item.quantidade, 0);
 
@@ -35,7 +32,6 @@ export function GraficoPizzaBI({
                   data={dados}
                   dataKey="quantidade"
                   nameKey="nome"
-                  innerRadius="60%"
                   outerRadius="88%"
                   paddingAngle={2}
                   stroke="var(--painel)"
@@ -47,8 +43,10 @@ export function GraficoPizzaBI({
                 </Pie>
                 <Tooltip
                   formatter={(valor) => [
-                    `${numeroBR.format(Number(valor))} negócios`,
-                    'Quantidade',
+                    `${percentualBR.format(
+                      totalValores > 0 ? (Number(valor) / totalValores) * 100 : 0
+                    )}%`,
+                    'Participação',
                   ]}
                   contentStyle={{
                     background: 'var(--painel-alto)',
@@ -63,10 +61,6 @@ export function GraficoPizzaBI({
           ) : (
             <div className="bi-distribuicao__vazio">Sem negócios para exibir</div>
           )}
-          <div className="bi-distribuicao__centro">
-            <strong>{numeroBR.format(totalNegocios)}</strong>
-            <span>negócios abertos</span>
-          </div>
         </div>
 
         {dados.length > 0 ? (
@@ -79,7 +73,7 @@ export function GraficoPizzaBI({
                 <li
                   className="bi-distribuicao__item"
                   key={item.nome}
-                  aria-label={`${item.nome}: ${numeroBR.format(item.quantidade)} negócios, ${percentualBR.format(percentual)}%`}
+                  aria-label={`${item.nome}: ${percentualBR.format(percentual)}%`}
                 >
                   <i
                     className="bi-distribuicao__amostra"
@@ -87,7 +81,6 @@ export function GraficoPizzaBI({
                     aria-hidden="true"
                   />
                   <span className="bi-distribuicao__nome">{item.nome}</span>
-                  <strong>{numeroBR.format(item.quantidade)}</strong>
                   <span className="bi-distribuicao__percentual">
                     {percentualBR.format(percentual)}%
                   </span>
@@ -96,11 +89,11 @@ export function GraficoPizzaBI({
             })}
           </ul>
         ) : (
-          <p className="bi-distribuicao__vazio">Nenhum negócio aberto encontrado.</p>
+          <p className="bi-distribuicao__vazio">Nenhum negócio com campo preenchido encontrado.</p>
         )}
       </div>
       <p className="bi-distribuicao__nota">
-        Base: negócios abertos. Campos vazios aparecem como “Não informado”.
+        Percentuais de negócios abertos e perdidos com o campo preenchido.
       </p>
     </div>
   );
