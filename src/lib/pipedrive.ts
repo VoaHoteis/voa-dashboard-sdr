@@ -314,7 +314,16 @@ export async function buscarCampoNegocioPorNome(
   nome: string,
   negocios: Negocio[] = []
 ): Promise<DefinicaoCampoNegocio> {
-  if (modoMock()) return { key: 'channel', options: [] };
+  if (modoMock()) {
+    const chavesMock: Record<string, string> = {
+      CANAL: 'channel',
+      CHANNEL: 'channel_manager_mock',
+      PMS: 'pms_mock',
+    };
+    const key = chavesMock[nome.trim().toUpperCase()];
+    if (key) return { key, options: [] };
+    throw new PipedriveError(`O campo personalizado "${nome}" não foi encontrado nos dados de exemplo.`);
+  }
 
   const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
   const campos = await buscarTudo<{
@@ -324,6 +333,9 @@ export async function buscarCampoNegocioPorNome(
   }>('/v1/dealFields', {}, 100);
   const correspondentes = campos.filter((item) => normalizar(item.name) === normalizar(nome));
   const idDaOpcao = (valor: unknown): number | null => {
+    if (Array.isArray(valor)) {
+      return valor.map(idDaOpcao).find((id): id is number => id !== null) ?? null;
+    }
     if (typeof valor === 'number' && Number.isSafeInteger(valor)) return valor;
     if (typeof valor === 'string' && /^\d+$/.test(valor.trim())) return Number(valor.trim());
     if (valor && typeof valor === 'object') {
@@ -375,6 +387,48 @@ function textoCampoOrigem(valor: unknown, opcoes: Map<number, string>): string |
     if (texto) return texto;
   }
   return null;
+}
+
+function valoresCampoNegocio(valor: unknown, opcoes: Map<number, string>): string[] {
+  if (Array.isArray(valor)) return valor.flatMap((item) => valoresCampoNegocio(item, opcoes));
+
+  if (valor && typeof valor === 'object') {
+    const campo = valor as { value?: unknown; values?: unknown };
+    if (Array.isArray(campo.value)) return valoresCampoNegocio(campo.value, opcoes);
+    if (Array.isArray(campo.values)) return valoresCampoNegocio(campo.values, opcoes);
+  }
+
+  if (typeof valor === 'string' && valor.includes(',')) {
+    return valor.split(',').flatMap((item) => valoresCampoNegocio(item, opcoes));
+  }
+
+  const texto = textoCampoOrigem(valor, opcoes);
+  return texto ? [texto] : [];
+}
+
+/** Conta negócios abertos por opção ou texto do campo personalizado. */
+export async function contarNegociosPorCampo(
+  negocios: Negocio[],
+  nome: string
+): Promise<Array<{ nome: string; quantidade: number }>> {
+  const campo = await buscarCampoNegocioPorNome(nome, negocios);
+  const opcoes = new Map(campo.options.map((opcao) => [Number(opcao.id), opcao.label]));
+  const contagens = new Map<string, number>();
+
+  for (const negocio of negocios) {
+    const camposNegocio = negocio as Record<string, unknown>;
+    const personalizados = camposNegocio.custom_fields as Record<string, unknown> | undefined;
+    const valores = new Set(
+      valoresCampoNegocio(camposNegocio[campo.key] ?? personalizados?.[campo.key], opcoes)
+    );
+    if (valores.size === 0) valores.add('Não informado');
+
+    for (const valor of valores) contagens.set(valor, (contagens.get(valor) ?? 0) + 1);
+  }
+
+  return [...contagens.entries()]
+    .map(([valor, quantidade]) => ({ nome: valor, quantidade }))
+    .sort((a, b) => b.quantidade - a.quantidade || a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
 /** Resolve o campo CANAL para cada negócio, usado como origem do lead nas listas. */

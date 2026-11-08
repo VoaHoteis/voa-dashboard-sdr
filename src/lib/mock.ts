@@ -62,6 +62,9 @@ const HOTEIS = [
   'Hotel Internacional Guarulhos', 'Hotel Ponte Aérea', 'Pousada Jardim de Minas', 'Almanara Cuiabá',
 ];
 
+const CHANNEL_MANAGERS = ['Omnibees', 'Cloudbeds', 'SiteMinder', 'Desbravador'];
+const PMS_SYSTEMS = ['Desbravador', 'HSystem', 'Cloudbeds', 'HITS'];
+
 /** Base fixa de negocios: 40 hoteis espalhados pelos dois funis e pelas etapas. */
 const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
   const r = rng(hash(titulo));
@@ -95,6 +98,16 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
   // Dono do negocio no formato objeto da v1 ({id, name}), alternando entre os
   // closers, para o card de Forecast ter um proprietario nomeado para exibir.
   const dono = CLOSERS[i % CLOSERS.length];
+  const sorteioChannel = rng(hash('channel-manager:' + titulo))();
+  const sorteioPms = rng(hash('pms:' + titulo))();
+  const channelManager =
+    sorteioChannel < 0.1
+      ? ''
+      : CHANNEL_MANAGERS[Math.floor(sorteioChannel * CHANNEL_MANAGERS.length) % CHANNEL_MANAGERS.length];
+  const pms =
+    sorteioPms < 0.1
+      ? ''
+      : PMS_SYSTEMS[Math.floor(sorteioPms * PMS_SYSTEMS.length) % PMS_SYSTEMS.length];
 
   return {
     id: 1000 + i,
@@ -109,6 +122,8 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
     channel: ['Indicação', 'Site', 'Prospecção ativa'][
       Math.floor(rng(hash('origem:' + titulo))() * 3)
     ],
+    channel_manager_mock: channelManager,
+    pms_mock: pms,
     user_id: { id: dono.userId, name: dono.nome },
     [SDR_FIELD_KEY]: sdrIds,
     // Unidades habitacionais: hoteis pequenos a medios, entre ~12 e ~200 U.Hs.

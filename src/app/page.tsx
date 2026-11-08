@@ -25,6 +25,7 @@ import { CardLigacoes } from '@/components/CardLigacoes';
 import { CardNoShows } from '@/components/CardNoShows';
 import { CardAgendamentosBI } from '@/components/CardAgendamentosBI';
 import { CardFechamentosMensaisBI } from '@/components/CardFechamentosMensaisBI';
+import { CardsNegociosMercadoBI } from '@/components/CardsNegociosMercadoBI';
 import {
   CardAgendamentosFuturos,
   CardsAtividadesSemana,
@@ -248,10 +249,15 @@ function Painel() {
       )}
 
       {aba === 'bi' ? (
-        <div className="grade">
-          <CardAgendamentosBI />
-          <CardFechamentosMensaisBI />
-        </div>
+        <>
+          <div className="grade">
+            <CardAgendamentosBI />
+            <CardFechamentosMensaisBI />
+          </div>
+          <div className="grade">
+            <CardsNegociosMercadoBI />
+          </div>
+        </>
       ) : aba === 'sdr' ? (
         <>
           <div className="grade">
