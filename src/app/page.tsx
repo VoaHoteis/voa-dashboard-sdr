@@ -26,6 +26,7 @@ import { CardNoShows } from '@/components/CardNoShows';
 import { CardAgendamentosBI } from '@/components/CardAgendamentosBI';
 import { CardFechamentosMensaisBI } from '@/components/CardFechamentosMensaisBI';
 import { CardsNegociosMercadoBI } from '@/components/CardsNegociosMercadoBI';
+import { CardEventoPortoSeguro } from '@/components/CardEventoPortoSeguro';
 import {
   CardAgendamentosFuturos,
   CardsAtividadesSemana,
@@ -33,7 +34,7 @@ import {
 import type { AgendamentosResposta, FuturosResposta } from '@/lib/types';
 
 type Atalho = 'este-mes' | 'mes-passado' | 'ultimos-30' | 'custom';
-type Aba = 'sdr' | 'closers' | 'bi';
+type Aba = 'sdr' | 'closers' | 'bi' | 'evento-porto-seguro';
 
 function intervalo(atalho: Atalho, ref: ISODate): { inicio: ISODate; fim: ISODate } {
   switch (atalho) {
@@ -138,7 +139,7 @@ function Painel() {
         </div>
 
         <div className="filtro">
-          {aba !== 'bi' && (
+          {(aba === 'sdr' || aba === 'closers') && (
             <div className="filtro-menu" ref={menuRef}>
               <button
                 className="gatilho-filtro"
@@ -227,6 +228,7 @@ function Painel() {
             ['sdr', 'SDRs'],
             ['closers', 'Closers'],
             ['bi', 'B.I'],
+            ['evento-porto-seguro', 'Evento Porto Seguro'],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -248,7 +250,11 @@ function Painel() {
         </p>
       )}
 
-      {aba === 'bi' ? (
+      {aba === 'evento-porto-seguro' ? (
+        <div className="grade">
+          <CardEventoPortoSeguro />
+        </div>
+      ) : aba === 'bi' ? (
         <>
           <div className="grade">
             <CardAgendamentosBI />

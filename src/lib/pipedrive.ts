@@ -556,6 +556,98 @@ export async function buscarNegociosAbertos(): Promise<Negocio[]> {
   return buscarTudo<Negocio>('/v1/deals', { status: 'open', user_id: 0 });
 }
 
+export interface MetricasEventoPortoSeguro {
+  leads: number;
+  negociosAbertos: number;
+}
+
+interface EntidadeComEtiquetas {
+  label?: unknown;
+  label_ids?: unknown;
+  labels?: unknown;
+  [campo: string]: unknown;
+}
+
+interface EtiquetaPipedrive {
+  id?: string | number;
+  name?: string;
+  label?: string;
+}
+
+function valorTemEtiqueta(
+  valor: unknown,
+  ids: Set<string>,
+  nomeNormalizado: string
+): boolean {
+  if (Array.isArray(valor)) {
+    return valor.some((item) => valorTemEtiqueta(item, ids, nomeNormalizado));
+  }
+  if (typeof valor === 'number' || typeof valor === 'string') {
+    const texto = String(valor).trim();
+    return ids.has(texto) || normalizarNome(texto) === nomeNormalizado;
+  }
+  if (valor && typeof valor === 'object') {
+    const objeto = valor as Record<string, unknown>;
+    return ['id', 'name', 'label', 'value', 'values'].some((chave) =>
+      valorTemEtiqueta(objeto[chave], ids, nomeNormalizado)
+    );
+  }
+  return false;
+}
+
+function entidadeTemEtiqueta(
+  entidade: EntidadeComEtiquetas,
+  ids: Set<string>,
+  nomeNormalizado: string
+): boolean {
+  return [entidade.label_ids, entidade.label, entidade.labels].some((valor) =>
+    valorTemEtiqueta(valor, ids, nomeNormalizado)
+  );
+}
+
+/** Conta leads ativos e negócios abertos com a etiqueta do evento. */
+export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoPortoSeguro> {
+  if (modoMock()) return { leads: 14, negociosAbertos: 6 };
+
+  const nomeEtiqueta = 'EVENTO PORTO SEGURO';
+  const nomeNormalizado = normalizarNome(nomeEtiqueta);
+  const [leads, etiquetasLead, camposNegocio, negociosAbertos] = await Promise.all([
+    buscarTudo<(EntidadeComEtiquetas & { id: string | number })>('/v1/leads', {}, 100),
+    buscarTudo<EtiquetaPipedrive>('/v1/leadLabels', {}, 100),
+    buscarTudo<{
+      key: string;
+      options?: EtiquetaPipedrive[] | null;
+    }>('/v1/dealFields', {}, 100),
+    buscarNegociosAbertos(),
+  ]);
+
+  const idsLead = new Set(
+    etiquetasLead
+      .filter((etiqueta) => normalizarNome(etiqueta.name ?? etiqueta.label ?? '') === nomeNormalizado)
+      .map((etiqueta) => String(etiqueta.id ?? ''))
+      .filter(Boolean)
+  );
+  const idsNegocio = new Set(
+    camposNegocio
+      .filter((campo) => campo.key === 'label' || campo.key === 'label_ids')
+      .flatMap((campo) => campo.options ?? [])
+      .filter((etiqueta) => normalizarNome(etiqueta.label ?? etiqueta.name ?? '') === nomeNormalizado)
+      .map((etiqueta) => String(etiqueta.id ?? ''))
+      .filter(Boolean)
+  );
+
+  const totalLeads = leads.filter((lead) => entidadeTemEtiqueta(lead, idsLead, nomeNormalizado)).length;
+  const totalNegociosAbertos = negociosAbertos.filter((negocio) =>
+    entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
+  ).length;
+
+  if (idsLead.size === 0 && idsNegocio.size === 0 && totalLeads === 0 && totalNegociosAbertos === 0) {
+    throw new PipedriveError(`A etiqueta "${nomeEtiqueta}" não foi encontrada no Pipedrive.`);
+  }
+
+  return { leads: totalLeads, negociosAbertos: totalNegociosAbertos };
+}
+
 /**
  * Etapas da conta (id -> nome), para o forecast rotular a etapa de cada negocio
  * sem depender do STAGES fixo (que so cobre as 4 etapas acompanhadas). Como o

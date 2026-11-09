@@ -75,6 +75,11 @@ export interface NegociosMercadoResposta {
   pms: ContagemValorNegocio[];
 }
 
+export interface MetricasEventoPortoSeguroResposta {
+  leads: number;
+  negociosAbertos: number;
+}
+
 export interface AgendamentosResposta {
   periodo: Periodo;
   unidade: UnidadeContagem;

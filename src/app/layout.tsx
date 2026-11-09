@@ -17,7 +17,7 @@ const texto = Inter({
 
 export const metadata: Metadata = {
   title: 'Painel Comercial — VOA Hotéis',
-  description: 'Acompanhamento de agendamentos, desempenho e metas do time comercial a partir do Pipedrive.',
+  description: 'Acompanhamento de metas comerciais, funis e métricas do evento Porto Seguro a partir do Pipedrive.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
