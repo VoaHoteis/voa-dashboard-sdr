@@ -1,8 +1,8 @@
 /**
  * Porta de entrada: sem sessao valida, ninguem passa.
  *
- * Cobre as rotas /api/* tambem -- sao elas que carregam os numeros. Proteger so
- * a pagina deixaria os dados a um `curl` de distancia.
+ * Cobre as rotas /api/* tambem -- sao elas que carregam os numeros. A rota da
+ * fila e suas operacoes sao liberadas explicitamente para uso sem login.
  */
 
 import { NextResponse } from 'next/server';
@@ -13,7 +13,7 @@ export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
 
-const LIVRES = ['/login', '/api/login', '/api/logout'];
+const LIVRES = ['/login', '/api/login', '/api/logout', '/fila-atendimento', '/api/fila-atendimento'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

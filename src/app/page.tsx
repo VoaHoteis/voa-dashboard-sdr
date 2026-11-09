@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { UNIDADE_PADRAO, type UnidadeContagem } from '@/lib/config';
 import {
   addDias,
@@ -34,7 +35,7 @@ import {
 import type { AgendamentosResposta, FuturosResposta } from '@/lib/types';
 
 type Atalho = 'este-mes' | 'mes-passado' | 'ultimos-30' | 'custom';
-type Aba = 'sdr' | 'closers' | 'bi' | 'evento-porto-seguro' | 'fila-atendimento';
+type Aba = 'sdr' | 'closers' | 'bi' | 'evento-porto-seguro';
 
 function intervalo(atalho: Atalho, ref: ISODate): { inicio: ISODate; fim: ISODate } {
   switch (atalho) {
@@ -231,16 +232,20 @@ function Painel() {
             ['evento-porto-seguro', 'Evento Porto Seguro'],
             ['fila-atendimento', 'Fila de Atendimento'],
           ] as const
-        ).map(([k, label]) => (
-          <button
-            key={k}
-            data-ativo={aba === k}
-            aria-current={aba === k ? 'page' : undefined}
-            onClick={() => setAba(k)}
-          >
-            {label}
-          </button>
-        ))}
+        ).map(([k, label]) =>
+          k === 'fila-atendimento' ? (
+            <Link key={k} href="/fila-atendimento" className="fila-atendimento-link">{label}</Link>
+          ) : (
+            <button
+              key={k}
+              data-ativo={aba === k}
+              aria-current={aba === k ? 'page' : undefined}
+              onClick={() => setAba(k)}
+            >
+              {label}
+            </button>
+          )
+        )}
       </nav>
 
       {aba === 'sdr' && !ehMesCorrente && (
@@ -251,16 +256,7 @@ function Painel() {
         </p>
       )}
 
-      {aba === 'fila-atendimento' ? (
-        <div className="grade">
-          <section className="card">
-            <header>
-              <h2>Fila de Atendimento</h2>
-            </header>
-            <p className="nota">Esta aba está pronta para receber os dados da fila de atendimento.</p>
-          </section>
-        </div>
-      ) : aba === 'evento-porto-seguro' ? (
+      {aba === 'evento-porto-seguro' ? (
         <div className="grade">
           <CardEventoPortoSeguro />
         </div>

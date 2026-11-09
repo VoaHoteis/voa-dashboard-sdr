@@ -17,12 +17,12 @@ const texto = Inter({
 
 export const metadata: Metadata = {
   title: 'Painel Comercial — VOA Hotéis',
-  description: 'Acompanhamento de metas comerciais, funis e métricas do evento Porto Seguro a partir do Pipedrive.',
+  description: 'Acompanhamento de metas comerciais, fila de atendimento, funis e métricas da VOA Hotéis.'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${numero.variable} ${texto.variable}`}>
+    <html lang="pt-BR" className={`${numero.variable} ${texto.variable} tema-voa`}>
       <body>{children}</body>
     </html>
   );
