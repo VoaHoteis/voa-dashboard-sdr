@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { UNIDADE_PADRAO, type UnidadeContagem } from '@/lib/config';
 import {
   addDias,
@@ -229,17 +230,22 @@ function Painel() {
             ['closers', 'Closers'],
             ['bi', 'B.I'],
             ['evento-porto-seguro', 'Evento Porto Seguro'],
+            ['fila-atendimento', 'Fila de Atendimento'],
           ] as const
-        ).map(([k, label]) => (
-          <button
-            key={k}
-            data-ativo={aba === k}
-            aria-current={aba === k ? 'page' : undefined}
-            onClick={() => setAba(k)}
-          >
-            {label}
-          </button>
-        ))}
+        ).map(([k, label]) =>
+          k === 'fila-atendimento' ? (
+            <Link key={k} href="/fila-atendimento" className="fila-atendimento-link">{label}</Link>
+          ) : (
+            <button
+              key={k}
+              data-ativo={aba === k}
+              aria-current={aba === k ? 'page' : undefined}
+              onClick={() => setAba(k)}
+            >
+              {label}
+            </button>
+          )
+        )}
       </nav>
 
       {aba === 'sdr' && !ehMesCorrente && (
