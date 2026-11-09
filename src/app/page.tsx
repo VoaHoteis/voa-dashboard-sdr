@@ -34,7 +34,7 @@ import {
 import type { AgendamentosResposta, FuturosResposta } from '@/lib/types';
 
 type Atalho = 'este-mes' | 'mes-passado' | 'ultimos-30' | 'custom';
-type Aba = 'sdr' | 'closers' | 'bi' | 'evento-porto-seguro';
+type Aba = 'sdr' | 'closers' | 'bi' | 'evento-porto-seguro' | 'fila-atendimento';
 
 function intervalo(atalho: Atalho, ref: ISODate): { inicio: ISODate; fim: ISODate } {
   switch (atalho) {
@@ -229,6 +229,7 @@ function Painel() {
             ['closers', 'Closers'],
             ['bi', 'B.I'],
             ['evento-porto-seguro', 'Evento Porto Seguro'],
+            ['fila-atendimento', 'Fila de Atendimento'],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -250,7 +251,16 @@ function Painel() {
         </p>
       )}
 
-      {aba === 'evento-porto-seguro' ? (
+      {aba === 'fila-atendimento' ? (
+        <div className="grade">
+          <section className="card">
+            <header>
+              <h2>Fila de Atendimento</h2>
+            </header>
+            <p className="nota">Esta aba está pronta para receber os dados da fila de atendimento.</p>
+          </section>
+        </div>
+      ) : aba === 'evento-porto-seguro' ? (
         <div className="grade">
           <CardEventoPortoSeguro />
         </div>
