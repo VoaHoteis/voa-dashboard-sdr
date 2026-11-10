@@ -7,7 +7,7 @@
  * mesma pergunta sempre devolve o mesmo numero.
  */
 
-import { FUNNEL_LABEL, PESSOAS, PIPELINES, SDR_FIELD_KEY } from './config';
+import { FUNNEL_LABEL, nomeDaPessoa, PESSOAS, PIPELINES, SDR_FIELD_KEY } from './config';
 import { addDias, type ISODate } from './dates';
 import type { ItemNegocioEtapa } from './types';
 
@@ -616,7 +616,7 @@ function entidadeTemEtiqueta(
 }
 
 /** Conta negócios etiquetados por proprietário e por etapa dos funis acompanhados. */
-function resumirNegociosDoEvento(
+export function resumirNegociosDoEvento(
   negocios: Negocio[],
   gruposEtapas: Array<{ funil: string; pipelineId: number; etapas: EtapaPipeline[] }>
 ): Pick<
@@ -637,15 +637,15 @@ function resumirNegociosDoEvento(
   const grupoPorPipeline = new Map(gruposEtapas.map((grupo) => [grupo.pipelineId, grupo]));
 
   for (const negocio of negocios) {
+    const grupo = grupoPorPipeline.get(negocio.pipeline_id);
+    const etapa = grupo?.etapas.find((item) => item.id === negocio.stage_id);
+    if (!grupo || !etapa) continue;
+
     const proprietario = nomeDoProprietario(negocio) ?? 'Sem proprietário';
     contagemPorProprietario.set(
       proprietario,
       (contagemPorProprietario.get(proprietario) ?? 0) + 1
     );
-
-    const grupo = grupoPorPipeline.get(negocio.pipeline_id);
-    const etapa = grupo?.etapas.find((item) => item.id === negocio.stage_id);
-    if (!grupo || !etapa) continue;
 
     const chave = JSON.stringify([proprietario, grupo.funil, etapa.id]);
     const existente = contagemPorProprietarioEtapa.get(chave);
@@ -690,23 +690,28 @@ function resumirNegociosDoEvento(
   };
 }
 
-/** Conta leads ativos e negócios abertos com a etiqueta do evento. */
+/** Busca as etapas de todos os funis acompanhados pelo dashboard. */
+async function buscarGruposEtapasEvento(): Promise<
+  Array<{ funil: string; pipelineId: number; etapas: EtapaPipeline[] }>
+> {
+  const funis = Object.keys(PIPELINES) as Array<keyof typeof PIPELINES>;
+  return Promise.all(
+    funis.map(async (funil) => ({
+      funil: FUNNEL_LABEL[funil],
+      pipelineId: PIPELINES[funil],
+      etapas: await buscarEtapasDoPipeline(PIPELINES[funil]),
+    }))
+  );
+}
+
+/** Conta leads ativos e negócios abertos com a etiqueta nos funis acompanhados. */
 export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoPortoSeguro> {
   if (modoMock()) {
-    const [moduloMock, etapasNovosNegocios] = await Promise.all([
-      mock(),
-      buscarEtapasDoPipeline(PIPELINES.novosNegocios),
-    ]);
+    const [moduloMock, gruposEtapas] = await Promise.all([mock(), buscarGruposEtapasEvento()]);
+    const pipelinesAcompanhados = new Set(gruposEtapas.map((grupo) => grupo.pipelineId));
     const negociosDeExemplo = (await moduloMock.negociosAbertosFalsos())
-      .filter((negocio) => negocio.pipeline_id === PIPELINES.novosNegocios)
+      .filter((negocio) => pipelinesAcompanhados.has(negocio.pipeline_id))
       .slice(0, 6);
-    const gruposEtapas = [
-      {
-        funil: FUNNEL_LABEL.novosNegocios,
-        pipelineId: PIPELINES.novosNegocios,
-        etapas: etapasNovosNegocios,
-      },
-    ];
 
     return {
       leads: 14,
@@ -717,17 +722,16 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
 
   const nomeEtiqueta = 'EVENTO PORTO SEGURO';
   const nomeNormalizado = normalizarNome(nomeEtiqueta);
-  const [leads, etiquetasLead, camposNegocio, negociosAbertos, etapasNovosNegocios] =
-    await Promise.all([
-      buscarTudo<(EntidadeComEtiquetas & { id: string | number })>('/v1/leads', {}, 100),
-      buscarTudo<EtiquetaPipedrive>('/v1/leadLabels', {}, 100),
-      buscarTudo<{
-        key: string;
-        options?: EtiquetaPipedrive[] | null;
-      }>('/v1/dealFields', {}, 100),
-      buscarNegociosAbertos(),
-      buscarEtapasDoPipeline(PIPELINES.novosNegocios),
-    ]);
+  const [leads, etiquetasLead, camposNegocio, negociosAbertos, gruposEtapas] = await Promise.all([
+    buscarTudo<(EntidadeComEtiquetas & { id: string | number })>('/v1/leads', {}, 100),
+    buscarTudo<EtiquetaPipedrive>('/v1/leadLabels', {}, 100),
+    buscarTudo<{
+      key: string;
+      options?: EtiquetaPipedrive[] | null;
+    }>('/v1/dealFields', {}, 100),
+    buscarNegociosAbertos(),
+    buscarGruposEtapasEvento(),
+  ]);
 
   const idsLead = new Set(
     etiquetasLead
@@ -748,26 +752,19 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
   const negociosComEtiqueta = negociosAbertos.filter((negocio) =>
     entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
   );
-  const negociosNovosComEtiqueta = negociosComEtiqueta.filter(
-    (negocio) => negocio.pipeline_id === PIPELINES.novosNegocios
+  const pipelinesAcompanhados = new Set(gruposEtapas.map((grupo) => grupo.pipelineId));
+  const negociosEvento = negociosComEtiqueta.filter((negocio) =>
+    pipelinesAcompanhados.has(negocio.pipeline_id)
   );
 
   if (idsLead.size === 0 && idsNegocio.size === 0 && totalLeads === 0 && negociosComEtiqueta.length === 0) {
     throw new PipedriveError(`A etiqueta "${nomeEtiqueta}" não foi encontrada no Pipedrive.`);
   }
 
-  const gruposEtapas = [
-    {
-      funil: FUNNEL_LABEL.novosNegocios,
-      pipelineId: PIPELINES.novosNegocios,
-      etapas: etapasNovosNegocios,
-    },
-  ];
-
   return {
     leads: totalLeads,
-    negociosAbertos: negociosNovosComEtiqueta.length,
-    ...resumirNegociosDoEvento(negociosNovosComEtiqueta, gruposEtapas),
+    negociosAbertos: negociosEvento.length,
+    ...resumirNegociosDoEvento(negociosEvento, gruposEtapas),
   };
 }
 
@@ -1039,6 +1036,9 @@ export function pessoaDoProprietario(negocio: Negocio | undefined): string | nul
  */
 export function nomeDoProprietario(negocio: Negocio | undefined): string | null {
   if (!negocio) return null;
+  const pessoa = pessoaDoProprietario(negocio);
+  if (pessoa) return nomeDaPessoa(pessoa);
+
   const bruto = (negocio as { user_id?: unknown }).user_id;
   if (bruto && typeof bruto === 'object') {
     const name = (bruto as { name?: unknown }).name;

@@ -77,7 +77,7 @@ export interface NegociosMercadoResposta {
 
 export interface MetricasEventoPortoSeguroResposta {
   leads: number;
-  /** Negócios abertos com a etiqueta no funil Novos Negócios. */
+  /** Negócios abertos com a etiqueta nos funis acompanhados pelo dashboard. */
   negociosAbertos: number;
   negociosPorProprietario: Array<{ nome: string; total: number }>;
   negociosPorEtapa: Array<{ funil: string; etapaId: number; etapa: string; ordem: number; total: number }>;
