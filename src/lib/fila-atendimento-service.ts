@@ -198,7 +198,7 @@ function createPostgresTransaction(transaction: DrizzleTransaction): QueueTransa
 
       if (memberKeys.length > 0) {
         const positions = sql.join(
-          memberKeys.map((memberKey, position) => sql`(${memberKey}, ${position})`),
+          memberKeys.map((memberKey, position) => sql`(${memberKey}::text, ${position}::integer)`),
           sql`, `
         );
         await transaction.execute(sql`
