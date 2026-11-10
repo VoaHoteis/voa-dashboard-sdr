@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
-    return queueError(error, 'Não foi possível registrar a ação. Ela não foi salva.');
+    return queueError(error, 'Não foi possível registrar a ação. Ela não foi salva.', 'register-action');
   }
 }
 
@@ -47,7 +47,7 @@ export async function PUT(request: Request) {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
-    return queueError(error, 'Não foi possível salvar a composição da fila. Nenhuma alteração foi salva.');
+    return queueError(error, 'Não foi possível salvar a composição da fila. Nenhuma alteração foi salva.', 'save-queue');
   }
 }
 
@@ -79,12 +79,26 @@ function originError() {
   return NextResponse.json({ erro: 'Origem da solicitação inválida.' }, { status: 403 });
 }
 
-function queueError(error: unknown, fallback: string) {
+function queueError(error: unknown, fallback: string, operation: 'register-action' | 'save-queue') {
   if (error instanceof QueueInputError) {
     return NextResponse.json({ erro: error.message }, { status: 400 });
   }
   if (error instanceof QueueConflictError) {
     return NextResponse.json({ erro: error.message }, { status: 409 });
   }
+
+  const errorRecord = isRecord(error) ? error : null;
+  const causeRecord = errorRecord && isRecord(errorRecord.cause) ? errorRecord.cause : errorRecord;
+  console.error('[fila-atendimento] Falha interna na operação', {
+    operation,
+    errorName: error instanceof Error ? error.name : 'UnknownError',
+    code: typeof causeRecord?.code === 'string' ? causeRecord.code : null,
+    constraint: typeof causeRecord?.constraint === 'string' ? causeRecord.constraint : null,
+  });
+
   return NextResponse.json({ erro: fallback }, { status: 503 });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
