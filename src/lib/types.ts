@@ -88,6 +88,7 @@ export interface MetricasEventoPortoSeguroResposta {
     total: number;
     negocios: ItemNegocioEtapa[];
   }>;
+  atividadesPorPessoa: Array<{ pessoa: string; hoje: number; semana: number; mes: number }>;
 }
 
 export interface AgendamentosResposta {
