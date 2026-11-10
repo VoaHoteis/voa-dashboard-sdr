@@ -22,15 +22,27 @@ export function CardEventoPortoSeguro() {
     <>
       <Painel titulo="Evento Porto Seguro" estado={estado}>
         {(dados) => {
-          const etapas = [...dados.negociosPorEtapa].sort(
-            (a, b) => a.funil.localeCompare(b.funil, 'pt-BR') || a.ordem - b.ordem
-          );
+          const etapas = dados.negociosPorEtapa
+            .filter((etapa) => etapa.funil !== 'Salabim')
+            .sort(
+              (a, b) => a.funil.localeCompare(b.funil, 'pt-BR') || a.ordem - b.ordem
+            );
           const funis = [...new Set(etapas.map((item) => item.funil))];
           const gruposEtapas = funis.map((funil) => ({
             funil,
             etapas: etapas.filter((etapa) => etapa.funil === funil),
           }));
-          const celulas = dados.negociosPorProprietarioEtapa;
+          const todasCelulas = dados.negociosPorProprietarioEtapa;
+          const celulas = todasCelulas.filter((item) => item.funil !== 'Salabim');
+          const proprietarios = dados.negociosPorProprietario
+            .map((proprietario) => ({
+              nome: proprietario.nome,
+              total: celulas
+                .filter((item) => item.proprietario === proprietario.nome)
+                .reduce((total, item) => total + item.total, 0),
+            }))
+            .filter((proprietario) => proprietario.total > 0);
+          const totalVisivel = etapas.reduce((total, etapa) => total + etapa.total, 0);
           const matriz = new Map(
             celulas.map((item) => [
               JSON.stringify([item.proprietario, item.funil, item.etapaId]),
@@ -45,7 +57,7 @@ export function CardEventoPortoSeguro() {
             celulas
               .filter((item) => item.funil === funil && item.etapaId === etapaId)
               .flatMap((item) => item.negocios);
-          const todosOsNegocios = celulas.flatMap((item) => item.negocios);
+          const todosOsNegocios = todasCelulas.flatMap((item) => item.negocios);
           const abrirDetalhe = (titulo: string, negocios: ItemNegocioEtapa[]) =>
             setDetalhe({ titulo, negocios });
           return (
@@ -78,7 +90,7 @@ export function CardEventoPortoSeguro() {
                   <p>Clique em uma contagem positiva para ver os negócios correspondentes.</p>
                 </div>
 
-                {dados.negociosPorProprietario.length > 0 ? (
+                {proprietarios.length > 0 ? (
                   <div
                     className="evento-matriz__rolagem"
                     role="region"
@@ -87,7 +99,7 @@ export function CardEventoPortoSeguro() {
                   >
                     <table className="evento-matriz">
                       <caption className="evento-matriz__legenda">
-                        Negócios abertos com a etiqueta, agrupados por funil e etapa. Clique em um número para abrir a lista.
+                        Negócios abertos com a etiqueta, exceto Salabim, agrupados por proprietário e etapa. Clique em um número para abrir a lista.
                       </caption>
                       <thead>
                         <tr>
@@ -129,7 +141,7 @@ export function CardEventoPortoSeguro() {
                         </tr>
                       </thead>
                       <tbody>
-                        {dados.negociosPorProprietario.map((proprietario) => {
+                        {proprietarios.map((proprietario) => {
                           const negocios = negociosDoProprietario(proprietario.nome);
                           return (
                             <tr key={proprietario.nome}>
@@ -195,12 +207,12 @@ export function CardEventoPortoSeguro() {
                           </th>
                           <td className="evento-matriz__fixa evento-matriz__total">
                             <NumeroClicavel
-                              valor={numeroBR(dados.negociosAbertos, 0)}
+                              valor={numeroBR(totalVisivel, 0)}
                               classe="evento-matriz__numero"
                               aoAbrir={() => abrirDetalhe('Todos os negócios', todosOsNegocios)}
-                              titulo={`Ver todos os ${quantidadeNegocios(dados.negociosAbertos)} com a etiqueta`}
-                              ariaLabel={`Ver todos os ${dados.negociosAbertos} negócios com a etiqueta Evento Porto Seguro`}
-                              desabilitado={dados.negociosAbertos === 0}
+                              titulo={`Ver todos os ${quantidadeNegocios(totalVisivel)} nos funis exibidos`}
+                              ariaLabel={`Ver todos os ${totalVisivel} negócios nos funis exibidos com a etiqueta Evento Porto Seguro`}
+                              desabilitado={totalVisivel === 0}
                             />
                           </td>
                           {etapas.map((etapa) => (
