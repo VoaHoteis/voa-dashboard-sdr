@@ -1086,13 +1086,7 @@ h3 {
   line-height: 1.5;
 }
 
-.evento-detalhes {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 20px;
-}
-
-.evento-detalhes__coluna {
+.evento-distribuicao {
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--borda);
@@ -1100,67 +1094,171 @@ h3 {
   background: var(--painel-alto);
 }
 
-.evento-detalhes h3 {
-  margin: 0 0 12px;
+.evento-distribuicao__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.evento-distribuicao__cabecalho h3 {
+  margin: 0;
   color: var(--texto);
   font-size: 14px;
   line-height: 1.5;
 }
 
-.evento-funil + .evento-funil {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--borda);
-}
-
-.evento-funil h4 {
-  margin: 0 0 4px;
-  color: var(--texto-fraco);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.evento-lista {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.evento-lista li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--borda);
-  color: var(--texto);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.evento-lista li:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.evento-contagem {
-  flex: 0 0 auto;
-  color: var(--novos);
-  font-variant-numeric: tabular-nums;
-}
-
+.evento-distribuicao__cabecalho p,
 .evento-vazio {
   margin: 0;
   color: var(--texto-fraco);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
+.evento-matriz__rolagem {
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  scrollbar-color: var(--borda) var(--painel-alto);
+}
+
+.evento-matriz__rolagem:focus-visible {
+  outline: 2px solid var(--novos);
+  outline-offset: 2px;
+}
+
+.evento-matriz {
+  --coluna-proprietario: 190px;
+  --coluna-total: 68px;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--texto);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.evento-matriz th,
+.evento-matriz td {
+  padding: 9px 10px;
+  border-right: 1px solid var(--borda);
+  border-bottom: 1px solid var(--borda);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.evento-matriz tr > :last-child {
+  border-right: 0;
+}
+
+.evento-matriz tbody tr:last-child > *,
+.evento-matriz tfoot tr > * {
+  border-bottom: 0;
+}
+
+.evento-matriz thead th {
+  background: var(--painel);
+  font-weight: 600;
+}
+
+.evento-matriz__legenda {
+  padding: 9px 10px;
+  color: var(--texto-fraco);
+  text-align: left;
+  white-space: normal;
+}
+
+.evento-matriz__grupo {
+  text-align: center !important;
+}
+
+.evento-matriz__grupo[data-funil='novos'] {
+  color: var(--novos);
+}
+
+.evento-matriz__grupo[data-funil='salabim'] {
+  color: var(--salabim);
+}
+
+.evento-matriz__etapa {
+  max-width: 150px;
+  color: var(--texto-fraco);
+  font-size: 11px;
+  font-weight: 500 !important;
+  white-space: normal;
+}
+
+.evento-matriz__fixa {
+  position: sticky;
+  z-index: 1;
+  background: var(--painel-alto);
+}
+
+.evento-matriz thead .evento-matriz__fixa {
+  z-index: 3;
+  background: var(--painel);
+}
+
+.evento-matriz__proprietario {
+  left: 0;
+  min-width: var(--coluna-proprietario);
+  max-width: var(--coluna-proprietario);
+  text-align: left !important;
+}
+
+.evento-matriz__total {
+  left: var(--coluna-proprietario);
+  min-width: var(--coluna-total);
+  max-width: var(--coluna-total);
+  color: var(--texto);
+  font-weight: 700;
+}
+
+.evento-matriz__valor,
+.evento-matriz__residual {
+  min-width: 76px;
+}
+
+.evento-matriz__valor[data-funil='novos'] {
+  color: var(--novos);
+}
+
+.evento-matriz__valor[data-funil='salabim'] {
+  color: var(--salabim);
+}
+
+.evento-matriz__residual {
+  color: var(--texto-fraco);
+}
+
+.evento-matriz tfoot th,
+.evento-matriz tfoot td {
+  border-top: 1px solid var(--borda);
+  background: var(--painel);
+  font-weight: 700;
+}
+
+.evento-vazio {
+  padding: 12px 0;
+}
+
 @media (max-width: 560px) {
-  .evento-metricas,
-  .evento-detalhes {
+  .evento-metricas {
     grid-template-columns: 1fr;
+  }
+
+  .evento-distribuicao {
+    padding: 12px;
+  }
+
+  .evento-matriz {
+    --coluna-proprietario: 150px;
+    --coluna-total: 60px;
   }
 }
 

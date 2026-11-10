@@ -79,7 +79,13 @@ export interface MetricasEventoPortoSeguroResposta {
   leads: number;
   negociosAbertos: number;
   negociosPorProprietario: Array<{ nome: string; total: number }>;
-  negociosPorEtapa: Array<{ funil: string; etapa: string; ordem: number; total: number }>;
+  negociosPorEtapa: Array<{ funil: string; etapaId: number; etapa: string; ordem: number; total: number }>;
+  negociosPorProprietarioEtapa: Array<{
+    proprietario: string;
+    funil: string;
+    etapaId: number;
+    total: number;
+  }>;
 }
 
 export interface AgendamentosResposta {

@@ -560,7 +560,13 @@ export interface MetricasEventoPortoSeguro {
   leads: number;
   negociosAbertos: number;
   negociosPorProprietario: Array<{ nome: string; total: number }>;
-  negociosPorEtapa: Array<{ funil: string; etapa: string; ordem: number; total: number }>;
+  negociosPorEtapa: Array<{ funil: string; etapaId: number; etapa: string; ordem: number; total: number }>;
+  negociosPorProprietarioEtapa: Array<{
+    proprietario: string;
+    funil: string;
+    etapaId: number;
+    total: number;
+  }>;
 }
 
 interface EntidadeComEtiquetas {
@@ -611,36 +617,60 @@ function entidadeTemEtiqueta(
 function resumirNegociosDoEvento(
   negocios: Negocio[],
   gruposEtapas: Array<{ funil: string; pipelineId: number; etapas: EtapaPipeline[] }>
-): Pick<MetricasEventoPortoSeguro, 'negociosPorProprietario' | 'negociosPorEtapa'> {
+): Pick<
+  MetricasEventoPortoSeguro,
+  'negociosPorProprietario' | 'negociosPorEtapa' | 'negociosPorProprietarioEtapa'
+> {
   const contagemPorProprietario = new Map<string, number>();
+  const contagemPorProprietarioEtapa = new Map<
+    string,
+    { proprietario: string; funil: string; etapaId: number; total: number }
+  >();
+  const grupoPorPipeline = new Map(gruposEtapas.map((grupo) => [grupo.pipelineId, grupo]));
 
   for (const negocio of negocios) {
-    const nome = nomeDoProprietario(negocio) ?? 'Sem proprietário';
-    contagemPorProprietario.set(nome, (contagemPorProprietario.get(nome) ?? 0) + 1);
+    const proprietario = nomeDoProprietario(negocio) ?? 'Sem proprietário';
+    contagemPorProprietario.set(
+      proprietario,
+      (contagemPorProprietario.get(proprietario) ?? 0) + 1
+    );
+
+    const grupo = grupoPorPipeline.get(negocio.pipeline_id);
+    const etapa = grupo?.etapas.find((item) => item.id === negocio.stage_id);
+    if (!grupo || !etapa) continue;
+
+    const chave = JSON.stringify([proprietario, grupo.funil, etapa.id]);
+    const existente = contagemPorProprietarioEtapa.get(chave);
+    if (existente) {
+      existente.total += 1;
+    } else {
+      contagemPorProprietarioEtapa.set(chave, {
+        proprietario,
+        funil: grupo.funil,
+        etapaId: etapa.id,
+        total: 1,
+      });
+    }
   }
 
   return {
     negociosPorProprietario: [...contagemPorProprietario.entries()]
       .map(([nome, total]) => ({ nome, total }))
       .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR')),
-    negociosPorEtapa: gruposEtapas.flatMap(({ funil, pipelineId, etapas }) => {
-      const porEtapa = new Map<string, { funil: string; etapa: string; ordem: number; total: number }>();
-
-      for (const etapa of etapas) {
-        const total = negocios.filter(
-          (negocio) => negocio.pipeline_id === pipelineId && negocio.stage_id === etapa.id
-        ).length;
-        const existente = porEtapa.get(etapa.nome);
-
-        if (existente) {
-          existente.total += total;
-        } else {
-          porEtapa.set(etapa.nome, { funil, etapa: etapa.nome, ordem: etapa.ordem, total });
-        }
-      }
-
-      return [...porEtapa.values()].sort((a, b) => a.ordem - b.ordem);
-    }),
+    negociosPorEtapa: gruposEtapas.flatMap(({ funil, pipelineId, etapas }) =>
+      etapas
+        .map((etapa) => ({
+          funil,
+          etapaId: etapa.id,
+          etapa: etapa.nome,
+          ordem: etapa.ordem,
+          total: negocios.filter(
+            (negocio) => negocio.pipeline_id === pipelineId && negocio.stage_id === etapa.id
+          ).length,
+        }))
+        .sort((a, b) => a.ordem - b.ordem)
+    ),
+    negociosPorProprietarioEtapa: [...contagemPorProprietarioEtapa.values()],
   };
 }
 
