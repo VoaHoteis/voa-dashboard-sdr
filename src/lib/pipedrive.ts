@@ -9,6 +9,7 @@
 
 import { FUNNEL_LABEL, PESSOAS, PIPELINES, SDR_FIELD_KEY } from './config';
 import { addDias, type ISODate } from './dates';
+import type { ItemNegocioEtapa } from './types';
 
 const BASE_PADRAO = 'https://voahoteis2.pipedrive.com/api';
 
@@ -566,6 +567,7 @@ export interface MetricasEventoPortoSeguro {
     funil: string;
     etapaId: number;
     total: number;
+    negocios: ItemNegocioEtapa[];
   }>;
 }
 
@@ -624,7 +626,13 @@ function resumirNegociosDoEvento(
   const contagemPorProprietario = new Map<string, number>();
   const contagemPorProprietarioEtapa = new Map<
     string,
-    { proprietario: string; funil: string; etapaId: number; total: number }
+    {
+      proprietario: string;
+      funil: string;
+      etapaId: number;
+      total: number;
+      negocios: ItemNegocioEtapa[];
+    }
   >();
   const grupoPorPipeline = new Map(gruposEtapas.map((grupo) => [grupo.pipelineId, grupo]));
 
@@ -641,14 +649,22 @@ function resumirNegociosDoEvento(
 
     const chave = JSON.stringify([proprietario, grupo.funil, etapa.id]);
     const existente = contagemPorProprietarioEtapa.get(chave);
+    const itemNegocio: ItemNegocioEtapa = {
+      negocioId: negocio.id,
+      titulo: negocio.title,
+      proprietario,
+      origem: null,
+    };
     if (existente) {
       existente.total += 1;
+      existente.negocios.push(itemNegocio);
     } else {
       contagemPorProprietarioEtapa.set(chave, {
         proprietario,
         funil: grupo.funil,
         etapaId: etapa.id,
         total: 1,
+        negocios: [itemNegocio],
       });
     }
   }
@@ -677,19 +693,19 @@ function resumirNegociosDoEvento(
 /** Conta leads ativos e negócios abertos com a etiqueta do evento. */
 export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoPortoSeguro> {
   if (modoMock()) {
-    const [moduloMock, etapasNovosNegocios, etapasSalabim] = await Promise.all([
+    const [moduloMock, etapasNovosNegocios] = await Promise.all([
       mock(),
       buscarEtapasDoPipeline(PIPELINES.novosNegocios),
-      buscarEtapasDoPipeline(PIPELINES.salabim),
     ]);
-    const negociosDeExemplo = (await moduloMock.negociosAbertosFalsos()).slice(0, 6);
+    const negociosDeExemplo = (await moduloMock.negociosAbertosFalsos())
+      .filter((negocio) => negocio.pipeline_id === PIPELINES.novosNegocios)
+      .slice(0, 6);
     const gruposEtapas = [
       {
         funil: FUNNEL_LABEL.novosNegocios,
         pipelineId: PIPELINES.novosNegocios,
         etapas: etapasNovosNegocios,
       },
-      { funil: FUNNEL_LABEL.salabim, pipelineId: PIPELINES.salabim, etapas: etapasSalabim },
     ];
 
     return {
@@ -701,7 +717,7 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
 
   const nomeEtiqueta = 'EVENTO PORTO SEGURO';
   const nomeNormalizado = normalizarNome(nomeEtiqueta);
-  const [leads, etiquetasLead, camposNegocio, negociosAbertos, etapasNovosNegocios, etapasSalabim] =
+  const [leads, etiquetasLead, camposNegocio, negociosAbertos, etapasNovosNegocios] =
     await Promise.all([
       buscarTudo<(EntidadeComEtiquetas & { id: string | number })>('/v1/leads', {}, 100),
       buscarTudo<EtiquetaPipedrive>('/v1/leadLabels', {}, 100),
@@ -711,7 +727,6 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
       }>('/v1/dealFields', {}, 100),
       buscarNegociosAbertos(),
       buscarEtapasDoPipeline(PIPELINES.novosNegocios),
-      buscarEtapasDoPipeline(PIPELINES.salabim),
     ]);
 
   const idsLead = new Set(
@@ -733,6 +748,9 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
   const negociosComEtiqueta = negociosAbertos.filter((negocio) =>
     entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
   );
+  const negociosNovosComEtiqueta = negociosComEtiqueta.filter(
+    (negocio) => negocio.pipeline_id === PIPELINES.novosNegocios
+  );
 
   if (idsLead.size === 0 && idsNegocio.size === 0 && totalLeads === 0 && negociosComEtiqueta.length === 0) {
     throw new PipedriveError(`A etiqueta "${nomeEtiqueta}" não foi encontrada no Pipedrive.`);
@@ -744,13 +762,12 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
       pipelineId: PIPELINES.novosNegocios,
       etapas: etapasNovosNegocios,
     },
-    { funil: FUNNEL_LABEL.salabim, pipelineId: PIPELINES.salabim, etapas: etapasSalabim },
   ];
 
   return {
     leads: totalLeads,
-    negociosAbertos: negociosComEtiqueta.length,
-    ...resumirNegociosDoEvento(negociosComEtiqueta, gruposEtapas),
+    negociosAbertos: negociosNovosComEtiqueta.length,
+    ...resumirNegociosDoEvento(negociosNovosComEtiqueta, gruposEtapas),
   };
 }
 
