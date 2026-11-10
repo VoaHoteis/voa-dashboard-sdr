@@ -1080,6 +1080,17 @@ h3 {
   color: var(--salabim);
 }
 
+.evento-metrica:last-child .clicavel {
+  border-bottom-color: currentColor;
+  padding: 4px 0;
+}
+
+.evento-metrica:last-child .clicavel:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--salabim);
+  outline-offset: 4px;
+}
+
 .evento-metrica span {
   color: var(--texto-fraco);
   font-size: 13px;
@@ -1221,10 +1232,26 @@ h3 {
 }
 
 .evento-matriz .evento-matriz__numero {
-  border-bottom-color: currentColor;
+  align-items: center;
+  border-bottom: 0;
+  display: flex;
   font: inherit;
   font-variant-numeric: tabular-nums;
+  justify-content: flex-end;
+  min-height: 32px;
+  padding: 4px 0;
   text-align: right;
+  width: 100%;
+}
+
+.evento-matriz button.evento-matriz__numero {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 4px;
+}
+
+.evento-matriz button.evento-matriz__numero:hover {
+  background-color: var(--painel);
 }
 
 .evento-matriz .evento-matriz__numero:focus-visible {

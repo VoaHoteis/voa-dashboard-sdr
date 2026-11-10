@@ -52,12 +52,14 @@ export function CardEventoPortoSeguro() {
                   <span>Leads com a etiqueta</span>
                 </div>
                 <div className="evento-metrica">
-                  <strong
-                    className="numero grande"
-                    aria-label={`${dados.negociosAbertos} negócios abertos no funil ${nomeFunil}`}
-                  >
-                    {numeroBR(dados.negociosAbertos, 0)}
-                  </strong>
+                  <NumeroClicavel
+                    valor={numeroBR(dados.negociosAbertos, 0)}
+                    classe="numero grande"
+                    aoAbrir={() => abrirDetalhe('Todos os negócios', todosOsNegocios)}
+                    titulo={`Ver todos os ${quantidadeNegocios(dados.negociosAbertos)} do funil ${nomeFunil}`}
+                    ariaLabel={`Ver todos os ${dados.negociosAbertos} negócios abertos no funil ${nomeFunil}`}
+                    desabilitado={dados.negociosAbertos === 0}
+                  />
                   <span>Negócios em aberto · {nomeFunil}</span>
                 </div>
               </div>
