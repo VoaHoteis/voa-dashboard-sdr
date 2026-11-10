@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { resumirNegociosDoEvento, type EtapaPipeline, type Negocio } from './pipedrive';
+import {
+  resumirAtividadesDoEvento,
+  resumirNegociosDoEvento,
+  type Atividade,
+  type EtapaPipeline,
+  type Negocio,
+} from './pipedrive';
 
 describe('resumo do Evento Porto Seguro', () => {
   it('inclui negócios do Bruno no funil Salabim e os agrupa pelas etapas', () => {
@@ -71,5 +77,37 @@ describe('resumo do Evento Porto Seguro', () => {
       resumo.negociosPorEtapa.find((item) => item.funil === 'Salabim' && item.etapaId === 102)?.total,
       1
     );
+  });
+
+  it('conta atividades concluídas ligadas a negócios do evento por hoje, semana e mês', () => {
+    const criarAtividade = (
+      id: number,
+      data: string,
+      negocioId: number,
+      userId: number | null = 12029818,
+      done = true
+    ): Atividade => ({
+      id,
+      type: 'call',
+      subject: 'Ligação',
+      done,
+      due_date: data,
+      marked_as_done_time: done ? `${data} 15:00:00` : null,
+      deal_id: negocioId,
+      user_id: userId,
+    });
+    const atividades = [
+      criarAtividade(1, '2026-11-10', 1),
+      criarAtividade(2, '2026-11-09', 2),
+      criarAtividade(3, '2026-11-08', 1),
+      criarAtividade(4, '2026-10-31', 1),
+      criarAtividade(5, '2026-11-10', 3),
+      criarAtividade(6, '2026-11-10', 1, 12029818, false),
+    ];
+
+    const resumo = resumirAtividadesDoEvento(atividades, new Set([1, 2]), '2026-11-10');
+    const bruno = resumo.find((pessoa) => pessoa.pessoa === 'Bruno Dias');
+
+    assert.deepEqual(bruno, { pessoa: 'Bruno Dias', hoje: 1, semana: 2, mes: 3 });
   });
 });

@@ -1267,6 +1267,15 @@ h3 {
   font-weight: 700;
 }
 
+.evento-atividades__tabela th:not(:first-child),
+.evento-atividades__tabela td:not(:first-child) {
+  min-width: 88px;
+}
+
+.evento-atividades__tabela tbody th {
+  font-weight: 500;
+}
+
 .evento-vazio {
   padding: 12px 0;
 }
@@ -1276,6 +1285,22 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  .evento-atividades__tabela {
+    --coluna-proprietario: 90px;
+    font-size: 11px;
+  }
+
+  .evento-atividades__tabela th:first-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .evento-atividades__tabela th:not(:first-child),
+  .evento-atividades__tabela td:not(:first-child) {
+    min-width: 44px;
+    padding-inline: 3px;
+  }
+
   .evento-distribuicao {
     padding: 12px;
   }
@@ -1283,6 +1308,10 @@ h3 {
   .evento-matriz {
     --coluna-proprietario: 150px;
     --coluna-total: 60px;
+  }
+
+  .evento-matriz.evento-atividades__tabela {
+    --coluna-proprietario: 90px;
   }
 }
 

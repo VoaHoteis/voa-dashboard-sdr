@@ -7,8 +7,14 @@
  * mesma pergunta sempre devolve o mesmo numero.
  */
 
-import { FUNNEL_LABEL, nomeDaPessoa, PESSOAS, PIPELINES, SDR_FIELD_KEY } from './config';
-import { addDias, type ISODate } from './dates';
+import {
+  FUNNEL_LABEL,
+  nomeDaPessoa,
+  PESSOAS,
+  PIPELINES,
+  SDR_FIELD_KEY,
+} from './config';
+import { addDias, diaDaSemana, hoje, primeiroDiaDoMes, type ISODate } from './dates';
 import type { ItemNegocioEtapa } from './types';
 
 const BASE_PADRAO = 'https://voahoteis2.pipedrive.com/api';
@@ -196,7 +202,7 @@ export interface Negocio {
 export async function buscarAtividades(opts: {
   inicio: ISODate;
   fim: ISODate;
-  tipos: readonly string[];
+  tipos?: readonly string[];
   concluidas: boolean;
   userId?: number;
 }): Promise<Atividade[]> {
@@ -204,23 +210,23 @@ export async function buscarAtividades(opts: {
 
   // A API v1 aceita um único tipo por chamada. Enviar uma lista separada por
   // vírgulas não aplica um filtro válido e pode ocultar todas as atividades.
-  // O `end_date` da v1 não inclui o último dia: pedindo até 30/09, as reuniões
-  // de 30/09 somem. Pedimos um dia a mais e recortamos por `due_date` aqui.
-  const atividadesPorTipo = await Promise.all(
-    [...new Set(opts.tipos)].map((type) =>
-      buscarTudo<Atividade>(
-        '/v1/activities',
-        {
-          user_id: opts.userId ?? 0,
-          type,
-          start_date: opts.inicio,
-          end_date: addDias(opts.fim, 1),
-          done: opts.concluidas ? 1 : 0,
-        },
-        100
+  // Sem tipos, consulta todos os tipos em uma única chamada.
+  // O `end_date` da v1 não inclui o último dia; pedimos um dia a mais e
+  // recortamos por `due_date` aqui.
+  const tipos = [...new Set(opts.tipos ?? [])];
+  const parametros = {
+    user_id: opts.userId ?? 0,
+    start_date: opts.inicio,
+    end_date: addDias(opts.fim, 1),
+    done: opts.concluidas ? 1 : 0,
+  };
+  const atividadesPorTipo = tipos.length
+    ? await Promise.all(
+        tipos.map((type) =>
+          buscarTudo<Atividade>('/v1/activities', { ...parametros, type }, 100)
+        )
       )
-    )
-  );
+    : [await buscarTudo<Atividade>('/v1/activities', parametros, 100)];
 
   const atividadesUnicas = new Map<number, Atividade>();
   for (const atividade of atividadesPorTipo.flat()) {
@@ -557,6 +563,47 @@ export async function buscarNegociosAbertos(): Promise<Negocio[]> {
   return buscarTudo<Negocio>('/v1/deals', { status: 'open', user_id: 0 });
 }
 
+export function resumirAtividadesDoEvento(
+  atividades: Atividade[],
+  negociosEvento: ReadonlySet<number>,
+  referencia: ISODate = hoje()
+): Array<{ pessoa: string; hoje: number; semana: number; mes: number }> {
+  const inicioMes = primeiroDiaDoMes(referencia);
+  const inicioSemana = addDias(referencia, -((diaDaSemana(referencia) + 6) % 7));
+  const nomesPorUsuario = new Map(
+    PESSOAS.flatMap((pessoa) =>
+      pessoa.userId === undefined ? [] : [[pessoa.userId, pessoa.nome] as const]
+    )
+  );
+  const contagens = new Map<string, { pessoa: string; hoje: number; semana: number; mes: number }>();
+
+  for (const pessoa of PESSOAS) {
+    if (pessoa.userId === undefined) continue;
+    contagens.set(pessoa.nome, { pessoa: pessoa.nome, hoje: 0, semana: 0, mes: 0 });
+  }
+
+  for (const atividade of atividades) {
+    if (!atividade.done || atividade.deal_id === null || !negociosEvento.has(atividade.deal_id)) {
+      continue;
+    }
+    const data = dataConclusao(atividade);
+    if (!data || data < inicioMes || data > referencia) continue;
+
+    const pessoa = atividade.user_id === null
+      ? 'Sem executor'
+      : nomesPorUsuario.get(atividade.user_id) ?? `Usuário ${atividade.user_id}`;
+    const contagem = contagens.get(pessoa) ?? { pessoa, hoje: 0, semana: 0, mes: 0 };
+    contagem.mes += 1;
+    if (data >= inicioSemana) contagem.semana += 1;
+    if (data === referencia) contagem.hoje += 1;
+    contagens.set(pessoa, contagem);
+  }
+
+  return [...contagens.values()].sort(
+    (a, b) => b.mes - a.mes || a.pessoa.localeCompare(b.pessoa, 'pt-BR')
+  );
+}
+
 export interface MetricasEventoPortoSeguro {
   leads: number;
   negociosAbertos: number;
@@ -569,6 +616,7 @@ export interface MetricasEventoPortoSeguro {
     total: number;
     negocios: ItemNegocioEtapa[];
   }>;
+  atividadesPorPessoa: Array<{ pessoa: string; hoje: number; semana: number; mes: number }>;
 }
 
 interface EntidadeComEtiquetas {
@@ -704,7 +752,24 @@ async function buscarGruposEtapasEvento(): Promise<
   );
 }
 
-/** Conta leads ativos e negócios abertos com a etiqueta nos funis acompanhados. */
+async function buscarAtividadesDosNegociosDoEvento(
+  negocios: Negocio[],
+  referencia: ISODate = hoje()
+): Promise<MetricasEventoPortoSeguro['atividadesPorPessoa']> {
+  const atividades = await buscarAtividades({
+    inicio: addDias(primeiroDiaDoMes(referencia), -35),
+    fim: referencia,
+    tipos: [],
+    concluidas: true,
+  });
+  return resumirAtividadesDoEvento(
+    atividades,
+    new Set(negocios.map((negocio) => negocio.id)),
+    referencia
+  );
+}
+
+/** Conta leads ativos, negócios abertos e atividades concluídas da etiqueta. */
 export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoPortoSeguro> {
   if (modoMock()) {
     const [moduloMock, gruposEtapas] = await Promise.all([mock(), buscarGruposEtapasEvento()]);
@@ -717,6 +782,7 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
       leads: 14,
       negociosAbertos: negociosDeExemplo.length,
       ...resumirNegociosDoEvento(negociosDeExemplo, gruposEtapas),
+      atividadesPorPessoa: await buscarAtividadesDosNegociosDoEvento(negociosDeExemplo),
     };
   }
 
@@ -765,6 +831,7 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
     leads: totalLeads,
     negociosAbertos: negociosEvento.length,
     ...resumirNegociosDoEvento(negociosEvento, gruposEtapas),
+    atividadesPorPessoa: await buscarAtividadesDosNegociosDoEvento(negociosEvento),
   };
 }
 

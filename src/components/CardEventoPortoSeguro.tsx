@@ -58,6 +58,14 @@ export function CardEventoPortoSeguro() {
               .filter((item) => item.funil === funil && item.etapaId === etapaId)
               .flatMap((item) => item.negocios);
           const todosOsNegocios = todasCelulas.flatMap((item) => item.negocios);
+          const totalAtividades = dados.atividadesPorPessoa.reduce(
+            (total, pessoa) => ({
+              hoje: total.hoje + pessoa.hoje,
+              semana: total.semana + pessoa.semana,
+              mes: total.mes + pessoa.mes,
+            }),
+            { hoje: 0, semana: 0, mes: 0 }
+          );
           const abrirDetalhe = (titulo: string, negocios: ItemNegocioEtapa[]) =>
             setDetalhe({ titulo, negocios });
           return (
@@ -243,6 +251,66 @@ export function CardEventoPortoSeguro() {
                 ) : (
                   <p className="evento-vazio">Nenhum negócio aberto com esta etiqueta nos funis acompanhados.</p>
                 )}
+              </section>
+
+              <section className="evento-distribuicao" aria-labelledby="evento-atividades-titulo">
+                <div className="evento-distribuicao__cabecalho">
+                  <h3 id="evento-atividades-titulo">Atividades por pessoa</h3>
+                  <p>Concluídas em negócios abertos com a etiqueta · Semana de segunda a hoje</p>
+                </div>
+                <div
+                  className="evento-matriz__rolagem"
+                  role="region"
+                  aria-label="Atividades por pessoa nos negócios do Evento Porto Seguro"
+                  tabIndex={0}
+                >
+                  <table className="evento-matriz evento-atividades__tabela">
+                    <caption className="evento-matriz__legenda">
+                      Quantidade de atividades concluídas vinculadas aos negócios abertos com a etiqueta Evento Porto Seguro.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th
+                          className="evento-matriz__fixa evento-matriz__proprietario"
+                          scope="col"
+                        >
+                          Pessoa
+                        </th>
+                        <th className="evento-matriz__etapa" scope="col">Hoje</th>
+                        <th className="evento-matriz__etapa" scope="col">Semana</th>
+                        <th className="evento-matriz__etapa" scope="col">Mês</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dados.atividadesPorPessoa.map((pessoa) => (
+                        <tr key={pessoa.pessoa}>
+                          <th
+                            className="evento-matriz__fixa evento-matriz__proprietario"
+                            scope="row"
+                          >
+                            {pessoa.pessoa}
+                          </th>
+                          <td className="evento-matriz__valor">{numeroBR(pessoa.hoje, 0)}</td>
+                          <td className="evento-matriz__valor">{numeroBR(pessoa.semana, 0)}</td>
+                          <td className="evento-matriz__valor">{numeroBR(pessoa.mes, 0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <th
+                          className="evento-matriz__fixa evento-matriz__proprietario"
+                          scope="row"
+                        >
+                          Total
+                        </th>
+                        <td className="evento-matriz__valor">{numeroBR(totalAtividades.hoje, 0)}</td>
+                        <td className="evento-matriz__valor">{numeroBR(totalAtividades.semana, 0)}</td>
+                        <td className="evento-matriz__valor">{numeroBR(totalAtividades.mes, 0)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </section>
             </div>
           );

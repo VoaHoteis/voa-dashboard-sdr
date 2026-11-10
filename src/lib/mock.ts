@@ -19,6 +19,7 @@ import {
   TIPOS_ESFORCO,
   TIPO_LIGACAO,
   TIPO_NO_SHOW,
+  PESSOAS,
 } from './config';
 import { addDias, ehDiaUtil, hoje, listarDias, primeiroDiaDoMes, type ISODate } from './dates';
 import type { Atividade, Negocio } from './pipedrive';
@@ -197,17 +198,25 @@ export async function negociosFalsosPorIds(ids: number[]): Promise<Map<number, N
 export async function atividadesFalsas(opts: {
   inicio: ISODate;
   fim: ISODate;
-  tipos: readonly string[];
+  tipos?: readonly string[];
   concluidas: boolean;
   userId?: number;
 }): Promise<Atividade[]> {
   const out: Atividade[] = [];
-  const ehAgendamento = opts.tipos.some((t) => (TIPOS_AGENDAMENTO as readonly string[]).includes(t));
-  const ehNoShow = opts.tipos.includes(TIPO_NO_SHOW);
-  const ehLigacoes = opts.tipos.length === 1 && opts.tipos[0] === TIPO_LIGACAO;
+  const todosTipos = !opts.tipos?.length;
+  const tipos = opts.tipos?.length
+    ? [...opts.tipos]
+    : [...TIPOS_AGENDAMENTO, ...TIPOS_ESFORCO.map((tipo) => tipo.key), TIPO_NO_SHOW];
+  const ehAgendamento = tipos.some((tipo) => TIPOS_AGENDAMENTO.some((agendamento) => agendamento === tipo));
+  const ehNoShow = tipos.includes(TIPO_NO_SHOW);
+  const ehLigacoes = tipos.length === 1 && tipos[0] === TIPO_LIGACAO;
   const usuarios = opts.userId
     ? [opts.userId]
-    : [...new Set([...SDRS.map((s) => s.userId), ...CLOSERS.map((c) => c.userId)])];
+    : [...new Set([
+        ...SDRS.map((s) => s.userId),
+        ...CLOSERS.map((c) => c.userId),
+        ...(todosTipos ? PESSOAS.flatMap((p) => p.userId === undefined ? [] : [p.userId]) : []),
+      ])];
   let id = 500000;
 
   for (const dia of listarDias(opts.inicio, opts.fim)) {
@@ -215,6 +224,25 @@ export async function atividadesFalsas(opts: {
 
     for (const userId of usuarios) {
       const r = rng(hash(dia + ':' + userId + ':' + (opts.concluidas ? 'd' : 'p')));
+
+      if (todosTipos) {
+        const quantos = opts.concluidas ? 2 + Math.floor(r() * 4) : 0;
+        for (let k = 0; k < quantos; k++) {
+          const tipo = tipos[Math.floor(r() * tipos.length)];
+          const negocio = r() < 0.08 ? null : negocioDaSdr(r, userId);
+          out.push({
+            id: id++,
+            type: tipo,
+            subject: tipo,
+            done: opts.concluidas,
+            due_date: dia,
+            marked_as_done_time: opts.concluidas ? dia + ' 12:00:00' : null,
+            deal_id: negocio?.id ?? null,
+            user_id: userId,
+          });
+        }
+        continue;
+      }
 
       if (ehLigacoes) {
         // Volume alto de tentativas (como o discador automático real): ~34 a 60
@@ -260,7 +288,7 @@ export async function atividadesFalsas(opts: {
           const negocio = negocioDaSdr(r, userId);
           out.push({
             id: id++,
-            type: opts.tipos[Math.floor(r() * opts.tipos.length)],
+            type: tipos[Math.floor(r() * tipos.length)],
             subject: 'Reunião de Apresentação — ' + negocio.title,
             done: opts.concluidas,
             due_date: dia,
@@ -273,7 +301,7 @@ export async function atividadesFalsas(opts: {
         // Esforco: bem mais volume, distribuido entre os 6 tipos.
         const quantos = 4 + Math.floor(r() * 9);
         for (let k = 0; k < quantos; k++) {
-          const tipo = opts.tipos[Math.floor(r() * opts.tipos.length)];
+          const tipo = tipos[Math.floor(r() * tipos.length)];
           const label = TIPOS_ESFORCO.find((t) => t.key === tipo)?.label ?? tipo;
           out.push({
             id: id++,
