@@ -7,7 +7,7 @@
  * mesma pergunta sempre devolve o mesmo numero.
  */
 
-import { PESSOAS, SDR_FIELD_KEY } from './config';
+import { FUNNEL_LABEL, PESSOAS, PIPELINES, SDR_FIELD_KEY } from './config';
 import { addDias, type ISODate } from './dates';
 
 const BASE_PADRAO = 'https://voahoteis2.pipedrive.com/api';
@@ -559,6 +559,8 @@ export async function buscarNegociosAbertos(): Promise<Negocio[]> {
 export interface MetricasEventoPortoSeguro {
   leads: number;
   negociosAbertos: number;
+  negociosPorProprietario: Array<{ nome: string; total: number }>;
+  negociosPorEtapa: Array<{ funil: string; etapa: string; ordem: number; total: number }>;
 }
 
 interface EntidadeComEtiquetas {
@@ -605,21 +607,82 @@ function entidadeTemEtiqueta(
   );
 }
 
+/** Conta negócios etiquetados por proprietário e por etapa dos funis acompanhados. */
+function resumirNegociosDoEvento(
+  negocios: Negocio[],
+  gruposEtapas: Array<{ funil: string; pipelineId: number; etapas: EtapaPipeline[] }>
+): Pick<MetricasEventoPortoSeguro, 'negociosPorProprietario' | 'negociosPorEtapa'> {
+  const contagemPorProprietario = new Map<string, number>();
+
+  for (const negocio of negocios) {
+    const nome = nomeDoProprietario(negocio) ?? 'Sem proprietário';
+    contagemPorProprietario.set(nome, (contagemPorProprietario.get(nome) ?? 0) + 1);
+  }
+
+  return {
+    negociosPorProprietario: [...contagemPorProprietario.entries()]
+      .map(([nome, total]) => ({ nome, total }))
+      .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR')),
+    negociosPorEtapa: gruposEtapas.flatMap(({ funil, pipelineId, etapas }) => {
+      const porEtapa = new Map<string, { funil: string; etapa: string; ordem: number; total: number }>();
+
+      for (const etapa of etapas) {
+        const total = negocios.filter(
+          (negocio) => negocio.pipeline_id === pipelineId && negocio.stage_id === etapa.id
+        ).length;
+        const existente = porEtapa.get(etapa.nome);
+
+        if (existente) {
+          existente.total += total;
+        } else {
+          porEtapa.set(etapa.nome, { funil, etapa: etapa.nome, ordem: etapa.ordem, total });
+        }
+      }
+
+      return [...porEtapa.values()].sort((a, b) => a.ordem - b.ordem);
+    }),
+  };
+}
+
 /** Conta leads ativos e negócios abertos com a etiqueta do evento. */
 export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoPortoSeguro> {
-  if (modoMock()) return { leads: 14, negociosAbertos: 6 };
+  if (modoMock()) {
+    const [moduloMock, etapasNovosNegocios, etapasSalabim] = await Promise.all([
+      mock(),
+      buscarEtapasDoPipeline(PIPELINES.novosNegocios),
+      buscarEtapasDoPipeline(PIPELINES.salabim),
+    ]);
+    const negociosDeExemplo = (await moduloMock.negociosAbertosFalsos()).slice(0, 6);
+    const gruposEtapas = [
+      {
+        funil: FUNNEL_LABEL.novosNegocios,
+        pipelineId: PIPELINES.novosNegocios,
+        etapas: etapasNovosNegocios,
+      },
+      { funil: FUNNEL_LABEL.salabim, pipelineId: PIPELINES.salabim, etapas: etapasSalabim },
+    ];
+
+    return {
+      leads: 14,
+      negociosAbertos: negociosDeExemplo.length,
+      ...resumirNegociosDoEvento(negociosDeExemplo, gruposEtapas),
+    };
+  }
 
   const nomeEtiqueta = 'EVENTO PORTO SEGURO';
   const nomeNormalizado = normalizarNome(nomeEtiqueta);
-  const [leads, etiquetasLead, camposNegocio, negociosAbertos] = await Promise.all([
-    buscarTudo<(EntidadeComEtiquetas & { id: string | number })>('/v1/leads', {}, 100),
-    buscarTudo<EtiquetaPipedrive>('/v1/leadLabels', {}, 100),
-    buscarTudo<{
-      key: string;
-      options?: EtiquetaPipedrive[] | null;
-    }>('/v1/dealFields', {}, 100),
-    buscarNegociosAbertos(),
-  ]);
+  const [leads, etiquetasLead, camposNegocio, negociosAbertos, etapasNovosNegocios, etapasSalabim] =
+    await Promise.all([
+      buscarTudo<(EntidadeComEtiquetas & { id: string | number })>('/v1/leads', {}, 100),
+      buscarTudo<EtiquetaPipedrive>('/v1/leadLabels', {}, 100),
+      buscarTudo<{
+        key: string;
+        options?: EtiquetaPipedrive[] | null;
+      }>('/v1/dealFields', {}, 100),
+      buscarNegociosAbertos(),
+      buscarEtapasDoPipeline(PIPELINES.novosNegocios),
+      buscarEtapasDoPipeline(PIPELINES.salabim),
+    ]);
 
   const idsLead = new Set(
     etiquetasLead
@@ -637,15 +700,28 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
   );
 
   const totalLeads = leads.filter((lead) => entidadeTemEtiqueta(lead, idsLead, nomeNormalizado)).length;
-  const totalNegociosAbertos = negociosAbertos.filter((negocio) =>
+  const negociosComEtiqueta = negociosAbertos.filter((negocio) =>
     entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
-  ).length;
+  );
 
-  if (idsLead.size === 0 && idsNegocio.size === 0 && totalLeads === 0 && totalNegociosAbertos === 0) {
+  if (idsLead.size === 0 && idsNegocio.size === 0 && totalLeads === 0 && negociosComEtiqueta.length === 0) {
     throw new PipedriveError(`A etiqueta "${nomeEtiqueta}" não foi encontrada no Pipedrive.`);
   }
 
-  return { leads: totalLeads, negociosAbertos: totalNegociosAbertos };
+  const gruposEtapas = [
+    {
+      funil: FUNNEL_LABEL.novosNegocios,
+      pipelineId: PIPELINES.novosNegocios,
+      etapas: etapasNovosNegocios,
+    },
+    { funil: FUNNEL_LABEL.salabim, pipelineId: PIPELINES.salabim, etapas: etapasSalabim },
+  ];
+
+  return {
+    leads: totalLeads,
+    negociosAbertos: negociosComEtiqueta.length,
+    ...resumirNegociosDoEvento(negociosComEtiqueta, gruposEtapas),
+  };
 }
 
 /**

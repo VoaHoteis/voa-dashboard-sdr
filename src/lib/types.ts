@@ -78,6 +78,8 @@ export interface NegociosMercadoResposta {
 export interface MetricasEventoPortoSeguroResposta {
   leads: number;
   negociosAbertos: number;
+  negociosPorProprietario: Array<{ nome: string; total: number }>;
+  negociosPorEtapa: Array<{ funil: string; etapa: string; ordem: number; total: number }>;
 }
 
 export interface AgendamentosResposta {
