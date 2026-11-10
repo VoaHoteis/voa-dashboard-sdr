@@ -401,6 +401,7 @@ export function NumeroClicavel({
   cor,
   aoAbrir,
   titulo,
+  ariaLabel,
   desabilitado,
 }: {
   valor: React.ReactNode;
@@ -408,6 +409,7 @@ export function NumeroClicavel({
   cor?: string;
   aoAbrir: () => void;
   titulo: string;
+  ariaLabel?: string;
   desabilitado?: boolean;
 }) {
   if (desabilitado) {
@@ -418,7 +420,14 @@ export function NumeroClicavel({
     );
   }
   return (
-    <button className={`clicavel ${classe}`} style={{ color: cor }} onClick={aoAbrir} title={titulo}>
+    <button
+      type="button"
+      className={`clicavel ${classe}`}
+      style={{ color: cor }}
+      onClick={aoAbrir}
+      title={titulo}
+      aria-label={ariaLabel}
+    >
       {valor}
     </button>
   );

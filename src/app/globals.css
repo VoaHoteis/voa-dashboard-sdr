@@ -1181,10 +1181,6 @@ h3 {
   color: var(--novos);
 }
 
-.evento-matriz__grupo[data-funil='salabim'] {
-  color: var(--salabim);
-}
-
 .evento-matriz__etapa {
   max-width: 150px;
   color: var(--texto-fraco);
@@ -1219,21 +1215,22 @@ h3 {
   font-weight: 700;
 }
 
-.evento-matriz__valor,
-.evento-matriz__residual {
+.evento-matriz__valor {
   min-width: 76px;
-}
-
-.evento-matriz__valor[data-funil='novos'] {
   color: var(--novos);
 }
 
-.evento-matriz__valor[data-funil='salabim'] {
-  color: var(--salabim);
+.evento-matriz .evento-matriz__numero {
+  border-bottom-color: currentColor;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
-.evento-matriz__residual {
-  color: var(--texto-fraco);
+.evento-matriz .evento-matriz__numero:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--novos);
+  outline-offset: 3px;
 }
 
 .evento-matriz tfoot th,
