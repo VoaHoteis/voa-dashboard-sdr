@@ -34,7 +34,7 @@ export type SdrKey = 'juliana' | 'barbara' | 'julianaAguiar' | 'wanderson' | 'vi
 
 /**
  * Papel de quem pode aparecer atribuido a um agendamento.
- * - 'sdr'     : as duas com meta (Juliana e Barbara);
+ * - 'sdr'     : SDRs ativas; Juliana e Bárbara formam a meta global do time;
  * - 'closer'  : Bruno e Joao -- fazem agendamentos, mas nao tem meta de SDR;
  * - 'bot'     : o robo de atendimento. Nao e pessoa nem SDR que saiu -- e um
  *               canal de agendamento por si so, que marca reunioes sozinho.
@@ -77,7 +77,7 @@ export interface SdrAtivoConfig extends Pessoa {
   papel: 'sdr';
 }
 
-/** SDRs com meta individual ativa; a meta do time é calculada apenas por esta lista. */
+/** SDRs que compõem a meta global do time, calculada apenas por esta lista. */
 export const SDRS: SdrConfig[] = [
   {
     key: 'juliana',
@@ -97,7 +97,7 @@ export const SDRS: SdrConfig[] = [
   },
 ];
 
-/** Todos os SDRs ativos; quem está sem meta continua aparecendo nos indicadores reais. */
+/** Todos os SDRs ativos; metas individuais não alteram a lista da meta global. */
 export const SDRS_ATIVOS: SdrAtivoConfig[] = [
   ...SDRS,
   {
@@ -106,6 +106,7 @@ export const SDRS_ATIVOS: SdrAtivoConfig[] = [
     sdrOptionNome: 'Juliana Aguiar',
     userId: 28966027,
     papel: 'sdr',
+    metas: { novosNegocios: 20, salabim: 10 },
   },
   {
     key: 'wanderson',
@@ -113,6 +114,7 @@ export const SDRS_ATIVOS: SdrAtivoConfig[] = [
     sdrOptionNome: 'Wanderson',
     userId: 28966016,
     papel: 'sdr',
+    metas: { novosNegocios: 20, salabim: 10 },
   },
   {
     key: 'viviane',
@@ -120,6 +122,7 @@ export const SDRS_ATIVOS: SdrAtivoConfig[] = [
     sdrOptionNome: 'Viviane',
     userId: 28966005,
     papel: 'sdr',
+    metas: { novosNegocios: 20, salabim: 10 },
   },
 ];
 
@@ -172,7 +175,7 @@ export const PAPEL_LABEL: Record<Papel, string> = {
   bot: 'bot',
 };
 
-/** Meta do time = soma das metas individuais (60 Novos + 30 Salabim = 90). */
+/** Meta global do time = soma das metas da lista SDRS (40 Novos + 20 Salabim = 60). */
 export const METAS_TIME: Record<FunnelKey, number> = {
   novosNegocios: SDRS.reduce((s, x) => s + x.metas.novosNegocios, 0),
   salabim: SDRS.reduce((s, x) => s + x.metas.salabim, 0),

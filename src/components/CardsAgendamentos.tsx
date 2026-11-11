@@ -7,6 +7,7 @@ import {
   METAS_TIME,
   META_TIME_TOTAL,
   MOSTRAR_NOTAS,
+  SDRS,
   type FunnelKey,
   type SdrKey,
 } from '@/lib/config';
@@ -26,6 +27,7 @@ import {
 import { TabelaNegocios } from './TabelaNegocios';
 
 const FUNIS: FunnelKey[] = ['novosNegocios', 'salabim'];
+const SDRS_META_GLOBAL = new Set(SDRS.map((sdr) => sdr.key));
 
 /** O que o modal esta mostrando no momento. */
 interface Detalhe {
@@ -41,11 +43,11 @@ export function CardAgendamentosTotais({ url }: { url: string }) {
     <>
       <Painel titulo="Agendamentos Totais" estado={estado}>
         {(d) => {
-          // A meta de 60 é das SDRs com meta (Juliana e Bárbara), não do time
-          // inteiro: o total inclui closers, inativos e agendamentos sem SDR.
-          const sdrsComMeta = d.porSdr.filter((s) => s.metas);
-          const totalSdr = sdrsComMeta.reduce((acc, s) => acc + s.total, 0);
-          const chavesSdr = sdrsComMeta.map((s) => s.sdr);
+          // A meta de 60 é calculada somente com SDRS; metas individuais extras
+          // não entram nesse total, assim como closers, inativos e agendamentos sem SDR.
+          const sdrsNaMetaGlobal = d.porSdr.filter((s) => SDRS_META_GLOBAL.has(s.sdr));
+          const totalSdr = sdrsNaMetaGlobal.reduce((acc, s) => acc + s.total, 0);
+          const chavesSdr = sdrsNaMetaGlobal.map((s) => s.sdr);
           const atingido = META_TIME_TOTAL > 0 ? totalSdr / META_TIME_TOTAL : 0;
           const divergem = d.time.total !== d.time.totalAlternativo;
           const abrir = (titulo: string, recorte: Recorte) =>
