@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ListaNegocios } from '@/components/CardFunilClosers';
+import { CardNegociosPerdidosEvento } from '@/components/CardNegociosPerdidosEvento';
 import { Modal, NumeroClicavel, Painel, numeroBR, useApi } from '@/components/base';
 import type { ItemNegocioEtapa, MetricasEventoPortoSeguroResposta } from '@/lib/types';
 
@@ -89,6 +90,8 @@ export function CardEventoPortoSeguro() {
                   <span>Negócios em aberto com etiqueta</span>
                 </div>
               </div>
+
+              <CardNegociosPerdidosEvento dados={dados.negociosPerdidos} />
 
               <section className="evento-distribuicao" aria-labelledby="evento-distribuicao-titulo">
                 <div className="evento-distribuicao__cabecalho">

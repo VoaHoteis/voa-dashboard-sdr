@@ -88,6 +88,11 @@ export interface MetricasEventoPortoSeguroResposta {
     total: number;
     negocios: ItemNegocioEtapa[];
   }>;
+  negociosPerdidos: {
+    total: number;
+    porSdr: Array<{ nome: string; total: number }>;
+    porMotivo: Array<{ motivo: string; total: number }>;
+  };
   atividadesPorPessoa: Array<{ pessoa: string; hoje: number; semana: number; mes: number }>;
 }
 

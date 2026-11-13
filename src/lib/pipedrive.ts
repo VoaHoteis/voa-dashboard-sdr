@@ -12,6 +12,7 @@ import {
   nomeDaPessoa,
   PESSOAS,
   PIPELINES,
+  SDRS_ATIVOS,
   SDR_FIELD_KEY,
 } from './config';
 import { addDias, diaDaSemana, hoje, primeiroDiaDoMes, type ISODate } from './dates';
@@ -690,6 +691,11 @@ export interface MetricasEventoPortoSeguro {
     total: number;
     negocios: ItemNegocioEtapa[];
   }>;
+  negociosPerdidos: {
+    total: number;
+    porSdr: Array<{ nome: string; total: number }>;
+    porMotivo: Array<{ motivo: string; total: number }>;
+  };
   atividadesPorPessoa: Array<{ pessoa: string; hoje: number; semana: number; mes: number }>;
 }
 
@@ -812,6 +818,47 @@ export function resumirNegociosDoEvento(
   };
 }
 
+/** Agrega perdas do evento por SDR responsável e motivo do Pipedrive. */
+export function resumirNegociosPerdidosDoEvento(
+  negocios: Negocio[]
+): MetricasEventoPortoSeguro['negociosPerdidos'] {
+  const porSdr = new Map(SDRS_ATIVOS.map((sdr) => [sdr.nome, 0]));
+  const porMotivo = new Map<string, number>();
+  let outrosResponsaveis = 0;
+
+  for (const negocio of negocios) {
+    const proprietarioId = donoDoNegocio(negocio);
+    const sdr = SDRS_ATIVOS.find((pessoa) => pessoa.userId === proprietarioId);
+    if (sdr) porSdr.set(sdr.nome, (porSdr.get(sdr.nome) ?? 0) + 1);
+    else outrosResponsaveis += 1;
+
+    const bruto = negocio.lost_reason;
+    let motivo = '';
+    if (typeof bruto === 'string') motivo = bruto.trim();
+    else if (bruto && typeof bruto === 'object') {
+      const objeto = bruto as { label?: unknown; value?: unknown; name?: unknown };
+      motivo = [objeto.label, objeto.value, objeto.name].find(
+        (valor): valor is string => typeof valor === 'string' && valor.trim().length > 0
+      )?.trim() ?? '';
+    }
+    const motivoFinal = motivo || 'Sem motivo informado';
+    porMotivo.set(motivoFinal, (porMotivo.get(motivoFinal) ?? 0) + 1);
+  }
+
+  const distribuicaoSdr = [...porSdr.entries()].map(([nome, total]) => ({ nome, total }));
+  if (outrosResponsaveis > 0) {
+    distribuicaoSdr.push({ nome: 'Outros responsáveis', total: outrosResponsaveis });
+  }
+
+  return {
+    total: negocios.length,
+    porSdr: distribuicaoSdr,
+    porMotivo: [...porMotivo.entries()]
+      .map(([motivo, total]) => ({ motivo, total }))
+      .sort((a, b) => b.total - a.total || a.motivo.localeCompare(b.motivo, 'pt-BR')),
+  };
+}
+
 /** Busca as etapas de todos os funis acompanhados pelo dashboard. */
 async function buscarGruposEtapasEvento(): Promise<
   Array<{ funil: string; pipelineId: number; etapas: EtapaPipeline[] }>
@@ -851,18 +898,30 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
     const negociosDeExemplo = (await moduloMock.negociosAbertosFalsos())
       .filter((negocio) => pipelinesAcompanhados.has(negocio.pipeline_id))
       .slice(0, 6);
+    const negociosPerdidos = (await moduloMock.negociosPerdidosFalsos({
+      inicio: addDias(hoje(), -90),
+      fim: hoje(),
+    })).filter((negocio) => pipelinesAcompanhados.has(negocio.pipeline_id));
 
     return {
       leads: 14,
       negociosAbertos: negociosDeExemplo.length,
       ...resumirNegociosDoEvento(negociosDeExemplo, gruposEtapas),
+      negociosPerdidos: resumirNegociosPerdidosDoEvento(negociosPerdidos),
       atividadesPorPessoa: await buscarAtividadesDosNegociosDoEvento(negociosDeExemplo),
     };
   }
 
   const nomeEtiqueta = 'EVENTO PORTO SEGURO';
   const nomeNormalizado = normalizarNome(nomeEtiqueta);
-  const [leads, etiquetasLead, camposNegocio, negociosAbertos, gruposEtapas] = await Promise.all([
+  const [
+    leads,
+    etiquetasLead,
+    camposNegocio,
+    negociosAbertos,
+    negociosPerdidosBrutos,
+    gruposEtapas,
+  ] = await Promise.all([
     buscarTudo<(EntidadeComEtiquetas & { id: string | number })>('/v1/leads', {}, 100),
     buscarTudo<EtiquetaPipedrive>('/v1/leadLabels', {}, 100),
     buscarTudo<{
@@ -870,6 +929,7 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
       options?: EtiquetaPipedrive[] | null;
     }>('/v1/dealFields', {}, 100),
     buscarNegociosAbertos(),
+    buscarTudo<Negocio>('/v1/deals', { status: 'lost', user_id: 0 }),
     buscarGruposEtapasEvento(),
   ]);
 
@@ -896,8 +956,19 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
   const negociosEvento = negociosComEtiqueta.filter((negocio) =>
     pipelinesAcompanhados.has(negocio.pipeline_id)
   );
+  const negociosPerdidosEvento = negociosPerdidosBrutos.filter(
+    (negocio) =>
+      pipelinesAcompanhados.has(negocio.pipeline_id) &&
+      entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
+  );
 
-  if (idsLead.size === 0 && idsNegocio.size === 0 && totalLeads === 0 && negociosComEtiqueta.length === 0) {
+  if (
+    idsLead.size === 0 &&
+    idsNegocio.size === 0 &&
+    totalLeads === 0 &&
+    negociosComEtiqueta.length === 0 &&
+    negociosPerdidosEvento.length === 0
+  ) {
     throw new PipedriveError(`A etiqueta "${nomeEtiqueta}" não foi encontrada no Pipedrive.`);
   }
 
@@ -905,6 +976,7 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
     leads: totalLeads,
     negociosAbertos: negociosEvento.length,
     ...resumirNegociosDoEvento(negociosEvento, gruposEtapas),
+    negociosPerdidos: resumirNegociosPerdidosDoEvento(negociosPerdidosEvento),
     atividadesPorPessoa: await buscarAtividadesDosNegociosDoEvento(negociosEvento),
   };
 }
