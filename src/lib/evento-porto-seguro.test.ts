@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   resumirAtividadesDoEvento,
   resumirNegociosDoEvento,
+  resumirNegociosPerdidosDoEvento,
   type Atividade,
   type EtapaPipeline,
   type Negocio,
@@ -77,6 +78,71 @@ describe('resumo do Evento Porto Seguro', () => {
       resumo.negociosPorEtapa.find((item) => item.funil === 'Salabim' && item.etapaId === 102)?.total,
       1
     );
+  });
+
+  it('resume hotéis perdidos por SDR proprietária e motivo', () => {
+    const negocios = [
+      {
+        id: 1,
+        title: 'Hotel A',
+        pipeline_id: 6,
+        stage_id: 34,
+        status: 'lost',
+        undone_activities_count: 0,
+        next_activity_date: null,
+        user_id: { id: 27038398, name: 'Juliana' },
+        lost_reason: { label: 'Sem orçamento' },
+      },
+      {
+        id: 2,
+        title: 'Hotel B',
+        pipeline_id: 6,
+        stage_id: 35,
+        status: 'lost',
+        undone_activities_count: 0,
+        next_activity_date: null,
+        user_id: { id: 27038398, name: 'Juliana' },
+      },
+      {
+        id: 3,
+        title: 'Hotel C',
+        pipeline_id: 10,
+        stage_id: 101,
+        status: 'lost',
+        undone_activities_count: 0,
+        next_activity_date: null,
+        user_id: { id: 27867501, name: 'Bárbara Almeida' },
+        lost_reason: 'Escolheu concorrente',
+      },
+      {
+        id: 4,
+        title: 'Hotel D',
+        pipeline_id: 10,
+        stage_id: 102,
+        status: 'lost',
+        undone_activities_count: 0,
+        next_activity_date: null,
+        user_id: { id: 12029818, name: 'Bruno Dias' },
+        lost_reason: null,
+      },
+    ] satisfies Negocio[];
+
+    const resumo = resumirNegociosPerdidosDoEvento(negocios);
+
+    assert.equal(resumo.total, 4);
+    assert.deepEqual(
+      resumo.porSdr.filter(({ total }) => total > 0),
+      [
+        { nome: 'Juliana', total: 2 },
+        { nome: 'Bárbara Almeida', total: 1 },
+        { nome: 'Outros responsáveis', total: 1 },
+      ]
+    );
+    assert.deepEqual(resumo.porMotivo, [
+      { motivo: 'Sem motivo informado', total: 2 },
+      { motivo: 'Escolheu concorrente', total: 1 },
+      { motivo: 'Sem orçamento', total: 1 },
+    ]);
   });
 
   it('conta atividades concluídas ligadas a negócios do evento por hoje, semana e mês', () => {
