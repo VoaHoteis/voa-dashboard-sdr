@@ -28,8 +28,8 @@ describe('resolver tipos de esforço do Pipedrive', () => {
         JSON.stringify({
           success: true,
           data: [
-            { key_string: 'custom_call_55', name: 'Ligação de Prospecção Automática 55' },
-            { key_string: 'custom_whatsapp_call', name: 'Ligação de Prospecção Whatsapp' },
+            { key_string: 'custom_call_55', name: 'Prospecção Automática #55' },
+            { key_string: 'custom_whatsapp_call', name: 'Ligação / Prospecção via Whatsapp' },
           ],
           additional_data: { pagination: { more_items_in_collection: false } },
         }),
@@ -40,10 +40,12 @@ describe('resolver tipos de esforço do Pipedrive', () => {
       {
         key: 'ligacao_de_prospeccao_automatica_55',
         nomePipedrive: 'Ligação de Prospecção Automatica 55',
+        tokensPipedrive: ['prospeccao', 'automatica', '55'],
       },
       {
         key: 'ligacao_de_prospeccao_whatsapp',
         nomePipedrive: 'Ligação de Prospecção WhatsApp',
+        tokensPipedrive: ['prospeccao', 'whatsapp'],
       },
       { key: 'whatsapp' },
     ]);
@@ -74,9 +76,39 @@ describe('resolver tipos de esforço do Pipedrive', () => {
         {
           key: 'ligacao_de_prospeccao_whatsapp',
           nomePipedrive: 'Ligação de Prospecção WhatsApp',
+          tokensPipedrive: ['prospeccao', 'whatsapp'],
         },
       ]),
-      /Tipos de atividade não encontrados no Pipedrive: "Ligação de Prospecção WhatsApp"/
+      /Tipos de atividade não encontrados ou ambíguos no Pipedrive: "Ligação de Prospecção WhatsApp"/
+    );
+  });
+
+  it('não escolhe arbitrariamente entre tipos personalizados com nomes parecidos', async () => {
+    process.env.PIPEDRIVE_API_TOKEN = 'test-token';
+    process.env.PIPEDRIVE_BASE_URL = 'https://example.test/api';
+    process.env.PIPEDRIVE_MOCK = '0';
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: [
+            { key_string: 'whatsapp_call', name: 'Ligação / Prospecção via WhatsApp' },
+            { key_string: 'whatsapp_followup', name: 'Prospecção WhatsApp follow-up' },
+          ],
+          additional_data: { pagination: { more_items_in_collection: false } },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
+
+    await assert.rejects(
+      resolverTiposEsforco([
+        {
+          key: 'ligacao_de_prospeccao_whatsapp',
+          nomePipedrive: 'Ligação de Prospecção WhatsApp',
+          tokensPipedrive: ['prospeccao', 'whatsapp'],
+        },
+      ]),
+      /ambíguo: Ligação \/ Prospecção via WhatsApp, Prospecção WhatsApp follow-up/
     );
   });
 });

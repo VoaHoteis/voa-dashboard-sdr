@@ -242,6 +242,16 @@ function normalizarNome(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
+function tokensDoNome(s: string): Set<string> {
+  return new Set(
+    normalizarNome(s)
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+  );
+}
+
 /**
  * Chaves dos tipos de atividade de agendamento: as fixas mais qualquer tipo
  * cadastrado com o nome "Reunião de Apresentação". A chave de um tipo
@@ -264,7 +274,11 @@ export async function resolverTiposAgendamento(fixos: readonly string[]): Promis
  * `key_string` de tipos personalizados pode ser diferente de um slug criado a partir do nome.
  */
 export async function resolverTiposEsforco(
-  configurados: readonly { key: string; nomePipedrive?: string }[]
+  configurados: readonly {
+    key: string;
+    nomePipedrive?: string;
+    tokensPipedrive?: readonly string[];
+  }[]
 ): Promise<Record<string, string>> {
   const comNomePipedrive = configurados.filter((tipo) => tipo.nomePipedrive);
   if (modoMock() || comNomePipedrive.length === 0) {
@@ -275,23 +289,47 @@ export async function resolverTiposEsforco(
     '/v1/activityTypes',
     {}
   );
-  const porNome = new Map(tipos.map((tipo) => [normalizarNome(tipo.name ?? ''), tipo.key_string]));
-  const naoEncontrados = comNomePipedrive.filter(
-    (tipo) => !porNome.has(normalizarNome(tipo.nomePipedrive ?? ''))
-  );
+  const resolvidos = new Map<string, string>();
+  const problemas: string[] = [];
 
-  if (naoEncontrados.length > 0) {
-    throw new PipedriveError(
-      'Tipos de atividade não encontrados no Pipedrive: ' +
-        naoEncontrados.map((tipo) => `"${tipo.nomePipedrive}"`).join(', ')
+  for (const configurado of comNomePipedrive) {
+    const nome = configurado.nomePipedrive ?? '';
+    const exatos = tipos.filter((tipo) => normalizarNome(tipo.name ?? '') === normalizarNome(nome));
+    if (exatos.length === 1) {
+      resolvidos.set(configurado.key, exatos[0].key_string);
+      continue;
+    }
+
+    const tokens = configurado.tokensPipedrive ?? [...tokensDoNome(nome)];
+    const candidatos = tipos.filter((tipo) => {
+      const nomeTokens = tokensDoNome(tipo.name ?? '');
+      return tokens.every((token) => nomeTokens.has(token));
+    });
+
+    if (candidatos.length === 1) {
+      resolvidos.set(configurado.key, candidatos[0].key_string);
+      continue;
+    }
+
+    const sugestoes =
+      candidatos.length > 1
+        ? candidatos.map((tipo) => tipo.name)
+        : tipos
+            .filter((tipo) => tokens.some((token) => tokensDoNome(tipo.name ?? '').has(token)))
+            .map((tipo) => tipo.name);
+    problemas.push(
+      candidatos.length > 1
+        ? `"${nome}" (ambíguo: ${sugestoes.join(', ')})`
+        : `"${nome}"${sugestoes.length ? ` (nomes próximos: ${sugestoes.join(', ')})` : ''}`
     );
   }
 
+  if (problemas.length > 0) {
+    throw new PipedriveError('Tipos de atividade não encontrados ou ambíguos no Pipedrive: ' + problemas.join('; '));
+  }
+
   return Object.fromEntries(
-    configurados.map(({ key, nomePipedrive }) => [
-      key,
-      nomePipedrive ? porNome.get(normalizarNome(nomePipedrive))! : key,
-    ])
+    configurados.map(({ key }) => [key, resolvidos.get(key) ?? key])
   );
 }
 
