@@ -260,6 +260,42 @@ export async function resolverTiposAgendamento(fixos: readonly string[]): Promis
 }
 
 /**
+ * Resolve os tipos personalizados do card de atividades pelo nome exibido no Pipedrive.
+ * `key_string` de tipos personalizados pode ser diferente de um slug criado a partir do nome.
+ */
+export async function resolverTiposEsforco(
+  configurados: readonly { key: string; nomePipedrive?: string }[]
+): Promise<Record<string, string>> {
+  const comNomePipedrive = configurados.filter((tipo) => tipo.nomePipedrive);
+  if (modoMock() || comNomePipedrive.length === 0) {
+    return Object.fromEntries(configurados.map(({ key }) => [key, key]));
+  }
+
+  const tipos = await buscarTudo<{ key_string: string; name: string; active_flag: boolean }>(
+    '/v1/activityTypes',
+    {}
+  );
+  const porNome = new Map(tipos.map((tipo) => [normalizarNome(tipo.name ?? ''), tipo.key_string]));
+  const naoEncontrados = comNomePipedrive.filter(
+    (tipo) => !porNome.has(normalizarNome(tipo.nomePipedrive ?? ''))
+  );
+
+  if (naoEncontrados.length > 0) {
+    throw new PipedriveError(
+      'Tipos de atividade não encontrados no Pipedrive: ' +
+        naoEncontrados.map((tipo) => `"${tipo.nomePipedrive}"`).join(', ')
+    );
+  }
+
+  return Object.fromEntries(
+    configurados.map(({ key, nomePipedrive }) => [
+      key,
+      nomePipedrive ? porNome.get(normalizarNome(nomePipedrive))! : key,
+    ])
+  );
+}
+
+/**
  * Negocios abertos de uma etapa.
  *
  * Aqui e a v1 de proposito, apesar de a v2 ter filtro de pipeline: so a v1

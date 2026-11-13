@@ -221,8 +221,8 @@ export const META_ATIVIDADES_POR_SEMANA = META_ATIVIDADES_POR_DIA * 5;
 /** Tipos de atividade de esforco, do card "Atividades por semana". */
 export const TIPOS_ESFORCO = [
   { key: TIPO_LIGACAO, label: 'Ligação de Prospecção', cor: '#C4FF3D' },
-  { key: 'ligacao_de_prospeccao_automatica_55', label: 'Ligação de Prospecção Automática 55', cor: '#C4FF3D' },
-  { key: 'ligacao_de_prospeccao_whatsapp', label: 'Ligação de Prospecção WhatsApp', cor: '#5CD0FF' },
+  { key: 'ligacao_de_prospeccao_automatica_55', label: 'Ligação de Prospecção Automática 55', cor: '#C4FF3D', nomePipedrive: 'Ligação de Prospecção Automatica 55' },
+  { key: 'ligacao_de_prospeccao_whatsapp', label: 'Ligação de Prospecção WhatsApp', cor: '#5CD0FF', nomePipedrive: 'Ligação de Prospecção Whatsapp' },
   { key: 'whatsapp', label: 'Follow up WhatsApp', cor: '#5CD0FF' },
   { key: 'primeiro_contato', label: 'Follow up', cor: '#F2A33C' },
   { key: 'pesquisa_de_qualificacao', label: 'Pesquisa de Qualificação', cor: '#B98CFF' },
