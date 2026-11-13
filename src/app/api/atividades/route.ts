@@ -33,6 +33,7 @@ import {
   buscarAtividades,
   buscarNegociosPorIds,
   dataConclusao,
+  resolverTiposEsforco,
 } from '@/lib/pipedrive';
 import type { AtividadesResposta, EscopoAtividade, Granularidade, SerieBarras } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
@@ -101,7 +102,13 @@ export async function GET(req: Request) {
     const fim = searchParams.get('fim') || ultimoDiaDoMes(ref);
     const mesmoMes = inicio.slice(0, 7) === fim.slice(0, 7);
     const tipos = TIPOS_ESFORCO.map((t) => t.key);
+    const tipoPipedrivePorChave = await resolverTiposEsforco(TIPOS_ESFORCO);
+    const tiposPipedrive = [...new Set(tipos.map((tipo) => tipoPipedrivePorChave[tipo]))];
+    const chavePorTipoPipedrive = new Map(
+      Object.entries(tipoPipedrivePorChave).map(([chave, tipoPipedrive]) => [tipoPipedrive, chave])
+    );
     const tiposSet = new Set<string>(tipos);
+    const tipoDaAtividade = (atividade: Atividade) => chavePorTipoPipedrive.get(atividade.type);
 
     // Todas as granularidades respeitam o intervalo escolhido no dashboard.
     const buckets: Record<Granularidade, Bucket[]> = {
@@ -129,7 +136,7 @@ export async function GET(req: Request) {
       const atividades = await buscarAtividades({
         inicio: janelaInicio,
         fim,
-        tipos,
+        tipos: tiposPipedrive,
         concluidas: true,
         userId: s.userId,
       });
@@ -153,8 +160,10 @@ export async function GET(req: Request) {
     // (deal_id null), enquanto a ligação que a SDR faz e marca no CRM fica
     // ligada a um negócio. Os demais tipos de esforço não têm essa inflação,
     // então contam como antes.
-    const contaAtividade = (a: Atividade) =>
-      tiposSet.has(a.type) && !(a.type === TIPO_LIGACAO && a.deal_id == null);
+    const contaAtividade = (a: Atividade) => {
+      const tipo = tipoDaAtividade(a);
+      return tipo !== undefined && tiposSet.has(tipo) && !(tipo === TIPO_LIGACAO && a.deal_id == null);
+    };
 
     const porSdr: AtividadesResposta['porSdr'] = SDRS_ATIVOS.map((s) => {
       const atividades = atividadesPorSdr.get(s.key) ?? [];
@@ -187,11 +196,12 @@ export async function GET(req: Request) {
 
             for (const a of atividades) {
               const d = dataConclusao(a);
-              if (!d || d < b.inicio || d > b.fim || !contaAtividade(a)) continue;
+              const tipo = tipoDaAtividade(a);
+              if (!d || d < b.inicio || d > b.fim || !tipo || !contaAtividade(a)) continue;
 
-              linhas.total[a.type] = (linhas.total[a.type] as number) + 1;
+              linhas.total[tipo] = (linhas.total[tipo] as number) + 1;
               const funil = funilDaAtividade(a);
-              if (funil) linhas[funil][a.type] = (linhas[funil][a.type] as number) + 1;
+              if (funil) linhas[funil][tipo] = (linhas[funil][tipo] as number) + 1;
             }
 
             for (const esc of ESCOPOS) serie[esc].push(linhas[esc]);
