@@ -55,6 +55,12 @@ export interface AgendamentosMensaisResposta {
   }>;
 }
 
+export interface AgendamentosClosersResposta {
+  periodo: Periodo;
+  total: number;
+  porCloser: Array<{ closer: string; nome: string; total: number }>;
+}
+
 export interface FechamentosMensaisResposta {
   ano: number;
   meses: Array<{
