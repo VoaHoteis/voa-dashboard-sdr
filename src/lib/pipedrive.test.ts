@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import { limparCache, resolverTiposEsforco } from './pipedrive';
+import { limparCache, resolverTiposAgendamentoPorNomes, resolverTiposEsforco } from './pipedrive';
 
 const originalFetch = globalThis.fetch;
 const originalToken = process.env.PIPEDRIVE_API_TOKEN;
@@ -110,5 +110,40 @@ describe('resolver tipos de esforço do Pipedrive', () => {
       ]),
       /ambíguo: Ligação \/ Prospecção via WhatsApp, Prospecção WhatsApp follow-up/
     );
+  });
+
+  it('inclui todas as variantes de acentuação do mesmo tipo de agendamento', async () => {
+    process.env.PIPEDRIVE_API_TOKEN = 'test-token';
+    process.env.PIPEDRIVE_BASE_URL = 'https://example.test/api';
+    process.env.PIPEDRIVE_MOCK = '0';
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: [
+            { key_string: 'reuniao_gc', name: 'Reunião de Apresentação Prospecção Executivo' },
+            { key_string: 'apresentacao_original', name: 'Reunião de Apresentação' },
+            { key_string: 'apresentacao_variante_1', name: 'Reunião de Apresentacão' },
+            { key_string: 'apresentacao_variante_2', name: 'Reunião de Apresentacão' },
+          ],
+          additional_data: { pagination: { more_items_in_collection: false } },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
+
+    const tipos = await resolverTiposAgendamentoPorNomes([
+      {
+        key: 'reuniao_de_apresentacao_gc',
+        nomePipedrive: 'Reunião de Apresentação Prospecção Executivo',
+      },
+      { key: 'apresentacao_institucional', nomePipedrive: 'Reunião de Apresentação' },
+    ]);
+
+    assert.deepEqual(tipos, [
+      'reuniao_gc',
+      'apresentacao_original',
+      'apresentacao_variante_1',
+      'apresentacao_variante_2',
+    ]);
   });
 });

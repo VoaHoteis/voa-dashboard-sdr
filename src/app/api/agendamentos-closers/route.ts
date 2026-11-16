@@ -6,7 +6,7 @@ import {
   buscarNegociosPorIds,
   dataConclusao,
   pessoaDoProprietario,
-  resolverTiposEsforco,
+  resolverTiposAgendamentoPorNomes,
 } from '@/lib/pipedrive';
 import type { AgendamentosClosersResposta } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../_comum';
@@ -36,11 +36,11 @@ export async function GET(req: Request) {
       return NextResponse.json({ erro: 'Período inválido.' }, { status: 400 });
     }
 
-    const tiposPorNome = await resolverTiposEsforco(TIPOS_REUNIAO);
+    const tipos = await resolverTiposAgendamentoPorNomes(TIPOS_REUNIAO);
     const atividades = await buscarAtividades({
       inicio: addDias(inicio, -35),
       fim: addDias(fim, 35),
-      tipos: Object.values(tiposPorNome),
+      tipos,
       concluidas: true,
     });
     const realizadasNoPeriodo = atividades.filter((atividade) => {
