@@ -21,6 +21,7 @@ import { CardFunilClosers } from '@/components/CardFunilClosers';
 import { CardConversaoContratos } from '@/components/CardConversaoContratos';
 import { CardCicloVendas } from '@/components/CardCicloVendas';
 import { CardPerdasClosers } from '@/components/CardPerdasClosers';
+import { CardAgendamentosClosers } from '@/components/CardAgendamentosClosers';
 import { CardsFunilPorCloser } from '@/components/CardsFunilPorCloser';
 import { CardLigacoes } from '@/components/CardLigacoes';
 import { CardNoShows } from '@/components/CardNoShows';
@@ -101,6 +102,7 @@ function Painel() {
   // periodo, e so assim da para compara-la com os agendamentos do mesmo recorte.
   const urlNoShows = `/api/no-shows?inicio=${periodo.inicio}&fim=${periodo.fim}`;
   const urlPerdasClosers = `/api/perdas-closers?inicio=${periodo.inicio}&fim=${periodo.fim}`;
+  const urlAgendamentosClosers = `/api/agendamentos-closers?inicio=${periodo.inicio}&fim=${periodo.fim}`;
   const urlFechamentos = `/api/fechamentos?inicio=${periodo.inicio}&fim=${periodo.fim}`;
 
   // Indicadores operacionais de SDR continuam ancorados no mês corrente.
@@ -319,6 +321,7 @@ function Painel() {
 
           <div className="grade">
             <CardPerdasClosers url={urlPerdasClosers} />
+            <CardAgendamentosClosers url={urlAgendamentosClosers} />
           </div>
 
           <div className="grade cheia">
