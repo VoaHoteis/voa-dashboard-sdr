@@ -271,6 +271,31 @@ export async function resolverTiposAgendamento(fixos: readonly string[]): Promis
 }
 
 /**
+ * Resolve tipos de agendamento por nome normalizado. O Pipedrive pode retornar
+ * variantes de acentuação com key_strings diferentes; todas devem ser contadas.
+ */
+export async function resolverTiposAgendamentoPorNomes(
+  configurados: readonly { key: string; nomePipedrive: string }[]
+): Promise<string[]> {
+  if (modoMock()) return [...new Set(configurados.map(({ key }) => key))];
+
+  const tipos = await buscarTudo<{ key_string: string; name: string; active_flag: boolean }>(
+    '/v1/activityTypes',
+    {}
+  );
+  const nomesConfigurados = new Set(configurados.map(({ nomePipedrive }) => normalizarNome(nomePipedrive)));
+  const tiposCorrespondentes = tipos.filter((tipo) =>
+    nomesConfigurados.has(normalizarNome(tipo.name ?? ''))
+  );
+  const nomesEncontrados = new Set(tiposCorrespondentes.map((tipo) => normalizarNome(tipo.name ?? '')));
+  const chavesFallback = configurados
+    .filter(({ nomePipedrive }) => !nomesEncontrados.has(normalizarNome(nomePipedrive)))
+    .map(({ key }) => key);
+
+  return [...new Set([...tiposCorrespondentes.map((tipo) => tipo.key_string), ...chavesFallback])];
+}
+
+/**
  * Resolve os tipos personalizados do card de atividades pelo nome exibido no Pipedrive.
  * `key_string` de tipos personalizados pode ser diferente de um slug criado a partir do nome.
  */
