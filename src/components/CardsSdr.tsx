@@ -30,6 +30,7 @@ import {
   Painel,
   pct,
   useApi,
+  useCarregamentoSobDemanda,
   type Estado,
 } from './base';
 import { ModalDetalhe } from './CardsAgendamentos';
@@ -245,10 +246,11 @@ export function CardDetalhamentoSdr({
 
 /** Card 4 — Funil por SDR. */
 export function CardFunilSdr() {
-  const estado = useApi<FunilResposta>('/api/funil');
+  const { ref, habilitado } = useCarregamentoSobDemanda();
+  const estado = useApi<FunilResposta>('/api/funil', habilitado);
 
   return (
-    <CarrosselSdr titulo="Funil por SDR">
+    <CarrosselSdr titulo="Funil por SDR" containerRef={ref}>
       {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}

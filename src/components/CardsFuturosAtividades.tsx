@@ -52,6 +52,7 @@ import {
   NumeroClicavel,
   Painel,
   useApi,
+  useCarregamentoSobDemanda,
   type Estado,
 } from './base';
 import { TabelaNegocios } from './TabelaNegocios';
@@ -608,16 +609,19 @@ function GraficoAtividadesSdr({
 
 /** Card 6 — Atividades por SDR, no período selecionado pelo dashboard. */
 export function CardsAtividadesSemana({ periodo }: { periodo: Periodo }) {
+  const { ref, habilitado } = useCarregamentoSobDemanda();
   const estado = useApi<AtividadesResposta>(
-    `/api/atividades?inicio=${periodo.inicio}&fim=${periodo.fim}`
+    `/api/atividades?inicio=${periodo.inicio}&fim=${periodo.fim}`,
+    habilitado
   );
   const semana = semanaDaMeta(hoje());
   const resumoSemanal = useApi<AtividadesResposta>(
-    `/api/atividades?inicio=${semana.periodo.inicio}&fim=${semana.periodo.fim}`
+    `/api/atividades?inicio=${semana.periodo.inicio}&fim=${semana.periodo.fim}`,
+    habilitado
   );
 
   return (
-    <CarrosselSdr titulo="Atividades por SDR">
+    <CarrosselSdr titulo="Atividades por SDR" containerRef={ref}>
       {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}
