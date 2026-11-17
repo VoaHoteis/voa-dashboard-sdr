@@ -43,11 +43,22 @@ export async function GET(req: Request) {
     limparCacheSePedido(req);
     const hojeIso = hoje();
 
-    // Perdas so fazem sentido dentro de uma janela; o funil e mensal como os
-    // demais cards de meta, entao contamos os perdidos do mes corrente pela
-    // Data de perda (`lost_time`), atribuidos pelo proprietario do negocio.
+    // Perdas e etapas sao independentes. Dispare as consultas juntas; o limite
+    // compartilhado em pipedrive.ts continua controlando a concorrencia externa.
     const periodoPerdidos = { inicio: primeiroDiaDoMes(hojeIso), fim: ultimoDiaDoMes(hojeIso) };
-    const perdidos = await buscarNegociosPerdidos(periodoPerdidos);
+    // Uma consulta por stage_id; etapas com mais de um stage viram uma lista só.
+    const etapas = FUNIS.flatMap((funil) => ETAPAS_ORDEM.map((etapa) => ({ funil, etapa })));
+    const [perdidos, resultadosEtapas] = await Promise.all([
+      buscarNegociosPerdidos(periodoPerdidos),
+      Promise.all(
+        etapas.map(async ({ funil, etapa }) => {
+          const listas = await Promise.all(
+            STAGES[funil][etapa].map((stageId) => buscarNegociosDaEtapa(stageId))
+          );
+          return { funil, etapa, negocios: listas.flat() };
+        })
+      ),
+    ]);
 
     // Agrega uma vez: por funil e por dono (userId). Perda em pipeline fora dos
     // dois funis acompanhados nao entra, mantendo o mesmo universo das etapas.
@@ -63,18 +74,11 @@ export async function GET(req: Request) {
       perdidosPorSdr[funil][dono] = (perdidosPorSdr[funil][dono] ?? 0) + 1;
     }
 
-    // Uma consulta por stage_id. Etapas com mais de um stage (o "Em Contato" do
-    // Salabim soma 77 e 71) viram uma lista so.
-    const porFunilEtapa = {} as Record<FunnelKey, Record<EtapaKey, Negocio[]>>;
-
-    for (const funil of FUNIS) {
-      porFunilEtapa[funil] = {} as Record<EtapaKey, Negocio[]>;
-      for (const etapa of ETAPAS_ORDEM) {
-        const listas = await Promise.all(
-          STAGES[funil][etapa].map((stageId) => buscarNegociosDaEtapa(stageId))
-        );
-        porFunilEtapa[funil][etapa] = listas.flat();
-      }
+    const porFunilEtapa = Object.fromEntries(
+      FUNIS.map((funil) => [funil, {}])
+    ) as Record<FunnelKey, Record<EtapaKey, Negocio[]>>;
+    for (const { funil, etapa, negocios } of resultadosEtapas) {
+      porFunilEtapa[funil][etapa] = negocios;
     }
 
     const resposta: FunilResposta = {

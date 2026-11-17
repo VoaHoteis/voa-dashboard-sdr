@@ -50,6 +50,8 @@ const ContextoAtualizacaoDados = createContext<AtualizacaoDados>({
   registrar: () => {},
 });
 
+const ContextoCarregamento = createContext<boolean | null>(null);
+
 export function useAtualizacao(): Atualizacao {
   return useContext(ContextoAtualizacao);
 }
@@ -160,10 +162,59 @@ async function buscarJson<T>(url: string): Promise<T> {
   throw new Error('O limite de requisições do Pipedrive continua ativo.');
 }
 
+export function AreaSobDemanda({
+  children,
+  className,
+  onAtivar,
+}: {
+  children: ReactNode;
+  className: string;
+  onAtivar?: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [ativa, setAtiva] = useState(false);
+
+  const ativar = useCallback(() => {
+    setAtiva(true);
+    onAtivar?.();
+  }, [onAtivar]);
+
+  useEffect(() => {
+    const elemento = ref.current;
+    if (!elemento || ativa) return;
+    if (!('IntersectionObserver' in window)) {
+      ativar();
+      return;
+    }
+
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada.isIntersecting) {
+          ativar();
+          observador.disconnect();
+        }
+      },
+      { rootMargin: '180px 0px' }
+    );
+    observador.observe(elemento);
+    return () => observador.disconnect();
+  }, [ativa, ativar]);
+
+  return (
+    <ContextoCarregamento.Provider value={ativa}>
+      <div ref={ref} className={className} aria-busy={!ativa}>
+        {children}
+      </div>
+    </ContextoCarregamento.Provider>
+  );
+}
+
 export function useApi<T>(url: string, habilitado = true): Estado<T> {
   const [tick, setTick] = useState(0);
   const { versao, registrar } = useContext(ContextoAtualizacaoDados);
-  const chave: readonly [string, number, number] | null = habilitado ? [url, versao, tick] : null;
+  const areaAtiva = useContext(ContextoCarregamento);
+  const podeBuscar = habilitado && areaAtiva !== false;
+  const chave: readonly [string, number, number] | null = podeBuscar ? [url, versao, tick] : null;
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     T,
     Error,
@@ -187,7 +238,12 @@ export function useApi<T>(url: string, habilitado = true): Estado<T> {
     };
   }, [isValidating, registrar]);
 
-  return { dados: data ?? null, carregando: !habilitado || isLoading, erro, recarregar };
+  return {
+    dados: data ?? null,
+    carregando: !podeBuscar || isLoading,
+    erro,
+    recarregar,
+  };
 }
 
 export function BotaoAtualizar() {
@@ -287,7 +343,7 @@ export function useCarregamentoSobDemanda() {
           observador.disconnect();
         }
       },
-      { rootMargin: '500px 0px' }
+      { rootMargin: '180px 0px' }
     );
     observador.observe(elemento);
     return () => observador.disconnect();

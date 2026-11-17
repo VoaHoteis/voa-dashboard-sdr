@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { UNIDADE_PADRAO, type UnidadeContagem } from '@/lib/config';
 import {
@@ -12,7 +12,7 @@ import {
   ultimoDiaDoMes,
   type ISODate,
 } from '@/lib/dates';
-import { BotaoAtualizar, ProvedorAtualizacao, useApi } from '@/components/base';
+import { AreaSobDemanda, BotaoAtualizar, ProvedorAtualizacao, useApi } from '@/components/base';
 import { CardAgendamentoPorSdr, CardAgendamentosTotais } from '@/components/CardsAgendamentos';
 import { CardDetalhamentoSdr, CardFunilSdr } from '@/components/CardsSdr';
 import { CardFechamentos } from '@/components/CardFechamentos';
@@ -68,6 +68,8 @@ function Painel() {
   const [custom, setCustom] = useState(() => intervalo('este-mes', ref));
   const [unidade, setUnidade] = useState<UnidadeContagem>(UNIDADE_PADRAO);
   const [filtroAberto, setFiltroAberto] = useState(false);
+  const [detalhamentoAtivo, setDetalhamentoAtivo] = useState(false);
+  const ativarDetalhamento = useCallback(() => setDetalhamentoAtivo(true), []);
 
   const periodo = atalho === 'custom' ? custom : intervalo(atalho, ref);
 
@@ -112,14 +114,14 @@ function Painel() {
     [ref, unidade]
   );
 
-  const mes = useApi<AgendamentosResposta>(urlMes);
+  const mes = useApi<AgendamentosResposta>(urlMes, aba === 'sdr' && detalhamentoAtivo);
   const urlMesAnterior = useMemo(() => {
     const comparavel = periodoComparavelMesAnterior(ref);
     return `/api/agendamentos?inicio=${comparavel.inicio}&fim=${comparavel.fim}&unidade=${unidade}`;
   }, [ref, unidade]);
-  const mesAnterior = useApi<AgendamentosResposta>(urlMesAnterior);
+  const mesAnterior = useApi<AgendamentosResposta>(urlMesAnterior, aba === 'sdr' && detalhamentoAtivo);
   // Uma busca so, dividida entre o card 5 e a marca de projecao do card 2.
-  const futuros = useApi<FuturosResposta>('/api/agendamentos-futuros');
+  const futuros = useApi<FuturosResposta>('/api/agendamentos-futuros', aba === 'sdr');
   const ehMesCorrente = periodo.inicio === primeiroDiaDoMes(ref) && periodo.fim === ultimoDiaDoMes(ref);
 
   return (
@@ -268,9 +270,9 @@ function Painel() {
             <CardAgendamentosBI />
             <CardFechamentosMensaisBI />
           </div>
-          <div className="grade">
+          <AreaSobDemanda className="grade">
             <CardsNegociosMercadoBI />
-          </div>
+          </AreaSobDemanda>
         </>
       ) : aba === 'sdr' ? (
         <>
@@ -282,29 +284,29 @@ function Painel() {
             />
           </div>
 
-          <div className="grade">
+          <AreaSobDemanda className="grade" onAtivar={ativarDetalhamento}>
             <CardDetalhamentoSdr estado={mes} estadoAnterior={mesAnterior} />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade cheia">
+          <AreaSobDemanda className="grade cheia">
             <CardNoShows url={urlNoShows} urlAgendamentos={urlFiltro} />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade">
+          <AreaSobDemanda className="grade">
             <CardFunilSdr />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade cheia">
+          <AreaSobDemanda className="grade cheia">
             <CardAgendamentosFuturos mes={mes.dados} estado={futuros} />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade">
+          <AreaSobDemanda className="grade">
             <CardsAtividadesSemana periodo={periodo} />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade">
+          <AreaSobDemanda className="grade">
             <CardLigacoes />
-          </div>
+          </AreaSobDemanda>
         </>
       ) : (
         <>
@@ -319,30 +321,30 @@ function Painel() {
             <CardCicloVendas />
           </div>
 
-          <div className="grade">
+          <AreaSobDemanda className="grade">
             <CardPerdasClosers url={urlPerdasClosers} />
             <CardAgendamentosClosers url={urlAgendamentosClosers} />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade cheia">
+          <AreaSobDemanda className="grade cheia">
             <CardFunilClosers funil="salabim" />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade cheia">
+          <AreaSobDemanda className="grade cheia">
             <CardFunilClosers funil="novosNegocios" />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade">
+          <AreaSobDemanda className="grade">
             <CardsFunilPorCloser />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade cheia">
+          <AreaSobDemanda className="grade cheia">
             <CardFechamentos url={urlFechamentos} />
-          </div>
+          </AreaSobDemanda>
 
-          <div className="grade cheia">
+          <AreaSobDemanda className="grade cheia">
             <CardForecast />
-          </div>
+          </AreaSobDemanda>
         </>
       )}
     </main>
