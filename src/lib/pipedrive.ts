@@ -17,6 +17,28 @@ import {
 } from './config';
 import { addDias, diaDaSemana, hoje, primeiroDiaDoMes, type ISODate } from './dates';
 import type { ItemNegocioEtapa } from './types';
+import type { Atividade, Negocio } from './pipedrive-types';
+import {
+  buscarComCachePipedrive,
+  limparCachePipedriveLocal,
+} from './pipedrive-cache';
+import {
+  dataConclusao,
+  donoDoNegocio,
+  nomeDoProprietario,
+  pessoaDoProprietario,
+  pessoasDoCampoSdr,
+  registrarOpcaoSdr,
+} from './pipedrive-utils';
+
+export type { Atividade, Negocio } from './pipedrive-types';
+export {
+  dataConclusao,
+  donoDoNegocio,
+  nomeDoProprietario,
+  pessoaDoProprietario,
+  pessoasDoCampoSdr,
+} from './pipedrive-utils';
 
 const BASE_PADRAO = 'https://voahoteis2.pipedrive.com/api';
 
@@ -36,11 +58,13 @@ export function modoMock(): boolean {
 
 export class PipedriveError extends Error {
   status?: number;
+  retryAfterMs?: number;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, retryAfterMs?: number) {
     super(message);
     this.name = 'PipedriveError';
     this.status = status;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -55,12 +79,36 @@ function token(): string {
   return t;
 }
 
-/** Cache em memoria. Corta rajadas de refresh sem esconder mudanca real por muito tempo. */
-const TTL_MS = 60_000;
-const cache = new Map<string, { em: number; valor: unknown }>();
+let requisicoesAtivas = 0;
+const filaDeRequisicoes: Array<() => void> = [];
+
+async function chamarComLimite<T>(operacao: () => Promise<T>): Promise<T> {
+  if (requisicoesAtivas >= 2) {
+    await new Promise<void>((liberar) => filaDeRequisicoes.push(liberar));
+  }
+
+  requisicoesAtivas += 1;
+  try {
+    return await operacao();
+  } finally {
+    requisicoesAtivas -= 1;
+    filaDeRequisicoes.shift()?.();
+  }
+}
+
+function retryAfterEmMs(res: Response): number | undefined {
+  const valor = res.headers.get('retry-after');
+  if (!valor) return undefined;
+
+  const segundos = Number(valor);
+  if (Number.isFinite(segundos)) return Math.max(0, segundos * 1000);
+
+  const data = Date.parse(valor);
+  return Number.isNaN(data) ? undefined : Math.max(0, data - Date.now());
+}
 
 export function limparCache(): void {
-  cache.clear();
+  limparCachePipedriveLocal();
 }
 
 interface RespostaPipedrive<T> {
@@ -95,7 +143,9 @@ async function chamar<T>(
 
   let res: Response;
   try {
-    res = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    res = await chamarComLimite(() =>
+      fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' })
+    );
   } catch (e) {
     throw new PipedriveError('Falha de rede ao chamar o Pipedrive: ' + (e as Error).message);
   }
@@ -103,7 +153,8 @@ async function chamar<T>(
   if (res.status === 429) {
     throw new PipedriveError(
       'Pipedrive respondeu 429 (limite de requisições). Tente de novo em alguns segundos.',
-      429
+      429,
+      retryAfterEmMs(res)
     );
   }
   if (!res.ok) {
@@ -127,71 +178,30 @@ async function buscarTudo<T>(
   params: Record<string, string | number | undefined>,
   limite = 500
 ): Promise<T[]> {
-  const chaveCache = path + '?' + JSON.stringify(params);
-  const hit = cache.get(chaveCache);
-  if (hit && Date.now() - hit.em < TTL_MS) return hit.valor as T[];
+  const paramsOrdenados = Object.fromEntries(Object.entries(params).sort(([a], [b]) => a.localeCompare(b)));
+  const chaveCache = `${baseUrl()}${path}?${JSON.stringify(paramsOrdenados)}|limit=${limite}`;
 
-  const out: T[] = [];
-  let start = 0;
+  return buscarComCachePipedrive(chaveCache, async () => {
+    const out: T[] = [];
+    let start = 0;
 
-  // Guarda contra loop infinito se a paginacao vier torta.
-  for (let pagina = 0; pagina < 60; pagina++) {
-    const json = await chamar<T>(path, { ...params, start, limit: limite });
-    if (json.data && json.data.length) out.push(...json.data);
+    // Guarda contra loop infinito se a paginacao vier torta.
+    for (let pagina = 0; pagina < 60; pagina++) {
+      const json = await chamar<T>(path, { ...params, start, limit: limite });
+      if (json.data && json.data.length) out.push(...json.data);
 
-    const p = json.additional_data?.pagination;
-    if (!p?.more_items_in_collection) break;
-    start = p.next_start ?? start + limite;
-  }
+      const p = json.additional_data?.pagination;
+      if (!p?.more_items_in_collection) break;
+      start = p.next_start ?? start + limite;
+    }
 
-  cache.set(chaveCache, { em: Date.now(), valor: out });
-  return out;
+    return out;
+  });
 }
 
 // ---------------------------------------------------------------- entidades
 
-export interface Atividade {
-  id: number;
-  type: string;
-  subject: string;
-  done: boolean;
-  due_date: ISODate | null;
-  /**
-   * Quando a atividade foi marcada como concluida. Vem como "2026-09-05 14:03:00"
-   * em UTC (ou null se ainda em aberto). E a base de contagem dos cards de
-   * esforco: a pergunta e "quantas ligacoes a pessoa FEZ no dia", e o dia que
-   * importa e o da realizacao, nao o que estava agendado na agenda.
-   */
-  marked_as_done_time: string | null;
-  deal_id: number | null;
-  user_id: number | null;
-}
-
-/**
- * Data de conclusao (`marked_as_done_time`), so a parte YYYY-MM-DD, ou null se
- * a atividade nao foi concluida.
- *
- * Como no resto do codigo (won_time, expected_close_date), comparamos so a parte
- * da data e aceitamos o fuso UTC: uma ligacao concluida perto da meia-noite pode
- * cair no dia vizinho. Para uma contagem diaria/mensal isso e aceitavel e evita
- * carregar conversao de fuso aqui.
- */
-export function dataConclusao(a: Atividade): ISODate | null {
-  const t = a.marked_as_done_time;
-  if (!t) return null;
-  return t.slice(0, 10) as ISODate;
-}
-
-export interface Negocio {
-  id: number;
-  title: string;
-  pipeline_id: number;
-  stage_id: number;
-  status: string;
-  undone_activities_count: number;
-  next_activity_date: ISODate | null;
-  [campoPersonalizado: string]: unknown;
-}
+// Os modelos de Pipedrive ficam em módulo sem dependências de servidor para uso nas métricas do cliente.
 
 /**
  * Atividades no periodo, filtradas por tipo.
@@ -386,7 +396,7 @@ export async function buscarNegociosDaEtapa(stageId: number): Promise<Negocio[]>
  * Negocios GANHOS no periodo, para o card de Fechamentos.
  *
  * A v1 nao filtra por data de ganho, entao pedimos todos os `status=won`
- * (paginado, com o mesmo cache de 60s dos outros endpoints) e recortamos por
+ * (paginado, com o cache compartilhado dos outros endpoints) e recortamos por
  * `won_time` em memoria. `won_time` vem como "2026-09-05 14:03:00" em UTC; como
  * o resto do codigo, comparamos so a parte da data -- perto da virada de dia um
  * fechamento pode cair no dia vizinho, o que e aceitavel para uma contagem
@@ -577,36 +587,33 @@ export async function buscarAgendamentosPorNegocio(
       const assinatura = (negocio as { won_time?: string | null }).won_time?.slice(0, 10);
       if (!assinatura) continue;
 
-      const chaveCache = '/v2/activities?deal_id=' + negocio.id + '&types=' + tiposUnicos.join(',') + '&won_time=' + assinatura + '&ciclo=2';
-      const hit = cache.get(chaveCache);
-      if (hit && Date.now() - hit.em < TTL_MS) {
-        const datas = hit.valor as { primeiro: ISODate; maisRecente: ISODate } | null;
-        if (datas) resultado.set(negocio.id, datas);
-        continue;
-      }
+      const chaveCache =
+        '/v2/activities?deal_id=' + negocio.id + '&types=' + tiposUnicos.join(',') + '&won_time=' + assinatura + '&ciclo=2';
+      const datas = await buscarComCachePipedrive(chaveCache, async () => {
+        let cursor: string | undefined;
+        let primeira: ISODate | null = null;
+        let maisRecente: ISODate | null = null;
 
-      let cursor: string | undefined;
-      let primeira: ISODate | null = null;
-      let maisRecente: ISODate | null = null;
-      for (let pagina = 0; pagina < 60; pagina++) {
-        const resposta = await chamar<Atividade>('/v2/activities', {
-          deal_id: negocio.id,
-          limit: 500,
-          cursor,
-        });
-        for (const atividade of resposta.data ?? []) {
-          const data = atividade.due_date?.slice(0, 10) as ISODate | undefined;
-          if (!data || data > assinatura || !tiposUnicos.includes(atividade.type)) continue;
-          if (!primeira || data < primeira) primeira = data;
-          if (!maisRecente || data > maisRecente) maisRecente = data;
+        for (let pagina = 0; pagina < 60; pagina++) {
+          const resposta = await chamar<Atividade>('/v2/activities', {
+            deal_id: negocio.id,
+            limit: 500,
+            cursor,
+          });
+          for (const atividade of resposta.data ?? []) {
+            const data = atividade.due_date?.slice(0, 10) as ISODate | undefined;
+            if (!data || data > assinatura || !tiposUnicos.includes(atividade.type)) continue;
+            if (!primeira || data < primeira) primeira = data;
+            if (!maisRecente || data > maisRecente) maisRecente = data;
+          }
+          const proximoCursor = resposta.additional_data?.next_cursor;
+          if (!proximoCursor) break;
+          cursor = proximoCursor;
         }
-        const proximoCursor = resposta.additional_data?.next_cursor;
-        if (!proximoCursor) break;
-        cursor = proximoCursor;
-      }
 
-      const datas = primeira && maisRecente ? { primeiro: primeira, maisRecente } : null;
-      cache.set(chaveCache, { em: Date.now(), valor: datas });
+        return primeira && maisRecente ? { primeiro: primeira, maisRecente } : null;
+      });
+
       if (datas) resultado.set(negocio.id, datas);
     }
   });
@@ -619,7 +626,7 @@ export async function buscarAgendamentosPorNegocio(
  * Negocios PERDIDOS no periodo, para a contagem de hoteis perdidos no funil.
  *
  * Mesmo padrao da busca de ganhos: a v1 nao filtra por data de perda, entao
- * pedimos todos os `status=lost` (paginado, com o cache de 60s) e recortamos por
+ * pedimos todos os `status=lost` (paginado, com o cache compartilhado) e recortamos por
  * `lost_time` em memoria. `lost_time` vem como "2026-09-05 14:03:00" em UTC; como
  * no resto do codigo, comparamos so a parte da data -- perto da virada de dia uma
  * perda pode cair no dia vizinho, aceitavel para uma contagem mensal e evita
@@ -1100,10 +1107,6 @@ function normalizarNegocioV2(d: Negocio): Negocio {
 
 // ------------------------------------------------------------ atribuicao SDR
 
-const OPCAO_PARA_PESSOA = new Map<number, string>(
-  PESSOAS.filter((p) => p.sdrOptionId !== undefined).map((p) => [p.sdrOptionId as number, p.key])
-);
-
 let opcoesSdrResolvidasEm = 0;
 
 /**
@@ -1132,7 +1135,7 @@ export async function garantirOpcoesSdr(): Promise<void> {
         opcoes.find((o) => normalizarNome(o.label ?? '') === alvo) ??
         opcoes.find((o) => normalizarNome(o.label ?? '').startsWith(alvo));
       if (opcao) {
-        OPCAO_PARA_PESSOA.set(opcao.id, p.key);
+        registrarOpcaoSdr(opcao.id, p.key);
       } else {
         console.warn(`[sdr] Opção "${p.sdrOptionNome}" não encontrada no campo SDR do Pipedrive.`);
       }
@@ -1141,35 +1144,6 @@ export async function garantirOpcoesSdr(): Promise<void> {
   } catch (e) {
     console.warn('[sdr] Falha ao resolver opções do campo SDR:', (e as Error).message);
   }
-}
-
-const USUARIO_PARA_PESSOA = new Map<number, string>(
-  PESSOAS.filter((p) => p.userId !== undefined).map((p) => [p.userId as number, p.key])
-);
-
-/**
- * Pessoas nomeadas no campo personalizado "SDR" do negocio.
- *
- * O valor chega como "645,680" (v1) ou como array de ids (v2). Negocio com duas
- * pessoas marcadas conta inteiro para as duas -- nao ha divisao de fracao.
- */
-export function pessoasDoCampoSdr(negocio: Negocio | undefined): string[] {
-  if (!negocio) return [];
-  const bruto = negocio[SDR_FIELD_KEY];
-  if (bruto === null || bruto === undefined || bruto === '') return [];
-
-  const ids: number[] = Array.isArray(bruto)
-    ? bruto.map((v) => Number(typeof v === 'object' && v !== null ? (v as { id?: unknown }).id : v))
-    : String(bruto)
-        .split(',')
-        .map((s) => Number(s.trim()));
-
-  const out: string[] = [];
-  for (const id of ids) {
-    const k = OPCAO_PARA_PESSOA.get(id);
-    if (k && !out.includes(k)) out.push(k);
-  }
-  return out;
 }
 
 /** Mantido para o card de funil, que atribui por dono e so olha as duas SDRs. */
@@ -1228,62 +1202,7 @@ export function quantidadeUhDoNegocio(
 }
 
 
-/**
- * Proprietario do negocio. A v1 devolve `user_id` como objeto ({id, name, ...}),
- * a v2 como numero -- dai as duas leituras.
- *
- * E este campo, e nao o campo personalizado "SDR", que diz de quem e o negocio
- * no **funil**. Conferido com o Joao em 08/09/2026: as seis contagens de etapa
- * batem exatamente pelo proprietario e nao batem pelo campo SDR, que esta vazio
- * em 91% dos negocios da Pre Qualificacao.
- */
-export function donoDoNegocio(negocio: Negocio | undefined): number | null {
-  if (!negocio) return null;
 
-  // Terceira divergencia entre as versoes: a v1 chama o dono de `user_id` e o
-  // entrega como objeto ({id, name, ...}); a v2 chama de `owner_id` e entrega
-  // como numero. Ler so `user_id` fazia a regra de reserva pelo proprietario
-  // nunca disparar nos cards que usam a v2 -- 14 agendamentos de julho ficavam
-  // sem responsavel sendo que o dono era o Joao ou o Bruno.
-  for (const bruto of [
-    (negocio as { user_id?: unknown }).user_id,
-    (negocio as { owner_id?: unknown }).owner_id,
-  ]) {
-    if (typeof bruto === 'number') return bruto;
-    if (bruto && typeof bruto === 'object') {
-      const id = (bruto as { id?: unknown }).id;
-      if (typeof id === 'number') return id;
-    }
-  }
-  return null;
-}
-
-/** Proprietario traduzido para uma pessoa conhecida, quando houver. */
-export function pessoaDoProprietario(negocio: Negocio | undefined): string | null {
-  const id = donoDoNegocio(negocio);
-  return id === null ? null : (USUARIO_PARA_PESSOA.get(id) ?? null);
-}
-
-/**
- * Nome de exibicao do dono, direto do objeto `user_id` da v1 ({id, name, ...}).
- *
- * Serve para o forecast, que lista negocios de qualquer dono -- inclusive quem
- * nao esta em PESSOAS. Quando o dono e uma pessoa conhecida, prefira
- * `pessoaDoProprietario` + `nomeDaPessoa` para o nome sair padronizado; este
- * aqui e o fallback com o nome cru que a conta cadastrou.
- */
-export function nomeDoProprietario(negocio: Negocio | undefined): string | null {
-  if (!negocio) return null;
-  const pessoa = pessoaDoProprietario(negocio);
-  if (pessoa) return nomeDaPessoa(pessoa);
-
-  const bruto = (negocio as { user_id?: unknown }).user_id;
-  if (bruto && typeof bruto === 'object') {
-    const name = (bruto as { name?: unknown }).name;
-    if (typeof name === 'string' && name.trim()) return name.trim();
-  }
-  return null;
-}
 
 // -------------------------------------------------------------------- mock
 

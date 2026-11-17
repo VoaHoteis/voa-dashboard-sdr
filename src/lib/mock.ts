@@ -22,7 +22,7 @@ import {
   PESSOAS,
 } from './config';
 import { addDias, ehDiaUtil, hoje, listarDias, primeiroDiaDoMes, type ISODate } from './dates';
-import type { Atividade, Negocio } from './pipedrive';
+import type { Atividade, Negocio } from './pipedrive-types';
 
 /**
  * Chave do campo "Quantidade UH" no modo mock. Em producao a chave e um hash de

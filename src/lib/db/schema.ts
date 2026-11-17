@@ -1,4 +1,4 @@
-import { bigserial, boolean, integer, pgTable, smallint, text, timestamp } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, integer, jsonb, pgTable, smallint, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const queueLock = pgTable('queue_lock', {
   id: smallint('id').primaryKey(),
@@ -26,4 +26,11 @@ export const queueEvents = pgTable('queue_events', {
   redirectedBy: text('redirected_by'),
   hotelName: text('hotel_name'),
   reason: text('reason'),
+});
+
+export const pipedriveApiCache = pgTable('pipedrive_api_cache', {
+  cacheKey: text('cache_key').primaryKey(),
+  payload: jsonb('payload').$type<unknown>(),
+  cachedAt: timestamp('cached_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  generation: bigint('generation', { mode: 'number' }).notNull().default(0),
 });
