@@ -20,14 +20,13 @@ import {
   type UnidadeContagem,
 } from './config';
 import { ehDiaUtil, listarDias, type ISODate } from './dates';
-import type { Negocio } from './pipedrive';
+import type { Atividade, Negocio } from './pipedrive-types';
 import {
   dataConclusao,
   nomeDoProprietario,
   pessoaDoProprietario,
   pessoasDoCampoSdr,
-  type Atividade,
-} from './pipedrive';
+} from './pipedrive-utils';
 import type { DiaLigacoes, PorFunil } from './types';
 
 export function zeroPorFunil(): PorFunil {

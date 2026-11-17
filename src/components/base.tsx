@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 import { CORES_FUNIL, FUNNEL_LABEL, type FunnelKey } from '@/lib/config';
+import useSWR from 'swr';
 
 export interface Estado<T> {
   dados: T | null;
@@ -23,21 +24,24 @@ export interface Estado<T> {
 // ------------------------------------------------------- atualizacao global
 
 interface Atualizacao {
-  /** Sobe a cada clique em "Atualizar"; todo card observa e refaz a busca. */
+  /** Identifica um novo snapshot após a invalidação compartilhada. */
   versao: number;
-  atualizar: () => void;
-  /** Quantas buscas estao em voo agora, para o botao saber quando parar de girar. */
+  atualizar: () => Promise<void>;
   emVoo: number;
   registrar: (delta: number) => void;
   concluidoEm: Date | null;
+  preparando: boolean;
+  erroAtualizacao: string | null;
 }
 
 const ContextoAtualizacao = createContext<Atualizacao>({
   versao: 0,
-  atualizar: () => {},
+  atualizar: async () => {},
   emVoo: 0,
   registrar: () => {},
   concluidoEm: null,
+  preparando: false,
+  erroAtualizacao: null,
 });
 
 export function useAtualizacao(): Atualizacao {
@@ -48,15 +52,30 @@ export function ProvedorAtualizacao({ children }: { children: React.ReactNode })
   const [versao, setVersao] = useState(0);
   const [emVoo, setEmVoo] = useState(0);
   const [concluidoEm, setConcluidoEm] = useState<Date | null>(null);
+  const [preparando, setPreparando] = useState(false);
+  const [erroAtualizacao, setErroAtualizacao] = useState<string | null>(null);
 
   const registrar = useCallback((delta: number) => {
     setEmVoo((n) => Math.max(0, n + delta));
   }, []);
 
-  const atualizar = useCallback(() => setVersao((v) => v + 1), []);
+  const atualizar = useCallback(async () => {
+    if (preparando || emVoo > 0) return;
 
-  // Marca a hora quando a ultima busca em voo termina -- assim o rodape diz
-  // quando os numeros na tela foram lidos, nao quando o botao foi clicado.
+    setPreparando(true);
+    setErroAtualizacao(null);
+    try {
+      const resposta = await fetch('/api/pipedrive-refresh', { method: 'POST', cache: 'no-store' });
+      const corpo = await resposta.json().catch(() => ({ erro: 'resposta não é JSON' }));
+      if (!resposta.ok) throw new Error(corpo?.erro ?? `HTTP ${resposta.status}`);
+      setVersao((v) => v + 1);
+    } catch (erro) {
+      setErroAtualizacao(erro instanceof Error ? erro.message : String(erro));
+    } finally {
+      setPreparando(false);
+    }
+  }, [preparando, emVoo]);
+
   const jaTeve = useRef(false);
   useEffect(() => {
     if (emVoo > 0) {
@@ -67,92 +86,121 @@ export function ProvedorAtualizacao({ children }: { children: React.ReactNode })
   }, [emVoo]);
 
   const valor = useMemo(
-    () => ({ versao, atualizar, emVoo, registrar, concluidoEm }),
-    [versao, atualizar, emVoo, registrar, concluidoEm]
+    () => ({ versao, atualizar, emVoo, registrar, concluidoEm, preparando, erroAtualizacao }),
+    [versao, atualizar, emVoo, registrar, concluidoEm, preparando, erroAtualizacao]
   );
 
   return <ContextoAtualizacao.Provider value={valor}>{children}</ContextoAtualizacao.Provider>;
 }
 
-/**
- * Busca de dados com estado explicito.
- *
- * O prototipo usava `catch (e) {}` -- qualquer falha virava card zerado, sem
- * aviso nenhum, e foi assim que os cards 3 a 6 passaram dias mostrando zero.
- * Aqui o erro sempre aparece na tela com o motivo e um botao de tentar de novo.
- */
-export function useApi<T>(url: string, habilitado = true): Estado<T> {
-  const [dados, setDados] = useState<T | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
+let requisicoesDoNavegador = 0;
+const filaDoNavegador: Array<() => void> = [];
 
-  const { versao, registrar } = useAtualizacao();
-  const versaoVista = useRef(versao);
-
-  const recarregar = useCallback(() => setTick((t) => t + 1), []);
-
-  useEffect(() => {
-    if (!habilitado) {
-      setCarregando(false);
-      return;
-    }
-
-    let cancelado = false;
-
-    // Só um pedido explícito de atualização derruba o cache do servidor. Uma
-    // troca de filtro aproveita o que já está em memória.
-    const manual = versaoVista.current !== versao;
-    versaoVista.current = versao;
-    const alvo = manual ? url + (url.includes('?') ? '&' : '?') + 'atualizar=1' : url;
-
-    setCarregando(true);
-    setErro(null);
-    registrar(1);
-
-    fetch(alvo, { cache: 'no-store' })
-      .then(async (r) => {
-        const corpo = await r.json().catch(() => ({ erro: 'resposta não é JSON' }));
-        if (!r.ok) throw new Error(corpo?.erro ?? `HTTP ${r.status}`);
-        return corpo as T;
-      })
-      .then((d) => {
-        if (!cancelado) setDados(d);
-      })
-      .catch((e: Error) => {
-        if (!cancelado) setErro(e.message);
-      })
-      .finally(() => {
-        registrar(-1);
-        if (!cancelado) setCarregando(false);
-      });
-
-    return () => {
-      cancelado = true;
+async function fetchComConcorrenciaLimitada(url: string): Promise<Response> {
+  await new Promise<void>((resolver) => {
+    const iniciar = () => {
+      requisicoesDoNavegador += 1;
+      resolver();
     };
-  }, [url, tick, versao, registrar, habilitado]);
+    if (requisicoesDoNavegador < 3) iniciar();
+    else filaDoNavegador.push(iniciar);
+  });
 
-  return { dados, carregando, erro, recarregar };
+  try {
+    return await fetch(url, { cache: 'no-store' });
+  } finally {
+    requisicoesDoNavegador -= 1;
+    filaDoNavegador.shift()?.();
+  }
 }
 
-/** Botao unico que refaz a busca de todos os cards. */
+function esperaRetryAfter(resposta: Response, tentativa: number): number {
+  const retryAfter = resposta.headers.get('retry-after');
+  let esperaServidor = 0;
+
+  if (retryAfter) {
+    const segundos = Number(retryAfter);
+    if (Number.isFinite(segundos)) esperaServidor = Math.max(0, segundos * 1000);
+    else {
+      const data = Date.parse(retryAfter);
+      if (!Number.isNaN(data)) esperaServidor = Math.max(0, data - Date.now());
+    }
+  }
+
+  return Math.max(1200 * 2 ** tentativa, esperaServidor) + Math.random() * 350;
+}
+
+async function buscarJson<T>(url: string): Promise<T> {
+  for (let tentativa = 0; tentativa <= 2; tentativa += 1) {
+    const resposta = await fetchComConcorrenciaLimitada(url);
+    const corpo = await resposta.json().catch(() => ({ erro: 'resposta não é JSON' }));
+
+    if (resposta.status === 429 && tentativa < 2) {
+      await new Promise((resolver) => window.setTimeout(resolver, esperaRetryAfter(resposta, tentativa)));
+      continue;
+    }
+
+    if (!resposta.ok) throw new Error(corpo?.erro ?? `HTTP ${resposta.status}`);
+    return corpo as T;
+  }
+
+  throw new Error('O limite de requisições do Pipedrive continua ativo.');
+}
+
+export function useApi<T>(url: string, habilitado = true): Estado<T> {
+  const [tick, setTick] = useState(0);
+  const { versao, registrar } = useAtualizacao();
+  const chave: readonly [string, number, number] | null = habilitado ? [url, versao, tick] : null;
+  const { data, error, isLoading, isValidating, mutate } = useSWR<
+    T,
+    Error,
+    readonly [string, number, number] | null
+  >(chave, ([endpoint]) => buscarJson<T>(endpoint), {
+    keepPreviousData: true,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    shouldRetryOnError: false,
+    dedupingInterval: 2000,
+  });
+  const recarregar = useCallback(() => {
+    void mutate();
+  }, [mutate]);
+  const erro = error instanceof Error ? error.message : error ? String(error) : null;
+
+  useEffect(() => {
+    if (isValidating) registrar(1);
+    return () => {
+      if (isValidating) registrar(-1);
+    };
+  }, [isValidating, registrar]);
+
+  return { dados: data ?? null, carregando: isLoading, erro, recarregar };
+}
+
 export function BotaoAtualizar() {
-  const { atualizar, emVoo, concluidoEm } = useAtualizacao();
-  const ocupado = emVoo > 0;
+  const { atualizar, emVoo, concluidoEm, preparando, erroAtualizacao } = useAtualizacao();
+  const ocupado = emVoo > 0 || preparando;
 
   return (
     <div className="atualizar">
-      <button onClick={atualizar} disabled={ocupado} data-ocupado={ocupado}>
+      <button
+        onClick={() => void atualizar()}
+        disabled={ocupado}
+        data-ocupado={ocupado}
+        aria-busy={ocupado}
+      >
         <span className="giro" aria-hidden="true" />
-        {ocupado ? 'Atualizando…' : 'Atualizar'}
+        {preparando ? 'Preparando atualização…' : ocupado ? 'Atualizando…' : 'Atualizar'}
       </button>
-      <span className="carimbo">
-        {ocupado
-          ? 'buscando no Pipedrive'
-          : concluidoEm
-            ? 'atualizado às ' +
-              concluidoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-            : ''}
+      <span className="carimbo" role={erroAtualizacao ? 'status' : undefined}>
+        {erroAtualizacao
+          ? erroAtualizacao
+          : ocupado
+            ? 'atualizando snapshot do Pipedrive'
+            : concluidoEm
+              ? 'atualizado às ' +
+                concluidoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+              : ''}
       </span>
     </div>
   );
@@ -176,7 +224,20 @@ export function Painel<T>({
         {periodo && <span className="periodo">{periodo}</span>}
       </header>
 
-      {estado.erro ? (
+      {estado.dados !== null ? (
+        <>
+          {estado.erro && (
+            <div className="estado aviso-cache" role="status">
+              <strong>Exibindo os últimos dados disponíveis.</strong>
+              <code>{estado.erro}</code>
+              <button className="botao" onClick={estado.recarregar}>
+                Tentar novamente
+              </button>
+            </div>
+          )}
+          {children(estado.dados)}
+        </>
+      ) : estado.erro ? (
         <div className="estado erro">
           <strong>Não foi possível carregar.</strong>
           <code>{estado.erro}</code>
@@ -184,10 +245,8 @@ export function Painel<T>({
             Tentar novamente
           </button>
         </div>
-      ) : estado.carregando && !estado.dados ? (
+      ) : estado.carregando ? (
         <div className="esqueleto" />
-      ) : estado.dados ? (
-        children(estado.dados)
       ) : (
         <div className="estado">Sem dados.</div>
       )}
