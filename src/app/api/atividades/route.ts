@@ -127,20 +127,24 @@ export async function GET(req: Request) {
     // usam a data de conclusão e descartam o excedente.
     const janelaInicio = addDias(inicio, -35);
 
-    // Busca as atividades dos SDRs ativos, junta os negócios e resolve o funil
-    // de cada um numa única chamada em lote (v2), em vez de uma consulta por SDR.
+    // Consulta os SDRs em paralelo. O limite compartilhado em pipedrive.ts
+    // mantém no máximo duas chamadas externas simultâneas neste processo.
     const atividadesPorSdr = new Map<string, Atividade[]>();
+    const resultadosAtividades = await Promise.all(
+      SDRS_ATIVOS.map(async (s) => {
+        const atividades = await buscarAtividades({
+          inicio: janelaInicio,
+          fim,
+          tipos: tiposPipedrive,
+          concluidas: true,
+          userId: s.userId,
+        });
+        return [s.key, atividades] as const;
+      })
+    );
     const idsNegocios: number[] = [];
-
-    for (const s of SDRS_ATIVOS) {
-      const atividades = await buscarAtividades({
-        inicio: janelaInicio,
-        fim,
-        tipos: tiposPipedrive,
-        concluidas: true,
-        userId: s.userId,
-      });
-      atividadesPorSdr.set(s.key, atividades);
+    for (const [chave, atividades] of resultadosAtividades) {
+      atividadesPorSdr.set(chave, atividades);
       for (const a of atividades) if (a.deal_id != null) idsNegocios.push(a.deal_id);
     }
 
