@@ -199,6 +199,34 @@ async function buscarTudo<T>(
   });
 }
 
+async function reduzirTudo<T, R>(
+  path: string,
+  params: Record<string, string | number | undefined>,
+  chaveReducao: string,
+  criarAcumulador: () => R,
+  reduzir: (acumulador: R, item: T) => void,
+  limite = 100
+): Promise<R> {
+  const paramsOrdenados = Object.fromEntries(Object.entries(params).sort(([a], [b]) => a.localeCompare(b)));
+  const chaveCache = `${baseUrl()}${path}?${JSON.stringify(paramsOrdenados)}|limit=${limite}|reducao=${chaveReducao}`;
+
+  return buscarComCachePipedrive(chaveCache, async () => {
+    const acumulador = criarAcumulador();
+    let start = 0;
+
+    for (let pagina = 0; pagina < 60; pagina++) {
+      const json = await chamar<T>(path, { ...params, start, limit: limite });
+      for (const item of json.data ?? []) reduzir(acumulador, item);
+
+      const paginacao = json.additional_data?.pagination;
+      if (!paginacao?.more_items_in_collection) break;
+      start = paginacao.next_start ?? start + limite;
+    }
+
+    return acumulador;
+  });
+}
+
 // ---------------------------------------------------------------- entidades
 
 // Os modelos de Pipedrive ficam em módulo sem dependências de servidor para uso nas métricas do cliente.
@@ -670,45 +698,75 @@ export async function buscarNegociosAbertos(): Promise<Negocio[]> {
   return buscarTudo<Negocio>('/v1/deals', { status: 'open', user_id: 0 });
 }
 
-export function resumirAtividadesDoEvento(
-  atividades: Atividade[],
-  negociosEvento: ReadonlySet<number>,
-  referencia: ISODate = hoje()
-): Array<{ pessoa: string; hoje: number; semana: number; mes: number }> {
-  const inicioMes = primeiroDiaDoMes(referencia);
-  const inicioSemana = addDias(referencia, -((diaDaSemana(referencia) + 6) % 7));
-  const nomesPorUsuario = new Map(
+interface ContagemAtividadeEvento {
+  pessoa: string;
+  hoje: number;
+  semana: number;
+  mes: number;
+}
+
+type AcumuladorAtividadesEvento = Record<string, ContagemAtividadeEvento>;
+
+function criarAcumuladorAtividadesEvento(): AcumuladorAtividadesEvento {
+  return Object.fromEntries(
+    PESSOAS.filter((pessoa) => pessoa.userId !== undefined).map((pessoa) => [
+      pessoa.nome,
+      { pessoa: pessoa.nome, hoje: 0, semana: 0, mes: 0 },
+    ])
+  );
+}
+
+function nomesUsuariosEvento(): Map<number, string> {
+  return new Map(
     PESSOAS.flatMap((pessoa) =>
       pessoa.userId === undefined ? [] : [[pessoa.userId, pessoa.nome] as const]
     )
   );
-  const contagens = new Map<string, { pessoa: string; hoje: number; semana: number; mes: number }>();
+}
 
-  for (const pessoa of PESSOAS) {
-    if (pessoa.userId === undefined) continue;
-    contagens.set(pessoa.nome, { pessoa: pessoa.nome, hoje: 0, semana: 0, mes: 0 });
+function acumularAtividadeEvento(
+  acumulador: AcumuladorAtividadesEvento,
+  atividade: Atividade,
+  negociosEvento: ReadonlySet<number>,
+  referencia: ISODate,
+  nomesPorUsuario: ReadonlyMap<number, string>
+): void {
+  if (!atividade.done || atividade.deal_id === null || !negociosEvento.has(atividade.deal_id)) {
+    return;
   }
+  const data = dataConclusao(atividade);
+  const inicioMes = primeiroDiaDoMes(referencia);
+  if (!data || data < inicioMes || data > referencia) return;
 
-  for (const atividade of atividades) {
-    if (!atividade.done || atividade.deal_id === null || !negociosEvento.has(atividade.deal_id)) {
-      continue;
-    }
-    const data = dataConclusao(atividade);
-    if (!data || data < inicioMes || data > referencia) continue;
+  const inicioSemana = addDias(referencia, -((diaDaSemana(referencia) + 6) % 7));
+  const pessoa = atividade.user_id === null
+    ? 'Sem executor'
+    : nomesPorUsuario.get(atividade.user_id) ?? `Usuário ${atividade.user_id}`;
+  const contagem = acumulador[pessoa] ?? (acumulador[pessoa] = { pessoa, hoje: 0, semana: 0, mes: 0 });
+  contagem.mes += 1;
+  if (data >= inicioSemana) contagem.semana += 1;
+  if (data === referencia) contagem.hoje += 1;
+}
 
-    const pessoa = atividade.user_id === null
-      ? 'Sem executor'
-      : nomesPorUsuario.get(atividade.user_id) ?? `Usuário ${atividade.user_id}`;
-    const contagem = contagens.get(pessoa) ?? { pessoa, hoje: 0, semana: 0, mes: 0 };
-    contagem.mes += 1;
-    if (data >= inicioSemana) contagem.semana += 1;
-    if (data === referencia) contagem.hoje += 1;
-    contagens.set(pessoa, contagem);
-  }
-
-  return [...contagens.values()].sort(
+function finalizarAcumuladorAtividadesEvento(
+  acumulador: AcumuladorAtividadesEvento
+): ContagemAtividadeEvento[] {
+  return Object.values(acumulador).sort(
     (a, b) => b.mes - a.mes || a.pessoa.localeCompare(b.pessoa, 'pt-BR')
   );
+}
+
+export function resumirAtividadesDoEvento(
+  atividades: Atividade[],
+  negociosEvento: ReadonlySet<number>,
+  referencia: ISODate = hoje()
+): ContagemAtividadeEvento[] {
+  const acumulador = criarAcumuladorAtividadesEvento();
+  const nomesPorUsuario = nomesUsuariosEvento();
+  for (const atividade of atividades) {
+    acumularAtividadeEvento(acumulador, atividade, negociosEvento, referencia, nomesPorUsuario);
+  }
+  return finalizarAcumuladorAtividadesEvento(acumulador);
 }
 
 export interface MetricasEventoPortoSeguro {
@@ -909,17 +967,32 @@ async function buscarAtividadesDosNegociosDoEvento(
   negocios: Negocio[],
   referencia: ISODate = hoje()
 ): Promise<MetricasEventoPortoSeguro['atividadesPorPessoa']> {
-  const atividades = await buscarAtividades({
-    inicio: addDias(primeiroDiaDoMes(referencia), -35),
-    fim: referencia,
-    tipos: [],
-    concluidas: true,
-  });
-  return resumirAtividadesDoEvento(
-    atividades,
-    new Set(negocios.map((negocio) => negocio.id)),
-    referencia
+  const negociosEvento = new Set(negocios.map((negocio) => negocio.id));
+  const inicio = addDias(primeiroDiaDoMes(referencia), -35);
+  if (negociosEvento.size === 0) {
+    return finalizarAcumuladorAtividadesEvento(criarAcumuladorAtividadesEvento());
+  }
+  if (modoMock()) {
+    const atividades = await buscarAtividades({ inicio, fim: referencia, tipos: [], concluidas: true });
+    return resumirAtividadesDoEvento(atividades, negociosEvento, referencia);
+  }
+
+  const nomesPorUsuario = nomesUsuariosEvento();
+  const acumulador = await reduzirTudo<Atividade, AcumuladorAtividadesEvento>(
+    '/v1/activities',
+    {
+      user_id: 0,
+      start_date: inicio,
+      end_date: addDias(referencia, 1),
+      done: 1,
+    },
+    `evento-atividades:${referencia}:${[...negociosEvento].sort((a, b) => a - b).join(',')}`,
+    criarAcumuladorAtividadesEvento,
+    (contagens, atividade) =>
+      acumularAtividadeEvento(contagens, atividade, negociosEvento, referencia, nomesPorUsuario),
+    100
   );
+  return finalizarAcumuladorAtividadesEvento(acumulador);
 }
 
 /** Conta leads ativos, negócios abertos e atividades concluídas da etiqueta. */
@@ -946,22 +1019,12 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
 
   const nomeEtiqueta = 'EVENTO PORTO SEGURO';
   const nomeNormalizado = normalizarNome(nomeEtiqueta);
-  const [
-    leads,
-    etiquetasLead,
-    camposNegocio,
-    negociosAbertos,
-    negociosPerdidosBrutos,
-    gruposEtapas,
-  ] = await Promise.all([
-    buscarTudo<(EntidadeComEtiquetas & { id: string | number })>('/v1/leads', {}, 100),
+  const [etiquetasLead, camposNegocio, gruposEtapas] = await Promise.all([
     buscarTudo<EtiquetaPipedrive>('/v1/leadLabels', {}, 100),
     buscarTudo<{
       key: string;
       options?: EtiquetaPipedrive[] | null;
     }>('/v1/dealFields', {}, 100),
-    buscarNegociosAbertos(),
-    buscarTudo<Negocio>('/v1/deals', { status: 'lost', user_id: 0 }),
     buscarGruposEtapasEvento(),
   ]);
 
@@ -980,32 +1043,67 @@ export async function buscarMetricasEventoPortoSeguro(): Promise<MetricasEventoP
       .filter(Boolean)
   );
 
-  const totalLeads = leads.filter((lead) => entidadeTemEtiqueta(lead, idsLead, nomeNormalizado)).length;
-  const negociosComEtiqueta = negociosAbertos.filter((negocio) =>
-    entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
-  );
   const pipelinesAcompanhados = new Set(gruposEtapas.map((grupo) => grupo.pipelineId));
-  const negociosEvento = negociosComEtiqueta.filter((negocio) =>
-    pipelinesAcompanhados.has(negocio.pipeline_id)
-  );
-  const negociosPerdidosEvento = negociosPerdidosBrutos.filter(
-    (negocio) =>
-      pipelinesAcompanhados.has(negocio.pipeline_id) &&
-      entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
-  );
+  const assinaturaEtiqueta = JSON.stringify({
+    nomeNormalizado,
+    idsLead: [...idsLead].sort(),
+    idsNegocio: [...idsNegocio].sort(),
+  });
+  const assinaturaPipelines = [...pipelinesAcompanhados].sort((a, b) => a - b).join(',');
+  const [leadsContados, negociosEvento, negociosPerdidosEvento] = await Promise.all([
+    reduzirTudo<EntidadeComEtiquetas, { total: number }>(
+      '/v1/leads',
+      {},
+      `evento-leads:${assinaturaEtiqueta}`,
+      () => ({ total: 0 }),
+      (acumulador, lead) => {
+        if (entidadeTemEtiqueta(lead, idsLead, nomeNormalizado)) acumulador.total += 1;
+      }
+    ),
+    reduzirTudo<Negocio, Negocio[]>(
+      '/v1/deals',
+      { status: 'open', user_id: 0 },
+      `evento-negocios-abertos:${assinaturaEtiqueta}:${assinaturaPipelines}`,
+      () => [],
+      (acumulador, negocio) => {
+        if (
+          pipelinesAcompanhados.has(negocio.pipeline_id) &&
+          entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
+        ) {
+          acumulador.push(negocio);
+        }
+      },
+      500
+    ),
+    reduzirTudo<Negocio, Negocio[]>(
+      '/v1/deals',
+      { status: 'lost', user_id: 0 },
+      `evento-negocios-perdidos:${assinaturaEtiqueta}:${assinaturaPipelines}`,
+      () => [],
+      (acumulador, negocio) => {
+        if (
+          pipelinesAcompanhados.has(negocio.pipeline_id) &&
+          entidadeTemEtiqueta(negocio, idsNegocio, nomeNormalizado)
+        ) {
+          acumulador.push(negocio);
+        }
+      },
+      500
+    ),
+  ]);
 
   if (
     idsLead.size === 0 &&
     idsNegocio.size === 0 &&
-    totalLeads === 0 &&
-    negociosComEtiqueta.length === 0 &&
+    leadsContados.total === 0 &&
+    negociosEvento.length === 0 &&
     negociosPerdidosEvento.length === 0
   ) {
     throw new PipedriveError(`A etiqueta "${nomeEtiqueta}" não foi encontrada no Pipedrive.`);
   }
 
   return {
-    leads: totalLeads,
+    leads: leadsContados.total,
     negociosAbertos: negociosEvento.length,
     ...resumirNegociosDoEvento(negociosEvento, gruposEtapas),
     negociosPerdidos: resumirNegociosPerdidosDoEvento(negociosPerdidosEvento),
