@@ -28,12 +28,20 @@ export async function buscarComCachePipedrive<T>(
   if (process.env.NODE_ENV === 'test') return carregar();
 
   const chave = `api:${chaveOriginal}`;
-  const [estadoInicial] = await db
-    .select({ generation: pipedriveApiCache.generation })
-    .from(pipedriveApiCache)
-    .where(eq(pipedriveApiCache.cacheKey, CHAVE_GERACAO))
-    .limit(1);
-  const geracaoInicial = estadoInicial?.generation ?? 0;
+  let geracaoInicial = 0;
+
+  try {
+    const [estadoInicial] = await db
+      .select({ generation: pipedriveApiCache.generation })
+      .from(pipedriveApiCache)
+      .where(eq(pipedriveApiCache.cacheKey, CHAVE_GERACAO))
+      .limit(1);
+    geracaoInicial = estadoInicial?.generation ?? 0;
+  } catch {
+    console.warn('[pipedrive-cache] Banco indisponível; consultando o Pipedrive sem cache.');
+    return carregar();
+  }
+
   const memoria = localCache.get(chave);
   const agora = Date.now();
 
@@ -45,30 +53,48 @@ export async function buscarComCachePipedrive<T>(
     return memoria.payload as T;
   }
 
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${chave}))`);
+  let payloadCarregado: T | undefined;
+  let carregamentoConcluido = false;
+  let erroAoCarregar: unknown;
+  let carregamentoFalhou = false;
 
-    const [estadoAtual] = await tx
-      .select({ generation: pipedriveApiCache.generation })
-      .from(pipedriveApiCache)
-      .where(eq(pipedriveApiCache.cacheKey, CHAVE_GERACAO))
-      .limit(1);
-    const geracao = estadoAtual?.generation ?? 0;
-    const [cache] = await tx
-      .select({ payload: pipedriveApiCache.payload, cachedAt: pipedriveApiCache.cachedAt, generation: pipedriveApiCache.generation })
-      .from(pipedriveApiCache)
-      .where(eq(pipedriveApiCache.cacheKey, chave))
-      .limit(1);
-    const idade = cache ? Date.now() - cache.cachedAt.getTime() : Number.POSITIVE_INFINITY;
+  try {
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${chave}))`);
 
-    if (cache && cache.generation === geracao && idade < TTL_CACHE_MS) {
-      const payload = cache.payload as T;
-      guardarLocal(chave, payload, cache.cachedAt.getTime(), geracao);
-      return payload;
-    }
+      const [estadoAtual] = await tx
+        .select({ generation: pipedriveApiCache.generation })
+        .from(pipedriveApiCache)
+        .where(eq(pipedriveApiCache.cacheKey, CHAVE_GERACAO))
+        .limit(1);
+      const geracao = estadoAtual?.generation ?? 0;
+      const [cache] = await tx
+        .select({ payload: pipedriveApiCache.payload, cachedAt: pipedriveApiCache.cachedAt, generation: pipedriveApiCache.generation })
+        .from(pipedriveApiCache)
+        .where(eq(pipedriveApiCache.cacheKey, chave))
+        .limit(1);
+      const idade = cache ? Date.now() - cache.cachedAt.getTime() : Number.POSITIVE_INFINITY;
 
-    try {
-      const payload = await carregar();
+      if (cache && cache.generation === geracao && idade < TTL_CACHE_MS) {
+        const payload = cache.payload as T;
+        guardarLocal(chave, payload, cache.cachedAt.getTime(), geracao);
+        return payload;
+      }
+
+      let payload: T;
+      try {
+        payload = await carregar();
+        payloadCarregado = payload;
+        carregamentoConcluido = true;
+      } catch (erro) {
+        carregamentoFalhou = true;
+        erroAoCarregar = erro;
+        if (cache && idade < MAX_IDADE_STALE_MS) {
+          return cache.payload as T;
+        }
+        throw erro;
+      }
+
       const cachedAt = new Date();
       await tx
         .insert(pipedriveApiCache)
@@ -79,13 +105,19 @@ export async function buscarComCachePipedrive<T>(
         });
       guardarLocal(chave, payload, cachedAt.getTime(), geracao);
       return payload;
-    } catch (erro) {
-      if (cache && idade < MAX_IDADE_STALE_MS) {
-        return cache.payload as T;
-      }
-      throw erro;
+    });
+  } catch (erro) {
+    if (carregamentoFalhou) throw erroAoCarregar;
+
+    if (carregamentoConcluido) {
+      console.warn('[pipedrive-cache] Falha ao salvar no banco; usando os dados consultados.');
+      guardarLocal(chave, payloadCarregado, Date.now(), geracaoInicial);
+      return payloadCarregado as T;
     }
-  });
+
+    console.warn('[pipedrive-cache] Banco indisponível; consultando o Pipedrive sem cache.');
+    return carregar();
+  }
 }
 
 export async function solicitarAtualizacaoPipedrive(): Promise<number> {
