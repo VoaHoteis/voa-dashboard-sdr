@@ -24,24 +24,30 @@ export interface Estado<T> {
 // ------------------------------------------------------- atualizacao global
 
 interface Atualizacao {
-  /** Identifica um novo snapshot após a invalidação compartilhada. */
-  versao: number;
   atualizar: () => Promise<void>;
   emVoo: number;
-  registrar: (delta: number) => void;
   concluidoEm: Date | null;
   preparando: boolean;
   erroAtualizacao: string | null;
 }
 
+interface AtualizacaoDados {
+  /** Identifica um novo snapshot após a invalidação compartilhada. */
+  versao: number;
+  registrar: (delta: number) => void;
+}
+
 const ContextoAtualizacao = createContext<Atualizacao>({
-  versao: 0,
   atualizar: async () => {},
   emVoo: 0,
-  registrar: () => {},
   concluidoEm: null,
   preparando: false,
   erroAtualizacao: null,
+});
+
+const ContextoAtualizacaoDados = createContext<AtualizacaoDados>({
+  versao: 0,
+  registrar: () => {},
 });
 
 export function useAtualizacao(): Atualizacao {
@@ -85,12 +91,19 @@ export function ProvedorAtualizacao({ children }: { children: React.ReactNode })
     if (jaTeve.current) setConcluidoEm(new Date());
   }, [emVoo]);
 
-  const valor = useMemo(
-    () => ({ versao, atualizar, emVoo, registrar, concluidoEm, preparando, erroAtualizacao }),
-    [versao, atualizar, emVoo, registrar, concluidoEm, preparando, erroAtualizacao]
+  const valorAtualizacao = useMemo(
+    () => ({ atualizar, emVoo, concluidoEm, preparando, erroAtualizacao }),
+    [atualizar, emVoo, concluidoEm, preparando, erroAtualizacao]
   );
+  const valorDados = useMemo(() => ({ versao, registrar }), [versao, registrar]);
 
-  return <ContextoAtualizacao.Provider value={valor}>{children}</ContextoAtualizacao.Provider>;
+  return (
+    <ContextoAtualizacaoDados.Provider value={valorDados}>
+      <ContextoAtualizacao.Provider value={valorAtualizacao}>
+        {children}
+      </ContextoAtualizacao.Provider>
+    </ContextoAtualizacaoDados.Provider>
+  );
 }
 
 let requisicoesDoNavegador = 0;
@@ -149,7 +162,7 @@ async function buscarJson<T>(url: string): Promise<T> {
 
 export function useApi<T>(url: string, habilitado = true): Estado<T> {
   const [tick, setTick] = useState(0);
-  const { versao, registrar } = useAtualizacao();
+  const { versao, registrar } = useContext(ContextoAtualizacaoDados);
   const chave: readonly [string, number, number] | null = habilitado ? [url, versao, tick] : null;
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     T,
@@ -174,7 +187,7 @@ export function useApi<T>(url: string, habilitado = true): Estado<T> {
     };
   }, [isValidating, registrar]);
 
-  return { dados: data ?? null, carregando: isLoading, erro, recarregar };
+  return { dados: data ?? null, carregando: !habilitado || isLoading, erro, recarregar };
 }
 
 export function BotaoAtualizar() {
@@ -255,7 +268,43 @@ export function Painel<T>({
 }
 
 /** Mostra dois cartões de SDR por página com controles acessíveis de navegação. */
-export function CarrosselSdr({ titulo, children }: { titulo: string; children: ReactNode }) {
+export function useCarregamentoSobDemanda() {
+  const ref = useRef<HTMLElement | null>(null);
+  const [habilitado, setHabilitado] = useState(false);
+
+  useEffect(() => {
+    const elemento = ref.current;
+    if (!elemento || habilitado) return;
+    if (!('IntersectionObserver' in window)) {
+      setHabilitado(true);
+      return;
+    }
+
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada.isIntersecting) {
+          setHabilitado(true);
+          observador.disconnect();
+        }
+      },
+      { rootMargin: '500px 0px' }
+    );
+    observador.observe(elemento);
+    return () => observador.disconnect();
+  }, [habilitado]);
+
+  return { ref, habilitado };
+}
+
+export function CarrosselSdr({
+  titulo,
+  children,
+  containerRef,
+}: {
+  titulo: string;
+  children: ReactNode;
+  containerRef?: React.RefObject<HTMLElement | null>;
+}) {
   const [pagina, setPagina] = useState(0);
   const cards = Children.toArray(children);
   const totalPaginas = Math.ceil(cards.length / 2);
@@ -263,7 +312,12 @@ export function CarrosselSdr({ titulo, children }: { titulo: string; children: R
   const fim = Math.min(inicio + 2, cards.length);
 
   return (
-    <section className="carrossel-sdr" aria-label={titulo} aria-roledescription="carrossel">
+    <section
+      ref={containerRef}
+      className="carrossel-sdr"
+      aria-label={titulo}
+      aria-roledescription="carrossel"
+    >
       <div className="carrossel-sdr__cabecalho">
         <span className="carrossel-sdr__status" aria-live="polite" aria-atomic="true">
           {cards.length > 0 ? `SDRs ${inicio + 1}–${fim} de ${cards.length}` : 'Nenhum SDR'}

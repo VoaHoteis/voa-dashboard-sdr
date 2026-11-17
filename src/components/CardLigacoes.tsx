@@ -3,7 +3,7 @@
 import { SDRS_ATIVOS } from '@/lib/config';
 import { diaDaSemana, formatarBR, hoje, nomeDoMes, parse } from '@/lib/dates';
 import type { DiaLigacoes, LigacoesResposta } from '@/lib/types';
-import { CarrosselSdr, Painel, useApi } from './base';
+import { CarrosselSdr, Painel, useApi, useCarregamentoSobDemanda } from './base';
 
 /**
  * Agrupa os dias úteis em semanas (linhas), quebrando sempre que a segunda-feira
@@ -29,10 +29,11 @@ function agruparPorSemana(dias: DiaLigacoes[]): DiaLigacoes[][] {
  * seguidos na meta.
  */
 export function CardLigacoes() {
-  const estado = useApi<LigacoesResposta>('/api/ligacoes');
+  const { ref, habilitado } = useCarregamentoSobDemanda();
+  const estado = useApi<LigacoesResposta>('/api/ligacoes', habilitado);
 
   return (
-    <CarrosselSdr titulo="Controle de ligações">
+    <CarrosselSdr titulo="Controle de ligações" containerRef={ref}>
       {SDRS_ATIVOS.map((cfg) => (
         <Painel
           key={cfg.key}
