@@ -25,6 +25,7 @@ export default function FilaAtendimento() {
     queueVersion: string;
   } | null>(null);
   const [managementOpen, setManagementOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [notice, setNotice] = useState<{ message: string; error?: boolean } | null>(null);
 
   async function refreshQueueSnapshot() {
@@ -41,11 +42,19 @@ export default function FilaAtendimento() {
   }
 
   async function refreshSnapshot() {
+    setNotice(null);
+    setIsRefreshing(true);
     try {
       await refreshQueueSnapshot();
       setNotice({ message: 'Fila, histórico e indicadores atualizados.' });
     } catch {
-      setNotice({ message: 'Não foi possível atualizar. Os dados anteriores foram mantidos.', error: true });
+      setNotice(
+        data
+          ? { message: 'Não foi possível atualizar. Os dados anteriores foram mantidos.', error: true }
+          : null
+      );
+    } finally {
+      setIsRefreshing(false);
     }
   }
 
@@ -78,7 +87,7 @@ export default function FilaAtendimento() {
   }
 
   return (
-    <main className="queue-page" aria-busy={isLoading}>
+    <main className="queue-page" aria-busy={isLoading || isRefreshing}>
       <header className="queue-page__header">
         <div className="queue-page__title-group">
           <Link href="/" className="queue-back-link">← Voltar à área Comercial</Link>
@@ -86,8 +95,8 @@ export default function FilaAtendimento() {
           <h1>Fila de Atendimento</h1>
           <p className="queue-page__description">Distribuição sequencial, registro de atendimentos e acompanhamento da equipe.</p>
         </div>
-        <button type="button" className="queue-button queue-button--quiet" onClick={() => void refreshSnapshot()} disabled={isLoading}>
-          {isLoading ? 'Carregando…' : 'Atualizar'}
+        <button type="button" className="queue-button queue-button--quiet" onClick={() => void refreshSnapshot()} disabled={isLoading || isRefreshing}>
+          {isRefreshing ? 'Atualizando…' : isLoading ? 'Carregando…' : 'Atualizar'}
         </button>
       </header>
 
