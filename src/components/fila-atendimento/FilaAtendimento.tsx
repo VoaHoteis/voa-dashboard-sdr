@@ -27,6 +27,12 @@ export default function FilaAtendimento() {
   const [managementOpen, setManagementOpen] = useState(false);
   const [notice, setNotice] = useState<{ message: string; error?: boolean } | null>(null);
 
+  async function refreshQueueSnapshot() {
+    const snapshot = await fetchSnapshot(snapshotKey);
+    await mutate(snapshot, { revalidate: false });
+    return snapshot;
+  }
+
   function openAction(action: QueueAction) {
     const member = data?.queue[0];
     if (!member || !data) return;
@@ -36,7 +42,7 @@ export default function FilaAtendimento() {
 
   async function refreshSnapshot() {
     try {
-      await mutate();
+      await refreshQueueSnapshot();
       setNotice({ message: 'Fila, histórico e indicadores atualizados.' });
     } catch {
       setNotice({ message: 'Não foi possível atualizar. Os dados anteriores foram mantidos.', error: true });
@@ -46,7 +52,7 @@ export default function FilaAtendimento() {
   async function completeAction(action: QueueAction) {
     setActionDialog(null);
     try {
-      await mutate();
+      await refreshQueueSnapshot();
       setNotice({
         message: action === 'assumir' ? 'Atendimento registrado e fila avançada.' : 'Vez passada e fila avançada.',
       });
@@ -61,7 +67,7 @@ export default function FilaAtendimento() {
   async function completeManagement() {
     setManagementOpen(false);
     try {
-      await mutate();
+      await refreshQueueSnapshot();
       setNotice({ message: 'Composição da fila salva e atualizada.' });
     } catch {
       setNotice({
