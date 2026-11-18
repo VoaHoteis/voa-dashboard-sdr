@@ -2466,7 +2466,225 @@ h3 {
   .queue-dialog__actions {
     flex-direction: column-reverse;
   }
+}
 
+.agenda-semanal {
+  --agenda-hora: 54px;
+}
+
+.agenda-semanal__cabecalho {
+  align-items: flex-start;
+}
+
+.agenda-semanal__cabecalho h3 {
+  margin-bottom: 3px;
+}
+
+.agenda-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: var(--texto-fraco);
+  font-size: 12px;
+}
+
+.agenda-legenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agenda-legenda__cor {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+}
+
+.agenda-legenda__cor--porto {
+  background: var(--novos);
+}
+
+.agenda-legenda__cor--arraial {
+  background: var(--atencao);
+}
+
+.agenda-legenda__cor--indefinido {
+  background: var(--texto-fraco);
+}
+
+.agenda-semanal__rolagem {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  scrollbar-color: var(--borda) var(--painel-alto);
+}
+
+.agenda-semanal__rolagem:focus-visible {
+  outline: 2px solid var(--novos);
+  outline-offset: 2px;
+}
+
+.agenda-semanal__dias {
+  display: grid;
+  min-width: 980px;
+  grid-template-columns: repeat(5, minmax(190px, 1fr));
+}
+
+.agenda-dia {
+  min-width: 0;
+  border-right: 1px solid var(--borda);
+}
+
+.agenda-dia:last-child {
+  border-right: 0;
+}
+
+.agenda-dia__cabecalho {
+  display: flex;
+  min-height: 73px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-bottom: 1px solid var(--borda);
+  background: var(--painel);
+}
+
+.agenda-dia__cabecalho > span {
+  color: var(--texto-fraco);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.agenda-dia__cabecalho strong {
+  color: var(--texto);
+  font-size: 19px;
+}
+
+.agenda-dia__cabecalho small {
+  color: var(--texto-fraco);
+  font-size: 10px;
+}
+
+.agenda-dia__corpo {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  padding: 6px 4px 0 0;
+}
+
+.agenda-dia__horas {
+  position: relative;
+  height: calc(var(--agenda-hora) * 12);
+  color: var(--texto-fraco);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-dia__horas span {
+  position: absolute;
+  right: 6px;
+  line-height: 1;
+}
+
+.agenda-dia__linha-tempo {
+  position: relative;
+  min-width: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--agenda-hora) - 1px),
+    var(--borda) calc(var(--agenda-hora) - 1px),
+    var(--borda) var(--agenda-hora)
+  );
+}
+
+.agenda-evento {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  padding: 5px 6px;
+  border: 1px solid currentColor;
+  border-left-width: 4px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.agenda-dia__linha-tempo > .agenda-evento {
+  position: absolute;
+  z-index: 1;
+}
+
+.agenda-evento strong {
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.agenda-evento__hora {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.agenda-evento__local {
+  color: inherit;
+  opacity: 0.82;
+}
+
+.agenda-evento--porto-seguro {
+  border-color: var(--novos);
+  background: color-mix(in srgb, var(--novos) 15%, var(--painel));
+  color: var(--novos);
+}
+
+.agenda-evento--arraial-dajuda {
+  border-color: var(--atencao);
+  background: color-mix(in srgb, var(--atencao) 15%, var(--painel));
+  color: var(--atencao);
+}
+
+.agenda-evento--indefinido {
+  border-color: var(--texto-fraco);
+  background: color-mix(in srgb, var(--texto-fraco) 12%, var(--painel));
+  color: var(--texto);
+}
+
+.agenda-dia__sem-horario {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--borda);
+}
+
+.agenda-dia__sem-horario-titulo {
+  color: var(--texto-fraco);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.agenda-semanal__vazio {
+  padding: 16px 0;
+}
+
+@media (max-width: 560px) {
+  .agenda-semanal__cabecalho {
+    flex-direction: column;
+  }
+
+  .agenda-semanal__dias {
+    min-width: 900px;
+    grid-template-columns: repeat(5, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
   .queue-dialog__actions .queue-button {
     width: 100%;
   }
