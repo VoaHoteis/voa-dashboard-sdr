@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { ISODate } from '@/lib/dates';
-import { buscarAtividades, buscarNegociosPorIds } from '@/lib/pipedrive';
+import { buscarAtividades, buscarNegociosPorIds, filtrarNegociosPorEtiqueta } from '@/lib/pipedrive';
 import type { AgendaEventoResposta, ItemAgendaEvento } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../../_comum';
 
@@ -34,10 +34,15 @@ export async function GET(req: Request) {
         .map((atividade) => atividade.deal_id)
         .filter((id): id is number => typeof id === 'number')
     );
+    const negociosComEtiqueta = await filtrarNegociosPorEtiqueta(
+      [...negocios.values()],
+      'Evento Porto Seguro'
+    );
+    const idsNegociosComEtiqueta = new Set(negociosComEtiqueta.map((negocio) => negocio.id));
 
     const itens: ItemAgendaEvento[] = atividades.flatMap((atividade) => {
-      if (!atividade.due_date) return [];
-      const negocio = atividade.deal_id ? negocios.get(atividade.deal_id) : undefined;
+      if (!atividade.due_date || !atividade.deal_id || !idsNegociosComEtiqueta.has(atividade.deal_id)) return [];
+      const negocio = negocios.get(atividade.deal_id);
       const assunto = atividade.subject?.trim() || atividade.type || 'Atividade';
       const local = atividade.location?.trim() || null;
       const tituloNegocio = negocio?.title?.trim() || null;

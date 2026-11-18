@@ -2690,6 +2690,144 @@ h3 {
   }
 }
 
+.agenda-semanal__cabecalho {
+  align-items: center;
+}
+
+.agenda-semanal__dias {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border-top: 1px solid var(--borda);
+}
+
+.agenda-dia {
+  display: grid;
+  grid-template-columns: minmax(130px, 190px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  padding: 14px 0;
+  border-right: 0;
+  border-bottom: 1px solid var(--borda);
+}
+
+.agenda-dia:last-child {
+  border-bottom: 0;
+}
+
+.agenda-dia__cabecalho {
+  min-height: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+}
+
+.agenda-dia__cabecalho strong {
+  color: var(--texto);
+  font-size: 15px;
+  text-transform: capitalize;
+}
+
+.agenda-dia__cabecalho > span,
+.agenda-dia__cabecalho small {
+  color: var(--texto-fraco);
+  font-size: 12px;
+  letter-spacing: normal;
+}
+
+.agenda-dia__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agenda-evento {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-left: 3px solid var(--texto-fraco);
+  border-radius: 4px;
+  background: var(--painel-alto);
+  color: var(--texto);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.agenda-evento__hora {
+  color: var(--texto-fraco);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.agenda-evento__texto {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
+.agenda-evento__texto strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.agenda-evento__texto span {
+  color: var(--texto-fraco);
+  font-size: 12px;
+}
+
+.agenda-evento__destino {
+  color: var(--texto-fraco);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.agenda-evento--porto-seguro {
+  border-left-color: var(--novos);
+}
+
+.agenda-evento--arraial-dajuda {
+  border-left-color: var(--atencao);
+}
+
+.agenda-evento--nao-definido {
+  border-left-color: var(--texto-fraco);
+}
+
+.agenda-dia__vazio {
+  margin: 0;
+  padding: 8px 0;
+  color: var(--texto-fraco);
+  font-size: 13px;
+}
+
+@media (max-width: 560px) {
+  .agenda-dia {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .agenda-evento {
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .agenda-evento__destino {
+    grid-column: 2;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .queue-button,
   .queue-icon-button,

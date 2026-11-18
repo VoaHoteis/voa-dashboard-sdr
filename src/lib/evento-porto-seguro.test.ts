@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  negocioTemEtiqueta,
   resumirAtividadesDoEvento,
   resumirNegociosDoEvento,
   resumirNegociosPerdidosDoEvento,
@@ -10,6 +11,26 @@ import {
 } from './pipedrive';
 
 describe('resumo do Evento Porto Seguro', () => {
+  it('reconhece a etiqueta pelo ID ou pelo nome, mas não aceita outra etiqueta', () => {
+    const negocio = {
+      id: 1,
+      title: 'Hotel Praia',
+      pipeline_id: 6,
+      stage_id: 61,
+      status: 'open',
+      undone_activities_count: 0,
+      next_activity_date: null,
+      label_ids: [42],
+    } satisfies Negocio;
+
+    assert.equal(negocioTemEtiqueta(negocio, new Set(['42']), 'Evento Porto Seguro'), true);
+    assert.equal(negocioTemEtiqueta(negocio, new Set(['99']), 'Evento Porto Seguro'), false);
+    assert.equal(
+      negocioTemEtiqueta({ ...negocio, label: 'Evento Porto Seguro', label_ids: [] }, new Set(), 'EVENTO PORTO SEGURO'),
+      true
+    );
+  });
+
   it('inclui negócios do Bruno no funil Salabim e os agrupa pelas etapas', () => {
     const gruposEtapas = [
       {

@@ -122,6 +122,7 @@ const NEGOCIOS: Negocio[] = HOTEIS.map((titulo, i) => {
     pipeline_id: pipelineId,
     stage_id: stageId,
     status: 'open',
+    label: i % 4 === 0 ? 'EVENTO PORTO SEGURO' : null,
     undone_activities_count: pendentes,
     next_activity_date: proxima,
     value: valor,
