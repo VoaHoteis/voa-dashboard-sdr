@@ -239,8 +239,10 @@ export async function buscarAtividades(opts: {
       )
     : [await buscarTudo<Atividade>('/v1/activities', parametros, 100)];
 
+  const tiposPermitidos = new Set(tipos);
   const atividadesUnicas = new Map<number, Atividade>();
   for (const atividade of atividadesPorTipo.flat()) {
+    if (tipos.length > 0 && !tiposPermitidos.has(atividade.type)) continue;
     const dia = atividade.due_date?.slice(0, 10);
     if (dia && (dia < opts.inicio || dia > opts.fim)) continue;
     atividadesUnicas.set(atividade.id, atividade);

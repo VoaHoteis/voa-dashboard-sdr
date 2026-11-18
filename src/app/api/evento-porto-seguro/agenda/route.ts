@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
+import { TIPOS_AGENDAMENTO } from '@/lib/config';
 import type { ISODate } from '@/lib/dates';
-import { buscarAtividades, buscarNegociosPorIds, filtrarNegociosPorEtiqueta } from '@/lib/pipedrive';
+import {
+  buscarAtividades,
+  buscarNegociosPorIds,
+  filtrarNegociosPorEtiqueta,
+  resolverTiposAgendamento,
+} from '@/lib/pipedrive';
 import type { AgendaEventoResposta, ItemAgendaEvento } from '@/lib/types';
 import { limparCacheSePedido, respostaDeErro } from '../../_comum';
 
@@ -26,7 +32,7 @@ export async function GET(req: Request) {
     const atividades = await buscarAtividades({
       inicio: INICIO,
       fim: FIM,
-      tipos: [],
+      tipos: await resolverTiposAgendamento(TIPOS_AGENDAMENTO),
       concluidas: false,
     });
     const negocios = await buscarNegociosPorIds(
