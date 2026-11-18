@@ -14,9 +14,17 @@ export async function GET() {
     return NextResponse.json(await getQueueSnapshot(), {
       headers: { 'Cache-Control': 'no-store, max-age=0' },
     });
-  } catch {
+  } catch (error) {
+    const errorCode = getDatabaseErrorCode(error);
+    console.error('[fila-atendimento] Falha ao carregar a fila', { code: errorCode });
+
     return NextResponse.json(
-      { erro: 'Não foi possível carregar a fila agora. Tente atualizar novamente.' },
+      {
+        erro:
+          errorCode === '53000'
+            ? 'O banco de dados atingiu o limite de uso. Aumente a cota do banco conectado e tente novamente.'
+            : 'Não foi possível carregar a fila agora. Tente atualizar novamente.',
+      },
       { status: 503, headers: { 'Cache-Control': 'no-store' } }
     );
   }
@@ -97,6 +105,13 @@ function queueError(error: unknown, fallback: string, operation: 'register-actio
   });
 
   return NextResponse.json({ erro: fallback }, { status: 503 });
+}
+
+function getDatabaseErrorCode(error: unknown): string | null {
+  if (!isRecord(error)) return null;
+  if (typeof error.code === 'string') return error.code;
+  if (isRecord(error.cause) && typeof error.cause.code === 'string') return error.cause.code;
+  return null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
