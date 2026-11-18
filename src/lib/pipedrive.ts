@@ -746,7 +746,7 @@ interface EtiquetaPipedrive {
 
 function valorTemEtiqueta(
   valor: unknown,
-  ids: Set<string>,
+  ids: ReadonlySet<string>,
   nomeNormalizado: string
 ): boolean {
   if (Array.isArray(valor)) {
@@ -767,12 +767,45 @@ function valorTemEtiqueta(
 
 function entidadeTemEtiqueta(
   entidade: EntidadeComEtiquetas,
-  ids: Set<string>,
+  ids: ReadonlySet<string>,
   nomeNormalizado: string
 ): boolean {
   return [entidade.label_ids, entidade.label, entidade.labels].some((valor) =>
     valorTemEtiqueta(valor, ids, nomeNormalizado)
   );
+}
+
+export function negocioTemEtiqueta(
+  negocio: Negocio,
+  ids: ReadonlySet<string>,
+  nomeEtiqueta: string
+): boolean {
+  return entidadeTemEtiqueta(negocio, ids, normalizarNome(nomeEtiqueta));
+}
+
+export async function filtrarNegociosPorEtiqueta(
+  negocios: Negocio[],
+  nomeEtiqueta: string
+): Promise<Negocio[]> {
+  if (negocios.length === 0) return [];
+
+  const nomeNormalizado = normalizarNome(nomeEtiqueta);
+  const campos = modoMock()
+    ? []
+    : await buscarTudo<{
+        key: string;
+        options?: EtiquetaPipedrive[] | null;
+      }>('/v1/dealFields', {}, 100);
+  const ids = new Set(
+    campos
+      .filter((campo) => campo.key === 'label' || campo.key === 'label_ids')
+      .flatMap((campo) => campo.options ?? [])
+      .filter((etiqueta) => normalizarNome(etiqueta.label ?? etiqueta.name ?? '') === nomeNormalizado)
+      .map((etiqueta) => String(etiqueta.id ?? ''))
+      .filter(Boolean)
+  );
+
+  return negocios.filter((negocio) => negocioTemEtiqueta(negocio, ids, nomeEtiqueta));
 }
 
 /** Conta negócios etiquetados por proprietário e por etapa dos funis acompanhados. */
