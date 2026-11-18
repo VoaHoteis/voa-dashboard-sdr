@@ -6,6 +6,9 @@ export interface Atividade {
   subject: string;
   done: boolean;
   due_date: ISODate | null;
+  due_time?: string | null;
+  duration?: string | null;
+  location?: string | null;
   /** Data em que foi concluída, em UTC; é a base das métricas de esforço diário. */
   marked_as_done_time: string | null;
   deal_id: number | null;

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ListaNegocios } from '@/components/CardFunilClosers';
+import { AgendaEventoPortoSeguro } from '@/components/AgendaEventoPortoSeguro';
 import { CardNegociosPerdidosEvento } from '@/components/CardNegociosPerdidosEvento';
 import { Modal, NumeroClicavel, Painel, numeroBR, useApi } from '@/components/base';
 import type { ItemNegocioEtapa, MetricasEventoPortoSeguroResposta } from '@/lib/types';
@@ -71,6 +72,7 @@ export function CardEventoPortoSeguro() {
             setDetalhe({ titulo, negocios });
           return (
             <div className="evento-conteudo" aria-label="Métricas da etiqueta Evento Porto Seguro">
+              <AgendaEventoPortoSeguro />
               <div className="evento-metricas">
                 <div className="evento-metrica">
                   <strong className="numero grande" aria-label={`${dados.leads} leads`}>

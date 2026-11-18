@@ -81,6 +81,23 @@ export interface NegociosMercadoResposta {
   pms: ContagemValorNegocio[];
 }
 
+export interface ItemAgendaEvento {
+  atividadeId: number;
+  data: ISODate;
+  hora: string | null;
+  duracao: string | null;
+  assunto: string;
+  negocio: string | null;
+  local: string | null;
+  destino: 'porto-seguro' | 'arraial-dajuda' | 'nao-definido';
+}
+
+export interface AgendaEventoResposta {
+  inicio: ISODate;
+  fim: ISODate;
+  itens: ItemAgendaEvento[];
+}
+
 export interface MetricasEventoPortoSeguroResposta {
   leads: number;
   /** Negócios abertos com a etiqueta nos funis acompanhados pelo dashboard. */
